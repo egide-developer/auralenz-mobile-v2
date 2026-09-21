@@ -1,21 +1,18 @@
 // AuraLenz BottomNav — mirrors web MobileNav.tsx
 // Floating glass pill with 4 tabs + separate Create FAB
-import React, { useEffect } from "react";
+// Animated sliding active pill indicator
+import React from "react";
 import {
   View,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Platform,
 } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
-  interpolate,
-  useDerivedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "../ui/Icon";
@@ -24,7 +21,6 @@ import { useThemeStore } from "../../stores/themeStore";
 import { useUnreadStore } from "../../stores/unreadStore";
 import { Colors } from "../../theme/colors";
 import { Radius } from "../../theme/spacing";
-import { Shadows } from "../../theme/shadows";
 
 interface NavItem {
   name: string;
@@ -41,7 +37,9 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const MAX_DOCK_WIDTH = Math.min(SCREEN_WIDTH - 20, 416); // max-w-[26rem]
+const MAX_DOCK_WIDTH = Math.min(SCREEN_WIDTH - 20, 416);
+
+const SPRING_CONFIG = { damping: 20, stiffness: 350, mass: 0.8 };
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -50,6 +48,21 @@ export function BottomNav() {
   const isDark = useThemeStore((s) => s.isDark);
   const totalUnread = useUnreadStore((s) => s.totalUnread);
   const isCreate = pathname.startsWith("/create");
+
+  const activeIndex = NAV_ITEMS.findIndex((item) =>
+    item.path === "/" ? pathname === "/" : pathname.startsWith(item.path)
+  );
+  const safeIndex = activeIndex >= 0 ? activeIndex : 0;
+
+  const translateX = useSharedValue(safeIndex);
+
+  React.useEffect(() => {
+    translateX.value = safeIndex;
+  }, [safeIndex]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: withSpring(translateX.value * (100 / NAV_ITEMS.length), SPRING_CONFIG) }],
+  }));
 
   const handleCreate = () => {
     if (!isCreate) {
@@ -76,7 +89,20 @@ export function BottomNav() {
             {/* Top hairline glow */}
             <View style={styles.hairlineGlow} />
 
-            {NAV_ITEMS.map((item) => {
+            {/* Animated sliding indicator */}
+            <Animated.View
+              style={[
+                styles.activeIndicator,
+                pillStyle,
+                {
+                  width: `${100 / NAV_ITEMS.length}%`,
+                  backgroundColor: isDark ? Colors.dark.primary + "12" : Colors.light.primary + "12",
+                  borderColor: isDark ? Colors.dark.primary + "1A" : Colors.light.primary + "1A",
+                },
+              ]}
+            />
+
+            {NAV_ITEMS.map((item, index) => {
               const isActive =
                 item.path === "/"
                   ? pathname === "/"
@@ -139,21 +165,9 @@ function TabButton({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      style={[styles.tabButton]}
+      style={styles.tabButton}
       accessibilityLabel={item.name}
     >
-      {isActive && (
-        <View
-          style={[
-            styles.activePill,
-            {
-              backgroundColor: isDark ? Colors.dark.primary + "12" : Colors.light.primary + "12",
-              borderColor: isDark ? Colors.dark.primary + "1A" : Colors.light.primary + "1A",
-            },
-          ]}
-        />
-      )}
-
       <View style={styles.tabContent}>
         <Icon
           name={item.icon}
@@ -211,6 +225,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 2,
     overflow: "hidden",
+    position: "relative",
   },
   hairlineGlow: {
     position: "absolute",
@@ -220,23 +235,20 @@ const styles = StyleSheet.create({
     height: 1,
     opacity: 0.5,
   },
+  activeIndicator: {
+    position: "absolute",
+    top: 1,
+    bottom: 1,
+    left: 4,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
   tabButton: {
     flex: 1,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: Radius.pill,
-    position: "relative",
-  },
-  activePill: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    margin: 1,
   },
   tabContent: {
     alignItems: "center",
