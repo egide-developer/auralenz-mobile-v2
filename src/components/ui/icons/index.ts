@@ -25,6 +25,8 @@ export { LockLight } from "./lock-light";
 export { LockBold } from "./lock-bold";
 export { LogoutLight } from "./logout-light";
 export { LogoutBold } from "./logout-bold";
+export { MessageLight } from "./message-light";
+export { MessageBold } from "./message-bold";
 export { SendLight } from "./send-light";
 export { SendBold } from "./send-bold";
 export { CallLight } from "./call-light";

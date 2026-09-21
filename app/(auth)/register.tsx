@@ -95,7 +95,7 @@ export default function RegisterScreen() {
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
             <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
-              <Icon name="chat" set="light" size={18} color={colors.mutedForeground} />
+              <Icon name="message" set="light" size={18} color={colors.mutedForeground} />
               <TextInput
                 style={[styles.inputField, { color: colors.foreground }]}
                 placeholder="you@example.com"

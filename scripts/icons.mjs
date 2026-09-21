@@ -26,6 +26,7 @@ const NEEDED_ICONS = {
   setting:         "Setting",
   lock:            "Lock",
   logout:          "Logout",
+  message:         "Message",        // email
 
   // Content
   send:            "Send",
