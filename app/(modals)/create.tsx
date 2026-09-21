@@ -61,10 +61,7 @@ export default function CreateScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-          <Icon name="close-square" set="light" size={24} color={colors.foreground} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>New Post</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground, flex: 1, textAlign: "center" }]}>New Post</Text>
         <TouchableOpacity onPress={handlePost} disabled={loading} style={styles.shareBtn}>
           <Text style={[styles.shareText, { color: colors.primary, opacity: loading ? 0.5 : 1 }]}>
             {loading ? "Sharing..." : "Share"}

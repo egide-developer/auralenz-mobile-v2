@@ -19,6 +19,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "../ui/Icon";
+import { PlusSolid } from "../ui/icons/plus-solid";
 import { useThemeStore } from "../../stores/themeStore";
 import { useUnreadStore } from "../../stores/unreadStore";
 import { Colors } from "../../theme/colors";
@@ -106,11 +107,10 @@ export function BottomNav() {
               },
             ]}
           >
-            <Icon
-              name="plus"
-              set="bold"
-              size={22}
+            <PlusSolid
+              size={24}
               color={isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground}
+              strokeWidth={2.5}
               style={{
                 transform: [{ rotate: isCreate ? "135deg" : "0deg" }],
               }}
