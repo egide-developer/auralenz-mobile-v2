@@ -6,7 +6,7 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   LayoutChangeEvent,
 } from "react-native";
 import { usePathname, useRouter } from "expo-router";
@@ -37,13 +37,13 @@ const NAV_ITEMS: NavItem[] = [
   { name: "profile", icon: "user", path: "/profile" },
 ];
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const MAX_DOCK_WIDTH = Math.min(SCREEN_WIDTH - 20, 416);
+const MAX_DOCK_WIDTH = 416;
 
 const SPRING_CONFIG = { damping: 20, stiffness: 350, mass: 0.8 };
 
 export function BottomNav() {
-  const pathname = usePathname();
+  const { width: screenWidth } = useWindowDimensions();
+  const dockMaxWidth = Math.min(screenWidth - 20, MAX_DOCK_WIDTH);  const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = useThemeStore((s) => s.isDark);
@@ -82,9 +82,9 @@ export function BottomNav() {
     router.back();
   };
 
-  return (
-    <View style={[styles.container, { marginBottom: 8 + insets.bottom }]}>
-      <View style={[styles.dockWrapper, { maxWidth: MAX_DOCK_WIDTH }]}>
+    return (
+    <View style={[styles.container, { paddingBottom: 8 + insets.bottom }]}>
+      <View style={[styles.dockWrapper, { maxWidth: dockMaxWidth }]}>
         <View style={styles.dockRow}>
           {/* Main pill with 4 tabs */}
           <View
@@ -211,13 +211,8 @@ function TabButton({
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     zIndex: 50,
     alignItems: "center",
-    pointerEvents: "box-none",
   },
   dockWrapper: {
     width: "100%",
