@@ -13,8 +13,8 @@ import { Link, router } from "expo-router";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
-import { Radius } from "../../src/theme/spacing";
-import { Typography } from "../../src/theme/typography";
+import { Radius, Spacing } from "../../src/theme/spacing";
+import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
 
@@ -78,48 +78,43 @@ export default function RegisterScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Display Name</Text>
-            <TextInput
-              style={[styles.input, {
-                color: colors.foreground,
-                backgroundColor: colors.card + "80",
-                borderColor: colors.border + "4D",
-              }, Shadows[isDark ? "dark" : "light"]["soft"]]}
-              placeholder="Your name"
-              placeholderTextColor={colors.mutedForeground + "80"}
-              value={displayName}
-              onChangeText={setDisplayName}
-              autoCapitalize="words"
-              autoComplete="name"
-            />
+            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+              <Icon name="user" set="light" size={18} color={colors.mutedForeground} />
+              <TextInput
+                style={[styles.inputField, { color: colors.foreground }]}
+                placeholder="Your name"
+                placeholderTextColor={colors.mutedForeground + "80"}
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoCapitalize="words"
+                autoComplete="name"
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
-            <TextInput
-              style={[styles.input, {
-                color: colors.foreground,
-                backgroundColor: colors.card + "80",
-                borderColor: colors.border + "4D",
-              }, Shadows[isDark ? "dark" : "light"]["soft"]]}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.mutedForeground + "80"}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
+            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+              <Icon name="message" set="light" size={18} color={colors.mutedForeground} />
+              <TextInput
+                style={[styles.inputField, { color: colors.foreground }]}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.mutedForeground + "80"}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
-            <View style={styles.passwordWrapper}>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+              <Icon name="lock" set="light" size={18} color={colors.mutedForeground} />
               <TextInput
-                style={[styles.input, styles.passwordInput, {
-                  color: colors.foreground,
-                  backgroundColor: colors.card + "80",
-                  borderColor: colors.border + "4D",
-                }, Shadows[isDark ? "dark" : "light"]["soft"]]}
+                style={[styles.inputField, styles.passwordField, { color: colors.foreground }]}
                 placeholder="Min. 8 characters"
                 placeholderTextColor={colors.mutedForeground + "80"}
                 value={password}
@@ -129,13 +124,12 @@ export default function RegisterScreen() {
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Icon
                   name={showPassword ? "hide" : "show"}
                   set="light"
-                  size={20}
+                  size={18}
                   color={colors.mutedForeground}
                 />
               </TouchableOpacity>
@@ -218,24 +212,22 @@ const styles = StyleSheet.create({
     ...Typography.label,
     paddingHorizontal: 4,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     height: 48,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    fontSize: Typography.body.fontSize,
+    paddingHorizontal: 16,
+    gap: 10,
   },
-  passwordWrapper: {
-    position: "relative",
+  inputField: {
+    flex: 1,
+    ...Typography.body,
+    paddingVertical: 0,
   },
-  passwordInput: {
-    paddingRight: 48,
-  },
-  eyeButton: {
-    position: "absolute",
-    right: 16,
-    top: 14,
+  passwordField: {
+    paddingRight: 8,
   },
   button: {
     height: 48,
@@ -261,6 +253,6 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     ...Typography.body,
-    fontWeight: "600",
+    fontFamily: FontFamily.semibold,
   },
 });

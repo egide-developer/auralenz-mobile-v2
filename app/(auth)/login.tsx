@@ -14,7 +14,7 @@ import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
-import { Typography } from "../../src/theme/typography";
+import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
 
@@ -73,31 +73,27 @@ export default function LoginScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
-            <TextInput
-              style={[styles.input, {
-                color: colors.foreground,
-                backgroundColor: colors.card + "80",
-                borderColor: colors.border + "4D",
-              }, Shadows[isDark ? "dark" : "light"]["soft"]]}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.mutedForeground + "80"}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
+            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+              <Icon name="message" set="light" size={18} color={colors.mutedForeground} />
+              <TextInput
+                style={[styles.inputField, { color: colors.foreground }]}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.mutedForeground + "80"}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
-            <View style={styles.passwordWrapper}>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+              <Icon name="lock" set="light" size={18} color={colors.mutedForeground} />
               <TextInput
-                style={[styles.input, styles.passwordInput, {
-                  color: colors.foreground,
-                  backgroundColor: colors.card + "80",
-                  borderColor: colors.border + "4D",
-                }, Shadows[isDark ? "dark" : "light"]["soft"]]}
+                style={[styles.inputField, styles.passwordField, { color: colors.foreground }]}
                 placeholder="Enter your password"
                 placeholderTextColor={colors.mutedForeground + "80"}
                 value={password}
@@ -107,13 +103,12 @@ export default function LoginScreen() {
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Icon
                   name={showPassword ? "hide" : "show"}
                   set="light"
-                  size={20}
+                  size={18}
                   color={colors.mutedForeground}
                 />
               </TouchableOpacity>
@@ -121,7 +116,7 @@ export default function LoginScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.forgotButton]}
+            style={styles.forgotButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text style={[styles.forgotText, { color: colors.primary }]}>
@@ -205,31 +200,29 @@ const styles = StyleSheet.create({
     ...Typography.label,
     paddingHorizontal: 4,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     height: 48,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    fontSize: Typography.body.fontSize,
+    paddingHorizontal: 16,
+    gap: 10,
   },
-  passwordWrapper: {
-    position: "relative",
+  inputField: {
+    flex: 1,
+    ...Typography.body,
+    paddingVertical: 0,
   },
-  passwordInput: {
-    paddingRight: 48,
-  },
-  eyeButton: {
-    position: "absolute",
-    right: 16,
-    top: 14,
+  passwordField: {
+    paddingRight: 8,
   },
   forgotButton: {
     alignSelf: "flex-end",
   },
   forgotText: {
     ...Typography.bodySmall,
-    fontWeight: "600",
+    fontFamily: FontFamily.semibold,
   },
   button: {
     height: 48,
@@ -255,6 +248,6 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     ...Typography.body,
-    fontWeight: "600",
+    fontFamily: FontFamily.semibold,
   },
 });
