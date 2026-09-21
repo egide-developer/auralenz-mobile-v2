@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Polyline, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;

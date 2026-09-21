@@ -225,7 +225,7 @@ function svgToComponent(svgContent, componentName, isBold) {
   const hasFill = /fill="#000000"/.test(inner);
 
   return `import React from "react";
-import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Polyline, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -247,8 +247,8 @@ export function ${componentName}({ size = 24, color = "#000000", strokeWidth = 1
         .replace(/clip-rule="evenodd"/g, 'clipRule="evenodd"')
         .replace(/opacity="0\.4"/g, 'opacity={0.4}')
         .replace(/xlink:href/g, 'xlinkHref')
-        .replace(/<(path|circle|line|g|polygon|defs|use|rect|ellipse|text|image)\b/g, (m, tag) => '<' + tag.charAt(0).toUpperCase() + tag.slice(1))
-        .replace(/<\/(path|circle|line|g|polygon|defs|use|rect|ellipse|text|image)\b/g, (m, tag) => '</' + tag.charAt(0).toUpperCase() + tag.slice(1))}
+        .replace(/<(path|circle|line|g|polygon|polyline|defs|use|rect|ellipse|text|image)\b/g, (m, tag) => '<' + tag.charAt(0).toUpperCase() + tag.slice(1))
+        .replace(/<\/(path|circle|line|g|polygon|polyline|defs|use|rect|ellipse|text|image)\b/g, (m, tag) => '</' + tag.charAt(0).toUpperCase() + tag.slice(1))}
     </Svg>
   );
 }
