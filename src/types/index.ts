@@ -26,7 +26,7 @@ export interface UserPreview {
 export interface Post {
   id: string;
   userId: string;
-  user: UserPreview;
+  author: UserPreview;
   caption?: string;
   media: PostMedia[];
   tags: string[];
@@ -53,8 +53,9 @@ export interface Comment {
   id: string;
   postId: string;
   userId: string;
-  user: UserPreview;
+  author: UserPreview;
   content: string;
+  text: string;
   likesCount: number;
   isLiked: boolean;
   replies?: Comment[];
