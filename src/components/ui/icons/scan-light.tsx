@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function ScanLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Scan</title>
-    <g id="Iconly/Light/Scan" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Scan" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Scan" transform="translate(1.500000, 3.350100)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="21" y1="9.4555" x2="0" y2="9.4555" id="Stroke-1"></line>
             <path d="M19.1299,5.245 L19.1299,3.732 C19.1299,1.671 17.4589,1.77635684e-15 15.3969,1.77635684e-15 L14.1919,1.77635684e-15" id="Stroke-3"></path>

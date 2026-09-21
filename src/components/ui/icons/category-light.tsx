@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function CategoryLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Category</title>
-    <g id="Iconly/Light/Category" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Category" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Category" transform="translate(2.999141, 3.000000)" stroke={color} strokeWidth={strokeWidth}>
             <path d="M0.000858865205,3.5 C0.000858865205,0.874787053 0.0289681101,0 3.50085887,0 C6.9727494,0 7.00085887,0.874787053 7.00085887,3.5 C7.00085887,6.12521295 7.01193168,7 3.50085887,7 C-0.010214169,7 0.000858865205,6.12521295 0.000858865205,3.5 Z" id="Stroke-1"></path>
             <path d="M11.0008589,3.5 C11.0008589,0.874787053 11.0289681,0 14.5008589,0 C17.9727494,0 18.0008589,0.874787053 18.0008589,3.5 C18.0008589,6.12521295 18.0119317,7 14.5008589,7 C10.9897858,7 11.0008589,6.12521295 11.0008589,3.5 Z" id="Stroke-3"></path>

@@ -212,18 +212,19 @@ function toPascalCase(str) {
 }
 
 function svgToComponent(svgContent, componentName, isBold) {
-  // Strip XML declaration and root SVG attrs; extract inner content
+  // Strip XML declaration, root SVG attrs, and title elements
   const inner = svgContent
     .replace(/<\?xml[^?]*\?>\s*/g, "")
     .replace(/<svg[^>]*>/, "")
     .replace(/<\/svg>/, "")
+    .replace(/<title>[^<]*<\/title>/g, "")
     .trim();
 
   const isStrokeBased = /stroke="#000000"/.test(inner);
   const hasFill = /fill="#000000"/.test(inner);
 
   return `import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;

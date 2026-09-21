@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function HideLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Hide</title>
-    <g id="Iconly/Light/Hide" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Hide" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Hide" transform="translate(2.000000, 3.500000)" stroke={color} strokeWidth={strokeWidth}>
             <path d="M7.7606,10.8668 C7.1856,10.2928 6.8356,9.5128 6.8356,8.6378 C6.8356,6.8848 8.2476,5.4718 9.9996,5.4718 C10.8666,5.4718 11.6646,5.8228 12.2296,6.3968" id="Stroke-1"></path>
             <path d="M13.1048,9.1989 C12.8728,10.4889 11.8568,11.5069 10.5678,11.7409" id="Stroke-3"></path>

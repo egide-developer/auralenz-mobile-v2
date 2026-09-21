@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function WorkLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Work</title>
-    <g id="Iconly/Light/Work" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Work" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Work" transform="translate(2.000000, 2.000000)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="9.9951" y1="14.6768" x2="9.9951" y2="12.1398" id="Stroke-1"></line>
             <g id="Group-8" transform="translate(0.000000, 0.739900)">

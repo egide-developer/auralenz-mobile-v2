@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function EditLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Edit</title>
-    <g id="Iconly/Light/Edit" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Edit" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Edit" transform="translate(3.000000, 3.000000)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="10.7473996" y1="17.4429051" x2="18" y2="17.4429051" id="Stroke-1"></line>
             <path d="M9.7800071,0.794792587 C10.5556498,-0.132213323 11.949987,-0.268144478 12.8962256,0.491732963 C12.9485416,0.532957985 14.6294799,1.83878843 14.6294799,1.83878843 C15.6689776,2.46719147 15.9919725,3.80310504 15.3493946,4.8225887 C15.3152754,4.877184 5.81194644,16.7644749 5.81194644,16.7644749 C5.49577537,17.1588981 5.01583223,17.3917638 4.50290722,17.3973347 L0.863527997,17.4430165 L0.0435303654,13.9723153 C-0.0713375414,13.4843002 0.0435303654,12.9717729 0.359701436,12.5773497 L9.7800071,0.794792587 Z" id="Stroke-3"></path>

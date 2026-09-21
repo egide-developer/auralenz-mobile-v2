@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function DocumentLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Document</title>
-    <g id="Iconly/Light/Document" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Document" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Document" transform="translate(3.000000, 2.000000)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="12.7162" y1="14.2234" x2="5.4962" y2="14.2234" id="Stroke-1"></line>
             <line x1="12.7162" y1="10.0369" x2="5.4962" y2="10.0369" id="Stroke-2"></line>

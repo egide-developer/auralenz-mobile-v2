@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function FilterLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Filter</title>
-    <g id="Iconly/Light/Filter" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Filter" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Filter" transform="translate(4.000000, 4.500000)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="6.33015655" y1="12.0929063" x2="0.0294393477" y2="12.0929063" id="Stroke-1"></line>
             <line x1="9.14048198" y1="2.40037662" x2="15.4411992" y2="2.40037662" id="Stroke-3"></line>

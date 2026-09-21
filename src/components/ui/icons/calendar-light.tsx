@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function CalendarLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Calendar</title>
-    <g id="Iconly/Light/Calendar" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Calendar" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Calendar" transform="translate(3.000000, 2.000000)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="0.0926400664" y1="7.40425532" x2="17.9165888" y2="7.40425532" id="Line_200"></line>
             <line x1="13.4420736" y1="11.3096927" x2="13.4513376" y2="11.3096927" id="Line_201"></line>

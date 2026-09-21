@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function SwapLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Swap</title>
-    <g id="Iconly/Light/Swap" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Swap" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Swap" transform="translate(2.000000, 3.000000)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="14.8395556" y1="17.1642222" x2="14.8395556" y2="3.54644444" id="Stroke-1"></line>
             <polyline id="Stroke-3" points="18.9172222 13.0681111 14.8394444 17.1647778 10.7616667 13.0681111"></polyline>

@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function DownloadLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Download</title>
-    <g id="Iconly/Light/Download" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Download" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Downlaod" transform="translate(2.000000, 3.000000)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="16.1427" y1="6.4156" x2="4.1017" y2="6.4156" id="Stroke-1" transform="translate(10.122200, 6.415600) rotate(-270.000000) translate(-10.122200, -6.415600) "></line>
             <polyline id="Stroke-3" transform="translate(10.122200, 10.972400) rotate(-270.000000) translate(-10.122200, -10.972400) " points="8.6582 8.0564 11.5862 10.9724 8.6582 13.8884"></polyline>

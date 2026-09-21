@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function VoiceLight({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light/Voice</title>
-    <g id="Iconly/Light/Voice" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+      <g id="Iconly/Light/Voice" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
         <g id="Voice" transform="translate(4.000000, 2.000000)" stroke={color} strokeWidth={strokeWidth}>
             <line x1="7.99979045" y1="20" x2="7.99979045" y2="16.8390306" id="Stroke-1"></line>
             <path d="M7.99979045,12.8480829 L7.99979045,12.8480829 C5.75658438,12.8480829 3.937712,11.0218152 3.937712,8.76819031 L3.937712,4.08094524 C3.937712,1.82732033 5.75658438,-3.55271368e-15 7.99979045,-3.55271368e-15 C10.2440443,-3.55271368e-15 12.0618689,1.82732033 12.0618689,4.08094524 L12.0618689,8.76819031 C12.0618689,11.0218152 10.2440443,12.8480829 7.99979045,12.8480829 Z" id="Stroke-3"></path>

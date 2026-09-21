@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Line, G } from "react-native-svg";
+import Svg, { Path, Circle, Line, G, Polygon, Defs, Use } from "react-native-svg";
 
 interface Props {
   size?: number;
@@ -10,8 +10,7 @@ interface Props {
 export function LogoutBold({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <title>Iconly/Light-Outline/Logout</title>
-    <defs>
+      <defs>
         <polygon id="path-1" points="0.10964744 0.33524936 4.537 0.33524936 4.537 7.666 0.10964744 7.666"></polygon>
     </defs>
     <g id="Iconly/Light-Outline/Logout" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd">
