@@ -21,10 +21,10 @@ export default function RootLayout() {
   const isDark = useThemeStore((s) => s.isDark);
 
   const [fontsLoaded] = useFonts({
-    Urbanist_400Regular,
-    Urbanist_500Medium,
-    Urbanist_600SemiBold,
-    Urbanist_700Bold,
+    "Urbanist-Regular": Urbanist_400Regular,
+    "Urbanist-Medium": Urbanist_500Medium,
+    "Urbanist-SemiBold": Urbanist_600SemiBold,
+    "Urbanist-Bold": Urbanist_700Bold,
   });
 
   useEffect(() => {

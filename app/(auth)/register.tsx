@@ -225,7 +225,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     fontSize: Typography.body.fontSize,
-    fontWeight: Typography.body.fontWeight,
   },
   passwordWrapper: {
     position: "relative",
