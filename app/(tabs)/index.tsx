@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
-    paddingTop: 60,
+    paddingTop: 12,
     paddingBottom: Spacing.md,
     borderBottomWidth: 0.5,
   },
