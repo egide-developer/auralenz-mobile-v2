@@ -32,6 +32,13 @@ export default function TabLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="create"
+          options={{
+            title: "Create",
+            href: null,
+          }}
+        />
       </Tabs>
       <BottomNav />
     </View>

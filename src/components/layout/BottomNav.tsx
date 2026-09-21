@@ -53,7 +53,7 @@ export function BottomNav() {
 
   const handleCreate = () => {
     if (!isCreate) {
-      router.push("/(modals)/create");
+      router.push("/create");
       return;
     }
     router.back();
