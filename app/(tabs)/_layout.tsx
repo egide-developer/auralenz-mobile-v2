@@ -1,4 +1,5 @@
 import { Redirect, Tabs } from "expo-router";
+import { View } from "react-native";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
@@ -13,7 +14,7 @@ export default function TabLayout() {
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -28,10 +29,11 @@ export default function TabLayout() {
           name="explore"
           options={{
             title: "Explore",
-            href: null, // hidden from tab bar
+            href: null,
           }}
         />
       </Tabs>
-    </>
+      <BottomNav />
+    </View>
   );
 }
