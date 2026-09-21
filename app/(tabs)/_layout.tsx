@@ -15,33 +15,31 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
-        <Tabs
-          screenOptions={{
-            headerShown: false,
-            tabBarStyle: { display: "none" },
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { display: "none" },
+        }}
+      >
+        <Tabs.Screen name="index" options={{ title: "Home" }} />
+        <Tabs.Screen name="search" options={{ title: "Search" }} />
+        <Tabs.Screen name="messages" options={{ title: "Messages" }} />
+        <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+        <Tabs.Screen
+          name="explore"
+          options={{
+            title: "Explore",
+            href: null,
           }}
-        >
-          <Tabs.Screen name="index" options={{ title: "Home" }} />
-          <Tabs.Screen name="search" options={{ title: "Search" }} />
-          <Tabs.Screen name="messages" options={{ title: "Messages" }} />
-          <Tabs.Screen name="profile" options={{ title: "Profile" }} />
-          <Tabs.Screen
-            name="explore"
-            options={{
-              title: "Explore",
-              href: null,
-            }}
-          />
-          <Tabs.Screen
-            name="create"
-            options={{
-              title: "Create",
-              href: null,
-            }}
-          />
-        </Tabs>
-      </View>
+        />
+        <Tabs.Screen
+          name="create"
+          options={{
+            title: "Create",
+            href: null,
+          }}
+        />
+      </Tabs>
       <BottomNav />
     </View>
   );
