@@ -10,11 +10,11 @@ interface Props {
 export function ArrowDown2Light({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <g id="Iconly/Light/Arrow---Down-2" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
-        <g id="Arrow---Down-2" transform="translate(5.000000, 8.500000)" stroke={color} strokeWidth={strokeWidth}>
+      <G id="Iconly/Light/Arrow---Down-2" stroke="none" strokeWidth={strokeWidth} fill="none" fillRule="evenodd" strokeLinecap="round" strokeLinejoin="round">
+        <G id="Arrow---Down-2" transform="translate(5.000000, 8.500000)" stroke={color} strokeWidth={strokeWidth}>
             <polyline id="Stroke-1" points="14 0 7 7 0 0"></polyline>
-        </g>
-    </g>
+        </G>
+    </G>
     </Svg>
   );
 }

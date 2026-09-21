@@ -235,7 +235,19 @@ interface Props {
 export function ${componentName}({ size = 24, color = "#000000", strokeWidth = 1.5 }: Props) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      ${inner.replace(/fill="#000000"/g, 'fill={color}').replace(/stroke="#000000"/g, 'stroke={color}').replace(/stroke-width="1\.5"/g, 'strokeWidth={strokeWidth}').replace(/stroke-linecap="round"/g, 'strokeLinecap="round"').replace(/stroke-linejoin="round"/g, 'strokeLinejoin="round"').replace(/stroke-linecap="square"/g, 'strokeLinecap="square"').replace(/fill-rule="evenodd"/g, 'fillRule="evenodd"').replace(/clip-rule="evenodd"/g, 'clipRule="evenodd"').replace(/opacity="0\.4"/g, 'opacity={0.4}').replace(/xlink:href/g, 'xlinkHref')}
+      ${inner
+        .replace(/fill="#000000"/g, 'fill={color}')
+        .replace(/stroke="#000000"/g, 'stroke={color}')
+        .replace(/stroke-width="1\.5"/g, 'strokeWidth={strokeWidth}')
+        .replace(/stroke-linecap="round"/g, 'strokeLinecap="round"')
+        .replace(/stroke-linejoin="round"/g, 'strokeLinejoin="round"')
+        .replace(/stroke-linecap="square"/g, 'strokeLinecap="square"')
+        .replace(/fill-rule="evenodd"/g, 'fillRule="evenodd"')
+        .replace(/clip-rule="evenodd"/g, 'clipRule="evenodd"')
+        .replace(/opacity="0\.4"/g, 'opacity={0.4}')
+        .replace(/xlink:href/g, 'xlinkHref')
+        .replace(/<(path|circle|line|g|polygon|defs|use|rect|ellipse|text|image)\b/g, (m, tag) => '<' + tag.charAt(0).toUpperCase() + tag.slice(1))
+        .replace(/<\/(path|circle|line|g|polygon|defs|use|rect|ellipse|text|image)\b/g, (m, tag) => '</' + tag.charAt(0).toUpperCase() + tag.slice(1))}
     </Svg>
   );
 }
