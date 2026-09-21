@@ -1,12 +1,13 @@
 // AuraLenz BottomNav — mirrors web MobileNav.tsx
 // Floating glass pill with 4 tabs + separate Create FAB
 // Animated sliding active pill indicator
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  LayoutChangeEvent,
 } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import Animated, {
@@ -49,20 +50,29 @@ export function BottomNav() {
   const totalUnread = useUnreadStore((s) => s.totalUnread);
   const isCreate = pathname.startsWith("/create");
 
+  const [pillWidth, setPillWidth] = useState(0);
+  const tabWidth = pillWidth > 0 ? pillWidth / NAV_ITEMS.length : 0;
+
   const activeIndex = NAV_ITEMS.findIndex((item) =>
     item.path === "/" ? pathname === "/" : pathname.startsWith(item.path)
   );
   const safeIndex = activeIndex >= 0 ? activeIndex : 0;
 
-  const translateX = useSharedValue(safeIndex);
+  const indicatorX = useSharedValue(0);
 
   React.useEffect(() => {
-    translateX.value = safeIndex;
-  }, [safeIndex]);
+    if (tabWidth > 0) {
+      indicatorX.value = safeIndex * tabWidth;
+    }
+  }, [safeIndex, tabWidth]);
 
-  const pillStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: withSpring(translateX.value * (100 / NAV_ITEMS.length), SPRING_CONFIG) }],
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: withSpring(indicatorX.value, SPRING_CONFIG) }],
   }));
+
+  const onPillLayout = (e: LayoutChangeEvent) => {
+    setPillWidth(e.nativeEvent.layout.width - 8); // minus paddingHorizontal*2
+  };
 
   const handleCreate = () => {
     if (!isCreate) {
@@ -78,6 +88,7 @@ export function BottomNav() {
         <View style={styles.dockRow}>
           {/* Main pill with 4 tabs */}
           <View
+            onLayout={onPillLayout}
             style={[
               styles.pill,
               {
@@ -90,19 +101,21 @@ export function BottomNav() {
             <View style={styles.hairlineGlow} />
 
             {/* Animated sliding indicator */}
-            <Animated.View
-              style={[
-                styles.activeIndicator,
-                pillStyle,
-                {
-                  width: `${100 / NAV_ITEMS.length}%`,
-                  backgroundColor: isDark ? Colors.dark.primary + "12" : Colors.light.primary + "12",
-                  borderColor: isDark ? Colors.dark.primary + "1A" : Colors.light.primary + "1A",
-                },
-              ]}
-            />
+            {tabWidth > 0 && (
+              <Animated.View
+                style={[
+                  styles.activeIndicator,
+                  indicatorStyle,
+                  {
+                    width: tabWidth,
+                    backgroundColor: isDark ? Colors.dark.primary + "12" : Colors.light.primary + "12",
+                    borderColor: isDark ? Colors.dark.primary + "1A" : Colors.light.primary + "1A",
+                  },
+                ]}
+              />
+            )}
 
-            {NAV_ITEMS.map((item, index) => {
+            {NAV_ITEMS.map((item) => {
               const isActive =
                 item.path === "/"
                   ? pathname === "/"
