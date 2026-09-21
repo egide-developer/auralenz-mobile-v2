@@ -21,8 +21,10 @@ export default function FeedScreen() {
   const fetchPosts = useCallback(async () => {
     try {
       const { data } = await api.get(API.posts.list);
-      setPosts(data.data || data.items || data);
-    } catch {} finally {
+      setPosts(data.posts || data.data || data.items || data);
+    } catch (e: any) {
+      console.log("Fetch posts error:", e?.response?.status, e?.message);
+    } finally {
       setLoading(false);
       setRefreshing(false);
     }

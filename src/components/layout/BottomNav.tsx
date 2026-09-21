@@ -71,7 +71,7 @@ export function BottomNav() {
   }));
 
   const onPillLayout = (e: LayoutChangeEvent) => {
-    setPillWidth(e.nativeEvent.layout.width - 8); // minus paddingHorizontal*2
+    setPillWidth(e.nativeEvent.layout.width - 4); // minus paddingHorizontal*2
   };
 
   const handleCreate = () => {
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 11,
   },
   pill: {
     flex: 1,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: Radius.pill,
     borderWidth: 1,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     paddingVertical: 2,
     overflow: "hidden",
     position: "relative",
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 1,
     bottom: 1,
-    left: 4,
+    left: 3,
     borderRadius: Radius.pill,
     borderWidth: 1,
   },
