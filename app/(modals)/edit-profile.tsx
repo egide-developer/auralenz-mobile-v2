@@ -1,11 +1,14 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { Radius, Spacing } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
+import { Shadows } from "../../src/theme/shadows";
+import { Icon } from "../../src/components/ui/Icon";
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -41,62 +44,104 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, flexDirection: "row", alignItems: "center" }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+    <ScrollView style={[styles.screen, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
+      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 20, fontWeight: "700", color: colors.foreground, flex: 1 }}>Edit Profile</Text>
-        <TouchableOpacity onPress={handleSave} disabled={loading}>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.primary }}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Edit Profile</Text>
+        <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn}>
+          <Text style={[styles.saveText, { color: colors.primary, opacity: loading ? 0.5 : 1 }]}>
             {loading ? "Saving..." : "Save"}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <View style={{ alignItems: "center", paddingVertical: 20 }}>
+      <View style={styles.avatarSection}>
         <TouchableOpacity onPress={pickAvatar}>
-          <View
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
-              backgroundColor: colors.muted,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="camera-outline" size={28} color={colors.mutedForeground} />
+          <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
+            <Icon name="camera" set="light" size={28} color={colors.mutedForeground} />
           </View>
         </TouchableOpacity>
         <TouchableOpacity onPress={pickAvatar}>
-          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "600", marginTop: 8 }}>
-            Change Photo
-          </Text>
+          <Text style={[styles.changePhoto, { color: colors.primary }]}>Change Photo</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={{ paddingHorizontal: 16, gap: 16 }}>
-        <View>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.mutedForeground, marginBottom: 6 }}>Username</Text>
+      <View style={styles.form}>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>Username</Text>
           <TextInput
             value={username}
             onChangeText={setUsername}
-            style={{ height: 48, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.muted, paddingHorizontal: 14, color: colors.foreground, fontSize: 15 }}
+            style={[styles.input, {
+              color: colors.foreground,
+              backgroundColor: colors.card + "80",
+              borderColor: colors.border + "4D",
+            }, Shadows[isDark ? "dark" : "light"]["soft"]]}
           />
         </View>
-        <View>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.mutedForeground, marginBottom: 6 }}>Bio</Text>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>Bio</Text>
           <TextInput
             value={bio}
             onChangeText={setBio}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
-            style={{ height: 100, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.muted, paddingHorizontal: 14, paddingTop: 12, color: colors.foreground, fontSize: 15 }}
+            style={[styles.bioInput, {
+              color: colors.foreground,
+              backgroundColor: colors.card + "80",
+              borderColor: colors.border + "4D",
+            }, Shadows[isDark ? "dark" : "light"]["soft"]]}
           />
         </View>
       </View>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  scrollContent: { paddingBottom: 40 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 0.5,
+  },
+  headerTitle: { ...Typography.h4 },
+  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  saveBtn: { paddingHorizontal: 8 },
+  saveText: { ...Typography.body, fontWeight: "600" },
+  avatarSection: { alignItems: "center", paddingVertical: Spacing.xl },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  changePhoto: { ...Typography.bodySmall, fontWeight: "600", marginTop: 8 },
+  form: { paddingHorizontal: Spacing.lg, gap: 16 },
+  inputGroup: { gap: 6 },
+  label: { ...Typography.label, paddingHorizontal: 4 },
+  input: {
+    height: 48,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    ...Typography.body,
+  },
+  bioInput: {
+    height: 100,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    ...Typography.body,
+  },
+});

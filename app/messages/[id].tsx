@@ -1,10 +1,13 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TextInput, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
 import { useEffect, useState, useRef } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { Radius, Spacing } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
+import { Shadows } from "../../src/theme/shadows";
+import { Icon } from "../../src/components/ui/Icon";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { Message } from "../../src/types";
@@ -41,38 +44,36 @@ export default function ChatDetailScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={[styles.screen, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={{ paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, flexDirection: "row", alignItems: "center", borderBottomWidth: 0.5, borderBottomColor: colors.border }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>Chat</Text>
-        </View>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Chat</Text>
+        <View style={styles.backBtn} />
       </View>
 
       <FlatList
         ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16, flexGrow: 1, justifyContent: "flex-end" }}
+        contentContainerStyle={styles.messageList}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
         renderItem={({ item }) => {
           const isMe = item.senderId === user?.id;
           return (
-            <View style={{ flexDirection: "row", justifyContent: isMe ? "flex-end" : "flex-start", marginBottom: 8 }}>
+            <View style={[styles.messageRow, isMe && styles.messageRowMe]}>
               <View
-                style={{
-                  maxWidth: "78%",
-                  backgroundColor: isMe ? colors.primary : colors.muted,
-                  borderRadius: 18,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                }}
+                style={[
+                  styles.bubble,
+                  isMe
+                    ? [styles.bubbleMe, { backgroundColor: colors.primary }]
+                    : [styles.bubbleThem, { backgroundColor: colors.card, borderColor: colors.border + "30" }],
+                ]}
               >
-                <Text style={{ color: isMe ? colors.primaryForeground : colors.foreground, fontSize: 15, lineHeight: 20 }}>
+                <Text style={{ color: isMe ? colors.primaryForeground : colors.foreground, ...Typography.body, lineHeight: 20 }}>
                   {item.content}
                 </Text>
               </View>
@@ -81,24 +82,81 @@ export default function ChatDetailScreen() {
         }}
       />
 
-      <View style={{ flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: colors.border, gap: 8 }}>
+      <View style={[styles.inputBar, { borderTopColor: colors.border + "66" }]}>
         <TextInput
           value={text}
           onChangeText={setText}
           placeholder="Message..."
-          placeholderTextColor={colors.mutedForeground}
+          placeholderTextColor={colors.mutedForeground + "80"}
           multiline
           maxLength={2000}
-          style={{ flex: 1, minHeight: 40, maxHeight: 120, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.muted, paddingHorizontal: 14, paddingVertical: 10, color: colors.foreground, fontSize: 15 }}
+          style={[styles.chatInput, {
+            color: colors.foreground,
+            backgroundColor: colors.card + "80",
+            borderColor: colors.border + "4D",
+          }, Shadows[isDark ? "dark" : "light"]["soft"]]}
         />
         <TouchableOpacity
           onPress={send}
           disabled={!text.trim()}
-          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: text.trim() ? colors.primary : colors.muted, alignItems: "center", justifyContent: "center" }}
+          style={[styles.sendBtn, {
+            backgroundColor: text.trim() ? colors.primary : colors.muted,
+          }]}
         >
-          <Ionicons name="send" size={18} color={text.trim() ? colors.primaryForeground : colors.mutedForeground} />
+          <Icon
+            name="send"
+            set="bold"
+            size={18}
+            color={text.trim() ? colors.primaryForeground : colors.mutedForeground}
+          />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 0.5,
+  },
+  headerTitle: { ...Typography.h4 },
+  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  messageList: { padding: Spacing.base, flexGrow: 1, justifyContent: "flex-end" },
+  messageRow: { flexDirection: "row", justifyContent: "flex-start", marginBottom: 8 },
+  messageRowMe: { justifyContent: "flex-end" },
+  bubble: { maxWidth: "78%", borderRadius: Radius.xl, paddingHorizontal: 14, paddingVertical: 10 },
+  bubbleMe: {},
+  bubbleThem: { borderWidth: 1 },
+  inputBar: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderTopWidth: 0.5,
+    gap: 8,
+  },
+  chatInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 120,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    ...Typography.body,
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

@@ -1,9 +1,12 @@
-import { View, Text, ScrollView, TouchableOpacity, Switch } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { Radius, Spacing } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
+import { Shadows } from "../../src/theme/shadows";
+import { Icon } from "../../src/components/ui/Icon";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -17,45 +20,44 @@ export default function SettingsScreen() {
     {
       title: "Account",
       items: [
-        { icon: "person-outline" as const, label: "Edit Profile", route: "/(modals)/edit-profile" },
-        { icon: "lock-closed-outline" as const, label: "Change Password", route: "/(modals)/change-password" },
-        { icon: "mail-outline" as const, label: "Email Settings", route: "" },
+        { icon: "edit-square", label: "Edit Profile", route: "/(modals)/edit-profile" },
+        { icon: "lock", label: "Change Password", route: "/(modals)/change-password" },
+        { icon: "notification", label: "Email Settings", route: "" },
       ],
     },
     {
       title: "Preferences",
       items: [
-        { icon: "moon-outline" as const, label: "Dark Mode", toggle: true, value: isDark, onToggle: toggleTheme },
-        { icon: "notifications-outline" as const, label: "Notifications", route: "/(modals)/notification-settings" },
-        { icon: "shield-outline" as const, label: "Privacy", route: "/(modals)/privacy" },
-        { icon: "ban-outline" as const, label: "Blocked Users", route: "/(modals)/blocked-users" },
+        { icon: "show", label: "Dark Mode", toggle: true, value: isDark, onToggle: toggleTheme },
+        { icon: "notification", label: "Notifications", route: "/(modals)/notification-settings" },
+        { icon: "shield", label: "Privacy", route: "/(modals)/privacy" },
+        { icon: "danger", label: "Blocked Users", route: "/(modals)/blocked-users" },
       ],
     },
     {
       title: "About",
       items: [
-        { icon: "information-circle-outline" as const, label: "About", route: "" },
-        { icon: "document-text-outline" as const, label: "Terms of Service", route: "" },
-        { icon: "eye-outline" as const, label: "Privacy Policy", route: "" },
+        { icon: "info-square", label: "About", route: "" },
+        { icon: "document", label: "Terms of Service", route: "" },
+        { icon: "show", label: "Privacy Policy", route: "" },
       ],
     },
   ];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, flexDirection: "row", alignItems: "center" }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+    <ScrollView style={[styles.screen, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
+      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 20, fontWeight: "700", color: colors.foreground }}>Settings</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Settings</Text>
+        <View style={styles.backBtn} />
       </View>
 
       {sections.map((section) => (
-        <View key={section.title} style={{ marginTop: 24, paddingHorizontal: 16 }}>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.mutedForeground, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {section.title}
-          </Text>
-          <View style={{ backgroundColor: colors.card, borderRadius: 14, borderWidth: 0.5, borderColor: colors.border, overflow: "hidden" }}>
+        <View key={section.title} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{section.title}</Text>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border + "30" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
             {section.items.map((item, i) => (
               <TouchableOpacity
                 key={item.label}
@@ -63,21 +65,14 @@ export default function SettingsScreen() {
                   if ("toggle" in item && item.onToggle) item.onToggle();
                   else if ("route" in item && item.route) router.push(item.route as any);
                 }}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingVertical: 14,
-                  paddingHorizontal: 14,
-                  borderBottomWidth: i < section.items.length - 1 ? 0.5 : 0,
-                  borderBottomColor: colors.border,
-                }}
+                style={[styles.menuRow, i < section.items.length - 1 && { borderBottomColor: colors.border + "30", borderBottomWidth: 0.5 }]}
               >
-                <Ionicons name={item.icon} size={20} color={colors.foreground} style={{ width: 26 }} />
-                <Text style={{ flex: 1, fontSize: 15, color: colors.foreground }}>{item.label}</Text>
+                <Icon name={item.icon} set="light" size={20} color={colors.foreground} />
+                <Text style={[styles.menuLabel, { color: colors.foreground }]}>{item.label}</Text>
                 {"toggle" in item ? (
                   <Switch value={item.value} onValueChange={item.onToggle} trackColor={{ true: colors.primary }} />
                 ) : (
-                  <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+                  <Icon name="arrow-right" set="light" size={16} color={colors.mutedForeground} />
                 )}
               </TouchableOpacity>
             ))}
@@ -85,14 +80,62 @@ export default function SettingsScreen() {
         </View>
       ))}
 
-      <View style={{ paddingHorizontal: 16, marginTop: 32 }}>
+      <View style={styles.logoutContainer}>
         <TouchableOpacity
           onPress={logout}
-          style={{ height: 50, borderRadius: 14, borderWidth: 1, borderColor: colors.destructive, alignItems: "center", justifyContent: "center" }}
+          style={[styles.logoutBtn, { borderColor: Colors.light.destructive + "40" }]}
         >
-          <Text style={{ fontSize: 15, fontWeight: "600", color: colors.destructive }}>Log Out</Text>
+          <Icon name="logout" set="light" size={18} color={Colors.light.destructive} />
+          <Text style={[styles.logoutText, { color: Colors.light.destructive }]}>Log Out</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  scrollContent: { paddingBottom: 40 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 0.5,
+  },
+  headerTitle: { ...Typography.h4 },
+  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  section: { marginTop: 24, paddingHorizontal: Spacing.lg },
+  sectionTitle: {
+    ...Typography.label,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  sectionCard: {
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  menuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 12,
+  },
+  menuLabel: { ...Typography.body, flex: 1 },
+  logoutContainer: { paddingHorizontal: Spacing.lg, marginTop: 32 },
+  logoutBtn: {
+    height: 50,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  logoutText: { ...Typography.body, fontWeight: "600" },
+});

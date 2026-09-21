@@ -1,8 +1,12 @@
-import { View, Text, TextInput, FlatList } from "react-native";
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet } from "react-native";
 import { useCallback, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { Radius, Spacing } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
+import { Shadows } from "../../src/theme/shadows";
+import { Icon } from "../../src/components/ui/Icon";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 
@@ -24,19 +28,14 @@ export default function SearchScreen() {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: colors.muted,
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            height: 44,
-          }}
-        >
-          <Ionicons name="search-outline" size={18} color={colors.mutedForeground} />
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Search</Text>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+          <Icon name="search" set="light" size={18} color={colors.mutedForeground} />
           <TextInput
             value={query}
             onChangeText={(t) => {
@@ -44,54 +43,114 @@ export default function SearchScreen() {
               search(t);
             }}
             placeholder="Search users..."
-            placeholderTextColor={colors.mutedForeground}
-            style={{ flex: 1, marginLeft: 8, color: colors.foreground, fontSize: 15 }}
+            placeholderTextColor={colors.mutedForeground + "80"}
+            style={[styles.searchInput, { color: colors.foreground }]}
           />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => { setQuery(""); setResults([]); }}>
+              <Icon name="close-square" set="light" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           query.length >= 2 ? (
-            <View style={{ paddingVertical: 40, alignItems: "center" }}>
-              <Text style={{ color: colors.mutedForeground }}>No results</Text>
+            <View style={styles.emptyState}>
+              <Icon name="search" set="light" size={48} color={colors.mutedForeground + "60"} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No results</Text>
             </View>
-          ) : null
+          ) : (
+            <View style={styles.emptyState}>
+              <Icon name="search" set="light" size={48} color={colors.mutedForeground + "40"} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                Type to search for users
+              </Text>
+            </View>
+          )
         }
         renderItem={({ item }) => (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              paddingVertical: 12,
-              borderBottomWidth: 0.5,
-              borderBottomColor: colors.border,
-            }}
+          <TouchableOpacity
+            style={[styles.resultRow, { borderBottomColor: colors.border + "30" }]}
+            onPress={() => router.push({ pathname: "/user/[id]", params: { id: item.id } })}
           >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: colors.muted,
-                marginRight: 12,
-              }}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 15 }}>
-                {item.username}
-              </Text>
+            <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
+              <Icon name="user" set="light" size={18} color={colors.mutedForeground} />
+            </View>
+            <View style={styles.resultMeta}>
+              <Text style={[styles.username, { color: colors.foreground }]}>{item.username}</Text>
               {item.displayName && (
-                <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                  {item.displayName}
-                </Text>
+                <Text style={[styles.displayName, { color: colors.mutedForeground }]}>{item.displayName}</Text>
               )}
             </View>
-          </View>
+            <Icon name="arrow-right" set="light" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
         )}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 0.5,
+  },
+  headerTitle: { ...Typography.h3 },
+  searchContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    height: 44,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    ...Typography.body,
+  },
+  listContent: {
+    paddingHorizontal: Spacing.lg,
+  },
+  emptyState: {
+    paddingVertical: 60,
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyText: {
+    ...Typography.body,
+  },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  resultMeta: { flex: 1 },
+  username: { ...Typography.body, fontWeight: "600" },
+  displayName: { ...Typography.caption, marginTop: 2 },
+});

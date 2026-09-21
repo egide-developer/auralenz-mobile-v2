@@ -1,87 +1,267 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { useState } from "react";
-import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
+import { Link, router } from "expo-router";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { Radius } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
+import { Shadows } from "../../src/theme/shadows";
+import { Icon } from "../../src/components/ui/Icon";
 
-export default function LoginScreen() {
-  const router = useRouter();
-  const login = useAuthStore((s) => s.login);
-  const isDark = useThemeStore((s) => s.isDark);
-  const colors = isDark ? Colors.dark : Colors.light;
+export default function RegisterScreen() {
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const register = useAuthStore((s) => s.register);
+  const isDark = useThemeStore((s) => s.isDark);
+  const colors = isDark ? Colors.dark : Colors.light;
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+  const handleRegister = async () => {
+    if (!displayName || !email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
     setLoading(true);
+    setError("");
     try {
-      await login(email, password);
+      await register(email, password, displayName);
+      router.replace("/(tabs)");
     } catch (e: any) {
-      Alert.alert("Error", e?.response?.data?.message || "Login failed");
+      setError(e?.response?.data?.error || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.foreground }]}>Welcome Back</Text>
-      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-        Sign in to continue
-      </Text>
-
-      <View style={styles.form}>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          placeholderTextColor={colors.mutedForeground}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          style={[styles.input, { backgroundColor: colors.muted, color: colors.foreground, borderColor: colors.border }]}
-        />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          placeholderTextColor={colors.mutedForeground}
-          secureTextEntry
-          style={[styles.input, { backgroundColor: colors.muted, color: colors.foreground, borderColor: colors.border }]}
-        />
-
-        <TouchableOpacity
-          onPress={handleLogin}
-          disabled={loading}
-          style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}
-        >
-          <Text style={[styles.primaryBtnText, { color: colors.primaryForeground }]}>
-            {loading ? "Signing in..." : "Log In"}
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.foreground }]}>
+            Create account
           </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
-          <Text style={[styles.link, { color: colors.mutedForeground }]}>
-            Don't have an account? <Text style={{ color: colors.primary, fontWeight: "600" }}>Sign Up</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+            Start sharing audio with the world
           </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        </View>
+
+        <View style={styles.form}>
+          {error ? (
+            <View style={[styles.errorBox, { backgroundColor: Colors.light.destructive + "15", borderColor: Colors.light.destructive + "30" }]}>
+              <Icon name="danger-circle" set="bold" size={18} color={Colors.light.destructive} />
+              <Text style={[styles.errorText, { color: Colors.light.destructive }]}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>Display Name</Text>
+            <TextInput
+              style={[styles.input, {
+                color: colors.foreground,
+                backgroundColor: colors.card + "80",
+                borderColor: colors.border + "4D",
+              }, Shadows[isDark ? "dark" : "light"]["soft"]]}
+              placeholder="Your name"
+              placeholderTextColor={colors.mutedForeground + "80"}
+              value={displayName}
+              onChangeText={setDisplayName}
+              autoCapitalize="words"
+              autoComplete="name"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
+            <TextInput
+              style={[styles.input, {
+                color: colors.foreground,
+                backgroundColor: colors.card + "80",
+                borderColor: colors.border + "4D",
+              }, Shadows[isDark ? "dark" : "light"]["soft"]]}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.mutedForeground + "80"}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput, {
+                  color: colors.foreground,
+                  backgroundColor: colors.card + "80",
+                  borderColor: colors.border + "4D",
+                }, Shadows[isDark ? "dark" : "light"]["soft"]]}
+                placeholder="Min. 8 characters"
+                placeholderTextColor={colors.mutedForeground + "80"}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete="new-password"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Icon
+                  name={showPassword ? "hide" : "show"}
+                  set="light"
+                  size={20}
+                  color={colors.mutedForeground}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleRegister}
+            disabled={loading}
+            style={[
+              styles.button,
+              { backgroundColor: colors.primary },
+              Shadows[isDark ? "dark" : "light"]["soft-md"],
+              loading && styles.buttonDisabled,
+            ]}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+              {loading ? "Creating account..." : "Create Account"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
+            Already have an account?{" "}
+          </Text>
+          <Link href="/(auth)/login" asChild>
+            <TouchableOpacity>
+              <Text style={[styles.footerLink, { color: colors.primary }]}>
+                Sign In
+              </Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", paddingHorizontal: 32 },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 4 },
-  subtitle: { fontSize: 15, marginBottom: 32 },
-  form: { gap: 12 },
-  input: { height: 52, borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, fontSize: 15 },
-  primaryBtn: { height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", marginTop: 8 },
-  primaryBtnText: { fontSize: 16, fontWeight: "600" },
-  link: { fontSize: 14, textAlign: "center", marginTop: 16 },
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  header: {
+    marginBottom: 32,
+  },
+  title: {
+    ...Typography.h1,
+    marginBottom: 8,
+  },
+  subtitle: {
+    ...Typography.body,
+  },
+  form: {
+    gap: 16,
+  },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+  },
+  errorText: {
+    ...Typography.bodySmall,
+    flex: 1,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  label: {
+    ...Typography.label,
+    paddingHorizontal: 4,
+  },
+  input: {
+    height: 48,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    fontSize: Typography.body.fontSize,
+    fontWeight: Typography.body.fontWeight,
+  },
+  passwordWrapper: {
+    position: "relative",
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeButton: {
+    position: "absolute",
+    right: 16,
+    top: 14,
+  },
+  button: {
+    height: 48,
+    borderRadius: Radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    ...Typography.button,
+    fontSize: 16,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+  footerText: {
+    ...Typography.body,
+  },
+  footerLink: {
+    ...Typography.body,
+    fontWeight: "600",
+  },
 });

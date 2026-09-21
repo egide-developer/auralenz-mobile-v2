@@ -1,7 +1,12 @@
-import { View, Text, FlatList, RefreshControl } from "react-native";
+import { View, Text, FlatList, RefreshControl, TouchableOpacity, StyleSheet } from "react-native";
 import { useCallback, useEffect, useState } from "react";
+import { router } from "expo-router";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { Radius, Spacing } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
+import { Shadows } from "../../src/theme/shadows";
+import { Icon } from "../../src/components/ui/Icon";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { Conversation } from "../../src/types";
@@ -26,81 +31,113 @@ export default function MessagesScreen() {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12 }}>
-        <Text style={{ fontSize: 24, fontWeight: "700", color: colors.foreground }}>
-          Messages
-        </Text>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Messages</Text>
       </View>
+
       <FlatList
         data={conversations}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchConversations(); }} tintColor={colors.primary} />
         }
         ListEmptyComponent={
-          <View style={{ paddingVertical: 60, alignItems: "center" }}>
-            <Text style={{ color: colors.mutedForeground }}>No conversations yet</Text>
+          <View style={styles.emptyState}>
+            <Icon name="chat" set="light" size={48} color={colors.mutedForeground + "60"} />
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No conversations yet</Text>
           </View>
         }
         renderItem={({ item }) => (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              paddingVertical: 14,
-              borderBottomWidth: 0.5,
-              borderBottomColor: colors.border,
-            }}
+          <TouchableOpacity
+            style={[styles.conversationRow, { borderBottomColor: colors.border + "30" }]}
+            onPress={() => router.push({ pathname: "/messages/[id]", params: { id: item.id } })}
           >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: colors.muted,
-                marginRight: 12,
-              }}
-            />
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 15 }} numberOfLines={1}>
+            <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
+              <Icon name="user" set="light" size={20} color={colors.mutedForeground} />
+            </View>
+            <View style={styles.conversationMeta}>
+              <View style={styles.conversationHeader}>
+                <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
                   {item.name || item.participants?.[0]?.user?.username || "Chat"}
                 </Text>
                 {item.lastMessage && (
-                  <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                  <Text style={[styles.time, { color: colors.mutedForeground }]}>
                     {new Date(item.lastMessage.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </Text>
                 )}
               </View>
               {item.lastMessage && (
-                <Text style={{ color: colors.mutedForeground, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+                <Text style={[styles.preview, { color: colors.mutedForeground }]} numberOfLines={1}>
                   {item.lastMessage.content}
                 </Text>
               )}
             </View>
             {item.unreadCount > 0 && (
-              <View
-                style={{
-                  backgroundColor: colors.primary,
-                  borderRadius: 10,
-                  minWidth: 20,
-                  height: 20,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingHorizontal: 6,
-                  marginLeft: 8,
-                }}
-              >
-                <Text style={{ color: "#000", fontSize: 11, fontWeight: "700" }}>
-                  {item.unreadCount}
+              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>
+                  {item.unreadCount > 9 ? "9+" : item.unreadCount}
                 </Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 0.5,
+  },
+  headerTitle: { ...Typography.h3 },
+  listContent: { paddingHorizontal: Spacing.lg },
+  emptyState: {
+    paddingVertical: 80,
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyText: { ...Typography.body },
+  conversationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  conversationMeta: { flex: 1 },
+  conversationHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  name: { ...Typography.body, fontWeight: "600", flex: 1, marginRight: 8 },
+  time: { ...Typography.caption },
+  preview: { ...Typography.bodySmall, marginTop: 2 },
+  badge: {
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    marginLeft: 8,
+  },
+  badgeText: { fontSize: 11, fontWeight: "700" },
+});

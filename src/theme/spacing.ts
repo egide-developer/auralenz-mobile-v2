@@ -1,3 +1,6 @@
+// AuraLenz — spacing & radius tokens
+// Radius: --radius = 1.125rem (18px) from frontend/src/index.css
+
 export const Spacing = {
   xxs: 2,
   xs: 4,
@@ -11,11 +14,10 @@ export const Spacing = {
 } as const;
 
 export const Radius = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 24,
+  sm: 10,    // radius - 8px
+  md: 14,    // radius - 4px
+  lg: 18,    // radius (1.125rem)
+  xl: 22,    // radius + 4px
+  "2xl": 26, // radius + 8px
   pill: 9999,
 } as const;

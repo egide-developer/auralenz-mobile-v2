@@ -1,9 +1,14 @@
-import { View, Text, FlatList, RefreshControl } from "react-native";
+import { View, Text, FlatList, RefreshControl, TouchableOpacity, StyleSheet } from "react-native";
 import { useCallback, useEffect, useState } from "react";
+import { router } from "expo-router";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { Radius, Spacing } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
+import { Shadows } from "../../src/theme/shadows";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import { Icon } from "../../src/components/ui/Icon";
 import type { Post } from "../../src/types";
 
 export default function FeedScreen() {
@@ -34,67 +39,89 @@ export default function FeedScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
-        <Text style={{ color: colors.mutedForeground }}>Loading...</Text>
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <Text style={{ color: colors.mutedForeground, ...Typography.body }}>Loading...</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>AuraLenz</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => router.push("/search")}
+            style={[styles.headerBtn, { backgroundColor: colors.card + "80" }]}
+          >
+            <Icon name="search" set="light" size={20} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/notifications")}
+            style={[styles.headerBtn, { backgroundColor: colors.card + "80" }]}
+          >
+            <Icon name="notification" set="light" size={20} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingVertical: 8 }}
+        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
         ListEmptyComponent={
-          <View style={{ paddingVertical: 60, alignItems: "center" }}>
-            <Text style={{ color: colors.mutedForeground, fontSize: 15 }}>
+          <View style={styles.emptyState}>
+            <Icon name="image" set="light" size={48} color={colors.mutedForeground + "60"} />
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               No posts yet
             </Text>
           </View>
         }
         renderItem={({ item }) => (
-          <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-            <View
-              style={{
-                backgroundColor: colors.card,
-                borderRadius: 16,
-                padding: 16,
-                borderWidth: 0.5,
-                borderColor: colors.border,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    backgroundColor: colors.muted,
-                    marginRight: 10,
-                  }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 14 }}>
+          <View style={styles.postCard}>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border + "30" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+              <View style={styles.postHeader}>
+                <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
+                  <Icon name="user" set="light" size={18} color={colors.mutedForeground} />
+                </View>
+                <View style={styles.postMeta}>
+                  <Text style={[styles.username, { color: colors.foreground }]}>
                     {item.user?.username || "User"}
                   </Text>
                 </View>
+                <TouchableOpacity style={styles.moreBtn}>
+                  <Icon name="more-circle" set="light" size={20} color={colors.mutedForeground} />
+                </TouchableOpacity>
               </View>
+
               {item.caption && (
-                <Text style={{ color: colors.foreground, fontSize: 14, lineHeight: 20 }}>
+                <Text style={[styles.caption, { color: colors.foreground }]}>
                   {item.caption}
                 </Text>
               )}
-              <View style={{ flexDirection: "row", marginTop: 12, gap: 16 }}>
-                <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                  ❤ {item.likesCount}
-                </Text>
-                <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>
-                  💬 {item.commentsCount}
-                </Text>
+
+              <View style={styles.postActions}>
+                <TouchableOpacity style={styles.actionBtn}>
+                  <Icon name="heart" set="light" size={18} color={colors.mutedForeground} />
+                  <Text style={[styles.actionText, { color: colors.mutedForeground }]}>
+                    {item.likesCount}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn}>
+                  <Icon name="chat" set="light" size={18} color={colors.mutedForeground} />
+                  <Text style={[styles.actionText, { color: colors.mutedForeground }]}>
+                    {item.commentsCount}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn}>
+                  <Icon name="send" set="light" size={18} color={colors.mutedForeground} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn}>
+                  <Icon name="bookmark" set="light" size={18} color={colors.mutedForeground} />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -103,3 +130,93 @@ export default function FeedScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 0.5,
+  },
+  headerTitle: {
+    ...Typography.h3,
+  },
+  headerActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  headerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  listContent: {
+    paddingVertical: Spacing.sm,
+  },
+  emptyState: {
+    paddingVertical: 80,
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyText: {
+    ...Typography.body,
+  },
+  postCard: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  card: {
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    padding: Spacing.base,
+  },
+  postHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  postMeta: {
+    flex: 1,
+  },
+  username: {
+    ...Typography.bodySmall,
+    fontWeight: "600",
+  },
+  moreBtn: {
+    padding: 4,
+  },
+  caption: {
+    ...Typography.bodySmall,
+    lineHeight: 20,
+    marginBottom: Spacing.sm,
+  },
+  postActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginTop: Spacing.xs,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  actionText: {
+    ...Typography.caption,
+  },
+});

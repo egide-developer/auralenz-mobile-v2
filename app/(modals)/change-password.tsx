@@ -1,9 +1,12 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { Radius, Spacing } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
+import { Shadows } from "../../src/theme/shadows";
+import { Icon } from "../../src/components/ui/Icon";
 import api from "../../src/api/client";
 
 export default function ChangePasswordScreen() {
@@ -28,28 +31,80 @@ export default function ChangePasswordScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, flexDirection: "row", alignItems: "center" }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}><Ionicons name="chevron-back" size={24} color={colors.foreground} /></TouchableOpacity>
-        <Text style={{ fontSize: 20, fontWeight: "700", color: colors.foreground }}>Change Password</Text>
+    <ScrollView style={[styles.screen, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
+      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Change Password</Text>
+        <View style={styles.backBtn} />
       </View>
-      <View style={{ paddingHorizontal: 16, gap: 14, marginTop: 8 }}>
+
+      <View style={styles.form}>
         {[
-          { label: "Current Password", value: current, set: setCurrent, secure: true },
-          { label: "New Password", value: newPass, set: setNewPass, secure: true },
-          { label: "Confirm Password", value: confirm, set: setConfirm, secure: true },
+          { label: "Current Password", value: current, set: setCurrent },
+          { label: "New Password", value: newPass, set: setNewPass },
+          { label: "Confirm Password", value: confirm, set: setConfirm },
         ].map((f) => (
-          <View key={f.label}>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.mutedForeground, marginBottom: 6 }}>{f.label}</Text>
-            <TextInput value={f.value} onChangeText={f.set} secureTextEntry={f.secure}
-              style={{ height: 48, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.muted, paddingHorizontal: 14, color: colors.foreground, fontSize: 15 }} />
+          <View key={f.label} style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>{f.label}</Text>
+            <TextInput
+              value={f.value}
+              onChangeText={f.set}
+              secureTextEntry
+              style={[styles.input, {
+                color: colors.foreground,
+                backgroundColor: colors.card + "80",
+                borderColor: colors.border + "4D",
+              }, Shadows[isDark ? "dark" : "light"]["soft"]]}
+            />
           </View>
         ))}
-        <TouchableOpacity onPress={handleSubmit} disabled={loading}
-          style={{ height: 50, borderRadius: 14, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", marginTop: 8, opacity: loading ? 0.6 : 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.primaryForeground }}>{loading ? "Saving..." : "Update Password"}</Text>
+
+        <TouchableOpacity
+          onPress={handleSubmit}
+          disabled={loading}
+          style={[styles.button, { backgroundColor: colors.primary }, loading && { opacity: 0.6 }]}
+        >
+          <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+            {loading ? "Saving..." : "Update Password"}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  scrollContent: { paddingBottom: 40 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 60,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 0.5,
+  },
+  headerTitle: { ...Typography.h4 },
+  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  form: { paddingHorizontal: Spacing.lg, gap: 14, marginTop: Spacing.md },
+  inputGroup: { gap: 6 },
+  label: { ...Typography.label, paddingHorizontal: 4 },
+  input: {
+    height: 48,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    ...Typography.body,
+  },
+  button: {
+    height: 50,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  buttonText: { ...Typography.button, fontSize: 16 },
+});
