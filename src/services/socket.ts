@@ -48,41 +48,59 @@ export function getSocket(): Socket | null {
 }
 
 // ─── Event Emitters ────────────────────────────────────────
+// Payload/event names below are dictated by backend/services/socketService.js —
+// keep them in sync with that file, not with convention.
 export function joinConversation(conversationId: string) {
-  socket?.emit("join:conversation", { conversationId });
+  socket?.emit("join_conversation", conversationId);
 }
 
 export function leaveConversation(conversationId: string) {
-  socket?.emit("leave:conversation", { conversationId });
-}
-
-export function sendMessage(conversationId: string, content: string) {
-  socket?.emit("message:send", { conversationId, content });
+  socket?.emit("leave_conversation", conversationId);
 }
 
 export function startTyping(conversationId: string) {
-  socket?.emit("typing:start", { conversationId });
+  socket?.emit("typing_start", { conversationId });
 }
 
 export function stopTyping(conversationId: string) {
-  socket?.emit("typing:stop", { conversationId });
+  socket?.emit("typing_stop", { conversationId });
 }
 
 export function markRead(conversationId: string) {
-  socket?.emit("message:read", { conversationId });
+  socket?.emit("mark_read", { conversationId });
 }
 
 // ─── Event Listeners ───────────────────────────────────────
-export function onNewMessage(callback: (message: any) => void) {
-  socket?.on("message:new", callback);
+// Each returns an unsubscribe function so multiple screens can listen to the
+// same event concurrently without stepping on each other's listeners.
+export function onNewMessage(callback: (data: { message: any; conversationId: string }) => void) {
+  socket?.on("new_message", callback);
+  return () => {
+    socket?.off("new_message", callback);
+  };
+}
+
+export function onMessagesRead(
+  callback: (data: { conversationId: string; readBy: string; messageIds: string[] }) => void
+) {
+  socket?.on("messages_read", callback);
+  return () => {
+    socket?.off("messages_read", callback);
+  };
 }
 
 export function onTypingStart(callback: (data: { userId: string; conversationId: string }) => void) {
-  socket?.on("typing:start", callback);
+  socket?.on("typing_start", callback);
+  return () => {
+    socket?.off("typing_start", callback);
+  };
 }
 
 export function onTypingStop(callback: (data: { userId: string; conversationId: string }) => void) {
-  socket?.on("typing:stop", callback);
+  socket?.on("typing_stop", callback);
+  return () => {
+    socket?.off("typing_stop", callback);
+  };
 }
 
 export function onUnreadUpdate(callback: (data: Record<string, number>) => void) {

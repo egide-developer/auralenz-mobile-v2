@@ -35,6 +35,7 @@ import { Shadows } from "../../src/theme/shadows";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { Icon } from "../../src/components/ui/Icon";
+import { PressableScale } from "../../src/components/ui/PressableScale";
 import { StoryBar } from "../../src/components/feed/StoryBar";
 import type { Post, Comment } from "../../src/types";
 
@@ -57,36 +58,6 @@ function timeAgo(dateStr: string): string {
   if (weeks < 4) return `${weeks}w`;
   const months = Math.floor(days / 30);
   return `${months}mo`;
-}
-
-function PressableScale({
-  children,
-  onPress,
-  style,
-  scaleTo = 0.9,
-}: {
-  children: React.ReactNode;
-  onPress?: () => void;
-  style?: any;
-  scaleTo?: number;
-}) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <AnimatedTouchable
-      activeOpacity={0.9}
-      onPress={onPress}
-      onPressIn={() => {
-        scale.value = withTiming(scaleTo, { duration: 100 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 12, stiffness: 200 });
-      }}
-      style={[style, animStyle]}
-    >
-      {children}
-    </AnimatedTouchable>
-  );
 }
 
 export default function FeedScreen() {

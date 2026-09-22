@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import {
   View,
+  Text,
   TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
@@ -203,14 +204,10 @@ function TabButton({
         />
 
         {item.badge && unreadCount > 0 && (
-          <View style={[styles.badge, { backgroundColor: isDark ? Colors.dark.destructive : Colors.light.destructive }]}>
-            <View style={[styles.badgeInner, { backgroundColor: isDark ? Colors.dark.card : Colors.light.card }]}>
-              <Animated.Text
-                style={[styles.badgeText, { color: isDark ? Colors.dark.destructiveForeground : Colors.light.destructiveForeground }]}
-              >
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </Animated.Text>
-            </View>
+          <View style={[styles.badge, { backgroundColor: isDark ? Colors.dark.primary : Colors.light.primary }]}>
+            <Text style={[styles.badgeText, { color: isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground }]}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </Text>
           </View>
         )}
       </View>
@@ -288,28 +285,18 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    top: -6,
-    right: -10,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    top: -4,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  badgeInner: {
-    flex: 1,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    borderWidth: 2,
+    paddingHorizontal: 5,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
-    lineHeight: 12,
+    lineHeight: 14,
   },
 });

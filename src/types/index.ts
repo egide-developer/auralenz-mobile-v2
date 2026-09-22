@@ -64,27 +64,24 @@ export interface Comment {
 
 export interface Conversation {
   id: string;
-  type: "direct" | "group";
-  name?: string;
-  avatarUrl?: string;
-  participants: Participant[];
-  lastMessage?: LastMessage;
-  unreadCount: number;
-  createdAt: string;
-}
-
-export interface Participant {
-  userId: string;
   user: UserPreview;
-  role?: "admin" | "member";
-  joinedAt: string;
+  lastMessage: LastMessage | null;
+  unreadCount: number;
 }
 
 export interface LastMessage {
-  id: string;
-  content: string;
+  text: string;
+  messageType: "text" | "image" | "audio" | "file";
   senderId: string;
-  createdAt: string;
+  senderName: string;
+  messageId: string;
+  isDeleted: boolean;
+  timestamp: string;
+}
+
+export interface MessageReadEntry {
+  user: string;
+  readAt: string;
 }
 
 export interface Message {
@@ -92,13 +89,19 @@ export interface Message {
   conversationId: string;
   senderId: string;
   sender: UserPreview;
-  content: string;
-  type: "text" | "image" | "audio" | "link" | "system";
-  mediaUrl?: string;
-  linkPreview?: LinkPreview;
-  reactions: Record<string, string[]>;
-  readBy: string[];
+  text: string;
+  images: string[];
+  audioUrl?: string | null;
+  messageType: "text" | "image" | "audio" | "file";
+  reactions: { emoji: string; users: string[] }[];
+  readBy: MessageReadEntry[];
+  isDeleted: boolean;
   createdAt: string;
+  /** Client-generated id used as a stable list key across the optimistic → confirmed transition. */
+  clientId?: string;
+  /** True while an optimistically-added message is still in flight to the server. */
+  pending?: boolean;
+  failed?: boolean;
 }
 
 export interface LinkPreview {

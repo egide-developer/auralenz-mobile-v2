@@ -1,8 +1,15 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
+import { router } from "expo-router";
 import api, { TOKEN_KEY } from "../api/client";
 import { API } from "../api/endpoints";
+import { connectSocket, disconnectSocket } from "../services/socket";
 import type { User } from "../types";
+
+function normalizeUser(raw: any): User | null {
+  if (!raw) return null;
+  return { ...raw, id: raw.id || raw._id };
+}
 
 interface AuthState {
   user: User | null;
@@ -31,8 +38,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
         const { data } = await api.get(API.auth.profile);
-        const user = data.data || data;
+        const user = normalizeUser(data.user || data.data || data);
         set({ user, token, isAuthenticated: true, isLoading: false });
+        connectSocket().catch(() => {});
       } else {
         set({ isLoading: false });
       }
@@ -46,12 +54,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data } = await api.post(API.auth.login, { email, password });
     const res = data.data || data;
     const token = res.accessToken || res.token;
-    const user = res.user;
+    const user = normalizeUser(res.user);
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     if (res.refreshToken) {
       await SecureStore.setItemAsync("refresh_token", res.refreshToken);
     }
     set({ user, token, isAuthenticated: true });
+    connectSocket().catch(() => {});
   },
 
   register: async (username, email, password) => {
@@ -62,12 +71,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     const res = data.data || data;
     const token = res.accessToken || res.token;
-    const user = res.user;
+    const user = normalizeUser(res.user);
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     if (res.refreshToken) {
       await SecureStore.setItemAsync("refresh_token", res.refreshToken);
     }
     set({ user, token, isAuthenticated: true });
+    connectSocket().catch(() => {});
   },
 
   logout: async () => {
@@ -76,12 +86,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {}
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync("refresh_token");
+    disconnectSocket();
     set({ user: null, token: null, isAuthenticated: false });
+    router.replace("/(auth)/login");
   },
 
   updateProfile: async (profileData) => {
     const { data } = await api.put(API.auth.profile, profileData);
-    const user = data.data || data;
+    const user = normalizeUser(data.user || data.data || data);
     set((s) => ({ user: { ...s.user!, ...user } }));
   },
 }));

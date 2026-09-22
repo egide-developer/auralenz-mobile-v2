@@ -4,6 +4,7 @@ import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { BottomNav } from "../../src/components/layout/BottomNav";
+import { UnreadSync } from "../../src/components/layout/UnreadSync";
 
 export default function TabLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -15,6 +16,7 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
+      <UnreadSync />
       <Tabs
         screenOptions={{
           headerShown: false,
