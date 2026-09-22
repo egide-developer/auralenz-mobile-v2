@@ -288,6 +288,15 @@ function PostCard({
   );
 }
 
+function normalizeComment(c: any): Comment {
+  return {
+    ...c,
+    id: c.id || c._id?.toString?.() || c.id,
+    author: c.author,
+    replies: c.replies?.map(normalizeComment) || [],
+  };
+}
+
 function CommentSheet({
   visible,
   onClose,
@@ -318,7 +327,8 @@ function CommentSheet({
       api
         .get(API.comments.list(postId))
         .then(({ data }) => {
-          setComments(data.comments || data.data || data || []);
+          const raw = data.comments || data.data || data || [];
+          setComments(raw.map(normalizeComment));
         })
         .catch(() => {})
         .finally(() => setLoading(false));
@@ -364,7 +374,7 @@ function CommentSheet({
     }
     try {
       const { data } = await api.post(`/api/comments/post/${postId}`, payload);
-      const newComment = data.comment;
+      const newComment = normalizeComment(data.comment);
       if (newComment) {
         if (replyTo) {
           setComments((prev) =>
@@ -387,33 +397,21 @@ function CommentSheet({
     }
   };
 
-  const handleLikeComment = async (comment: Comment) => {
-    const wasLiked = comment.isLiked;
-    const wasCount = comment.likesCount;
-    const updateComment = (c: Comment): Comment => {
-      if (c.id === comment.id) {
-        return { ...c, isLiked: !wasLiked, likesCount: wasLiked ? wasCount - 1 : wasCount + 1 };
-      }
-      if (c.replies) {
-        return { ...c, replies: c.replies.map(updateComment) };
-      }
-      return c;
-    };
-    setComments((prev) => prev.map(updateComment));
+  const handleLikeComment = async (commentId: string) => {
     try {
-      await api.post(API.comments.like(comment.id));
-    } catch {
-      const rollback = (c: Comment): Comment => {
-        if (c.id === comment.id) {
-          return { ...c, isLiked: wasLiked, likesCount: wasCount };
-        }
-        if (c.replies) {
-          return { ...c, replies: c.replies.map(rollback) };
-        }
-        return c;
-      };
-      setComments((prev) => prev.map(rollback));
-    }
+      const { data } = await api.post(API.comments.like(commentId));
+      const updated = normalizeComment(data.comment);
+      if (!updated) return;
+      const patch = (list: Comment[]): Comment[] =>
+        list.map((c) => {
+          if (c.id === commentId) {
+            return { ...c, isLiked: data.isLiked, likesCount: updated.likesCount ?? c.likesCount };
+          }
+          if (c.replies) return { ...c, replies: patch(c.replies) };
+          return c;
+        });
+      setComments((prev) => patch(prev));
+    } catch {}
   };
 
   return (
@@ -452,7 +450,7 @@ function CommentSheet({
                     comment={item}
                     colors={colors}
                     isDark={isDark}
-                    onLike={handleLikeComment}
+                    onLike={(c) => handleLikeComment(c.id)}
                     onReply={(c) => {
                       setReplyTo(c);
                     }}
@@ -533,19 +531,6 @@ function CommentItem({
             <Text style={[styles.commentTime, { color: colors.mutedForeground }]}>
               {timeAgo(comment.createdAt)}
             </Text>
-            <TouchableOpacity style={styles.commentActionBtn} onPress={() => onLike(comment)}>
-              <Icon
-                name="heart"
-                set={comment.isLiked ? "bold" : "light"}
-                size={13}
-                color={comment.isLiked ? Colors.light.destructive : colors.mutedForeground}
-              />
-              {comment.likesCount > 0 && (
-                <Text style={[styles.commentActionText, { color: comment.isLiked ? Colors.light.destructive : colors.mutedForeground }]}>
-                  {comment.likesCount}
-                </Text>
-              )}
-            </TouchableOpacity>
             {depth === 0 && (
               <TouchableOpacity style={styles.commentActionBtn} onPress={() => onReply(comment)}>
                 <Text style={[styles.commentActionText, { color: colors.mutedForeground }]}>Reply</Text>
@@ -553,6 +538,19 @@ function CommentItem({
             )}
           </View>
         </View>
+        <TouchableOpacity style={styles.commentLikeBtn} onPress={() => onLike(comment)}>
+          <Icon
+            name="heart"
+            set={comment.isLiked ? "bold" : "light"}
+            size={14}
+            color={comment.isLiked ? Colors.light.destructive : colors.mutedForeground}
+          />
+          {comment.likesCount > 0 && (
+            <Text style={[styles.commentLikeCount, { color: comment.isLiked ? Colors.light.destructive : colors.mutedForeground }]}>
+              {comment.likesCount}
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
 
       {hasReplies &&
@@ -752,6 +750,18 @@ const styles = StyleSheet.create({
   commentActionText: {
     fontSize: 12,
     fontWeight: "600",
+  },
+  commentLikeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    alignSelf: "flex-start",
+    marginTop: 10,
+    marginLeft: 6,
+    paddingVertical: 4,
+  },
+  commentLikeCount: {
+    fontSize: 11,
   },
   replyBanner: {
     flexDirection: "row",
