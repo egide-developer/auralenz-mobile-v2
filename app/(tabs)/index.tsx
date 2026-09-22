@@ -288,10 +288,21 @@ function PostCard({
   );
 }
 
+function extractId(obj: any): string {
+  if (!obj) return "";
+  if (typeof obj === "string") return obj;
+  if (typeof obj === "object" && obj.$oid) return obj.$oid;
+  if (typeof obj.toString === "function") {
+    const s = obj.toString();
+    if (s !== "[object Object]" && s.length === 24) return s;
+  }
+  return "";
+}
+
 function normalizeComment(c: any): Comment {
   return {
     ...c,
-    id: c.id || c._id?.toString?.() || c.id,
+    id: extractId(c.id) || extractId(c._id),
     author: c.author,
     replies: c.replies?.map(normalizeComment) || [],
   };
@@ -398,20 +409,56 @@ function CommentSheet({
   };
 
   const handleLikeComment = async (commentId: string) => {
+    const prev = comments;
+
+    let targetComment: Comment | undefined;
+    const find = (list: Comment[]): Comment | undefined => {
+      for (const c of list) {
+        if (c.id === commentId) return c;
+        if (c.replies) {
+          const found = find(c.replies);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+    targetComment = find(comments);
+    if (!targetComment) return;
+
+    const wasLiked = targetComment.isLiked;
+    const wasCount = targetComment.likesCount;
+    const newLiked = !wasLiked;
+    const newCount = wasLiked ? wasCount - 1 : wasCount + 1;
+
+    const apply = (list: Comment[]): Comment[] =>
+      list.map((c) => {
+        if (c.id === commentId) return { ...c, isLiked: newLiked, likesCount: newCount };
+        if (c.replies) return { ...c, replies: apply(c.replies) };
+        return c;
+      });
+
+    setComments(apply(comments));
+
     try {
       const { data } = await api.post(API.comments.like(commentId));
-      const updated = normalizeComment(data.comment);
-      if (!updated) return;
-      const patch = (list: Comment[]): Comment[] =>
-        list.map((c) => {
-          if (c.id === commentId) {
-            return { ...c, isLiked: data.isLiked, likesCount: updated.likesCount ?? c.likesCount };
+      const serverCount = data.comment?.likesCount ?? newCount;
+      setComments((cur) =>
+        cur.map((c) => {
+          if (c.id === commentId) return { ...c, isLiked: data.isLiked, likesCount: serverCount };
+          if (c.replies) {
+            return {
+              ...c,
+              replies: c.replies.map((r) =>
+                r.id === commentId ? { ...r, isLiked: data.isLiked, likesCount: serverCount } : r
+              ),
+            };
           }
-          if (c.replies) return { ...c, replies: patch(c.replies) };
           return c;
-        });
-      setComments((prev) => patch(prev));
-    } catch {}
+        })
+      );
+    } catch {
+      setComments(prev);
+    }
   };
 
   return (
