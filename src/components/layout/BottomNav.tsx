@@ -14,6 +14,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "../ui/Icon";
@@ -59,6 +60,7 @@ export function BottomNav() {
   const safeIndex = activeIndex >= 0 ? activeIndex : 0;
 
   const indicatorX = useSharedValue(0);
+  const fabRotation = useSharedValue(0);
 
   React.useEffect(() => {
     if (tabWidth > 0) {
@@ -66,8 +68,16 @@ export function BottomNav() {
     }
   }, [safeIndex, tabWidth]);
 
+  React.useEffect(() => {
+    fabRotation.value = withTiming(isCreate ? 135 : 0, { duration: 300 });
+  }, [isCreate]);
+
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: withSpring(indicatorX.value, SPRING_CONFIG) }],
+  }));
+
+  const fabStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${fabRotation.value}deg` }],
   }));
 
   const onPillLayout = (e: LayoutChangeEvent) => {
@@ -134,27 +144,26 @@ export function BottomNav() {
           </View>
 
           {/* Create FAB */}
-          <TouchableOpacity
-            onPress={handleCreate}
-            activeOpacity={0.8}
-            style={[
-              styles.fab,
-              {
-                backgroundColor: isDark ? Colors.dark.primary : Colors.light.primary,
-                shadowColor: isDark ? Colors.dark.primary : Colors.light.primary,
-                shadowOpacity: isCreate ? 0.9 : 0.6,
-              },
-            ]}
-          >
-            <PlusSolid
-              size={24}
-              color={isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground}
-              strokeWidth={2.5}
-              style={{
-                transform: [{ rotate: isCreate ? "135deg" : "0deg" }],
-              }}
-            />
-          </TouchableOpacity>
+          <Animated.View style={fabStyle}>
+            <TouchableOpacity
+              onPress={handleCreate}
+              activeOpacity={0.8}
+              style={[
+                styles.fab,
+                {
+                  backgroundColor: isDark ? Colors.dark.primary : Colors.light.primary,
+                  shadowColor: isDark ? Colors.dark.primary : Colors.light.primary,
+                  shadowOpacity: isCreate ? 0.9 : 0.6,
+                },
+              ]}
+            >
+              <PlusSolid
+                size={24}
+                color={isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground}
+                strokeWidth={2.5}
+              />
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </View>
     </View>

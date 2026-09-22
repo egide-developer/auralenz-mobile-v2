@@ -11,31 +11,38 @@ import {
   Modal,
   Dimensions,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { router } from "expo-router";
+import { BlurView } from "expo-blur";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   Easing,
   runOnJS,
+  FadeInDown,
+  LinearTransition,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
-import { Radius, Spacing } from "../../src/theme/spacing";
+import { Spacing } from "../../src/theme/spacing";
 import { Typography } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { Icon } from "../../src/components/ui/Icon";
+import { StoryBar } from "../../src/components/feed/StoryBar";
 import type { Post, Comment } from "../../src/types";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const SHEET_HEIGHT_DEFAULT = Math.round(SCREEN_HEIGHT * 2 / 3);
 const SHEET_HEIGHT_EXPANDED = Math.round(SCREEN_HEIGHT * 0.8);
-const EXPAND_AFTER_ITEMS = 10;
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -50,6 +57,36 @@ function timeAgo(dateStr: string): string {
   if (weeks < 4) return `${weeks}w`;
   const months = Math.floor(days / 30);
   return `${months}mo`;
+}
+
+function PressableScale({
+  children,
+  onPress,
+  style,
+  scaleTo = 0.9,
+}: {
+  children: React.ReactNode;
+  onPress?: () => void;
+  style?: any;
+  scaleTo?: number;
+}) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <AnimatedTouchable
+      activeOpacity={0.9}
+      onPress={onPress}
+      onPressIn={() => {
+        scale.value = withTiming(scaleTo, { duration: 100 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+      }}
+      style={[style, animStyle]}
+    >
+      {children}
+    </AnimatedTouchable>
+  );
 }
 
 export default function FeedScreen() {
@@ -145,23 +182,33 @@ export default function FeedScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+      <BlurView
+        intensity={Platform.OS === "ios" ? 40 : 0}
+        tint={isDark ? "dark" : "light"}
+        style={[
+          styles.header,
+          {
+            borderBottomColor: colors.border + "40",
+            backgroundColor: Platform.OS === "ios" ? "transparent" : colors.background,
+          },
+        ]}
+      >
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>AuraLenz</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity
+          <PressableScale
             onPress={() => router.push("/search")}
-            style={[styles.headerBtn, { backgroundColor: colors.card + "80" }]}
+            style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
           >
             <Icon name="search" set="light" size={20} color={colors.mutedForeground} />
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableScale>
+          <PressableScale
             onPress={() => router.push("/notifications")}
-            style={[styles.headerBtn, { backgroundColor: colors.card + "80" }]}
+            style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
           >
             <Icon name="notification" set="light" size={20} color={colors.mutedForeground} />
-          </TouchableOpacity>
+          </PressableScale>
         </View>
-      </View>
+      </BlurView>
 
       <FlatList
         data={posts}
@@ -170,6 +217,7 @@ export default function FeedScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        ListHeaderComponent={<StoryBar colors={colors} isDark={isDark} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Icon name="image" set="light" size={48} color={colors.mutedForeground + "60"} />
@@ -178,9 +226,10 @@ export default function FeedScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <PostCard
             post={item}
+            index={index}
             colors={colors}
             isDark={isDark}
             onLike={handleLike}
@@ -195,6 +244,7 @@ export default function FeedScreen() {
 
 function PostCard({
   post,
+  index,
   colors,
   isDark,
   onLike,
@@ -202,6 +252,7 @@ function PostCard({
   onShare,
 }: {
   post: Post;
+  index: number;
   colors: any;
   isDark: boolean;
   onLike: (p: Post) => void;
@@ -210,72 +261,136 @@ function PostCard({
 }) {
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const firstMedia = post.media?.[0];
+  const heartScale = useSharedValue(0);
+  const likeBtnScale = useSharedValue(1);
+  const saveBtnScale = useSharedValue(1);
+
+  const burstHeart = useCallback(() => {
+    heartScale.value = withSpring(1, { damping: 8, stiffness: 200 }, () => {
+      heartScale.value = withTiming(0, { duration: 250, easing: Easing.in(Easing.cubic) });
+    });
+  }, []);
+
+  const handleDoubleTap = useCallback(() => {
+    if (!post.isLiked) onLike(post);
+    burstHeart();
+  }, [post, onLike, burstHeart]);
+
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      runOnJS(handleDoubleTap)();
+    });
+
+  const handleLikePress = () => {
+    likeBtnScale.value = withSpring(1.3, { damping: 6, stiffness: 300 }, () => {
+      likeBtnScale.value = withSpring(1, { damping: 8, stiffness: 250 });
+    });
+    onLike(post);
+  };
+
+  const handleSavePress = () => {
+    saveBtnScale.value = withSpring(1.25, { damping: 6, stiffness: 300 }, () => {
+      saveBtnScale.value = withSpring(1, { damping: 8, stiffness: 250 });
+    });
+    onSave(post);
+  };
+
+  const heartOverlayStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+    opacity: heartScale.value,
+  }));
+
+  const likeBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: likeBtnScale.value }] }));
+  const saveBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: saveBtnScale.value }] }));
 
   return (
-    <View style={styles.postCard}>
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border + "30" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+    <Animated.View
+      entering={FadeInDown.duration(400).delay(Math.min(index, 6) * 60)}
+      layout={LinearTransition.springify()}
+      style={styles.postCard}
+    >
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.card, borderColor: colors.border + "30" },
+        ]}
+      >
         <View style={styles.postHeader}>
-          <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
-            {post.author?.avatarUrl ? (
-              <Image source={{ uri: post.author.avatarUrl }} style={styles.avatarImg} />
-            ) : (
-              <Icon name="user" set="light" size={18} color={colors.mutedForeground} />
-            )}
-          </View>
-          <View style={styles.postMeta}>
-            <Text style={[styles.username, { color: colors.foreground }]}>
-              {post.author?.username || "User"}
-            </Text>
-            <Text style={[styles.timeAgo, { color: colors.mutedForeground }]}>
-              {timeAgo(post.createdAt)}
-            </Text>
-          </View>
+          <TouchableOpacity activeOpacity={0.8} style={styles.postHeaderLeft}>
+            <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
+              {post.author?.avatarUrl ? (
+                <Image source={{ uri: post.author.avatarUrl }} style={styles.avatarImg} />
+              ) : (
+                <Icon name="user" set="light" size={18} color={colors.mutedForeground} />
+              )}
+            </View>
+            <View style={styles.postMeta}>
+              <Text style={[styles.username, { color: colors.foreground }]}>
+                {post.author?.username || "User"}
+              </Text>
+              <Text style={[styles.timeAgo, { color: colors.mutedForeground }]}>
+                {timeAgo(post.createdAt)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.moreBtn} hitSlop={8}>
+            <Icon name="more-circle" set="light" size={20} color={colors.mutedForeground} />
+          </TouchableOpacity>
         </View>
 
         {firstMedia && firstMedia.url ? (
-          <Image
-            source={{ uri: firstMedia.url }}
-            style={styles.postImage}
-            resizeMode="cover"
-          />
+          <GestureDetector gesture={doubleTapGesture}>
+            <View style={styles.mediaWrap}>
+              <Image source={{ uri: firstMedia.url }} style={styles.postImage} resizeMode="cover" />
+              <Animated.View pointerEvents="none" style={[styles.heartOverlay, heartOverlayStyle]}>
+                <Icon name="heart" set="bold" size={84} color="#FFFFFF" />
+              </Animated.View>
+            </View>
+          </GestureDetector>
         ) : null}
 
         {post.caption ? (
           <Text style={[styles.caption, { color: colors.foreground }]}>
+            <Text style={{ fontWeight: "700" }}>{post.author?.username} </Text>
             {post.caption}
           </Text>
         ) : null}
 
         <View style={styles.postActions}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(post)}>
+          <AnimatedTouchable style={[styles.actionBtn, likeBtnStyle]} onPress={handleLikePress} activeOpacity={0.75}>
             <Icon
               name="heart"
               set={post.isLiked ? "bold" : "light"}
-              size={18}
+              size={19}
               color={post.isLiked ? Colors.light.destructive : colors.mutedForeground}
             />
             <Text style={[styles.actionText, { color: post.isLiked ? Colors.light.destructive : colors.mutedForeground }]}>
               {post.likesCount}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => setCommentModalVisible(true)}>
-            <Icon name="chat" set="light" size={18} color={colors.mutedForeground} />
+          </AnimatedTouchable>
+          <PressableScale
+            style={styles.actionBtn}
+            onPress={() => setCommentModalVisible(true)}
+            scaleTo={0.85}
+          >
+            <Icon name="chat" set="light" size={19} color={colors.mutedForeground} />
             <Text style={[styles.actionText, { color: colors.mutedForeground }]}>
               {post.commentsCount}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => onShare(post)}>
-            <Icon name="send" set="light" size={18} color={colors.mutedForeground} />
-          </TouchableOpacity>
+          </PressableScale>
+          <PressableScale style={styles.actionBtn} onPress={() => onShare(post)} scaleTo={0.85}>
+            <Icon name="send" set="light" size={19} color={colors.mutedForeground} />
+          </PressableScale>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity style={styles.actionBtn} onPress={() => onSave(post)}>
+          <AnimatedTouchable style={saveBtnStyle} onPress={handleSavePress} activeOpacity={0.75}>
             <Icon
               name="bookmark"
               set={post.isSaved ? "bold" : "light"}
-              size={18}
-              color={post.isSaved ? Colors.light.primary : colors.mutedForeground}
+              size={19}
+              color={post.isSaved ? colors.primary : colors.mutedForeground}
             />
-          </TouchableOpacity>
+          </AnimatedTouchable>
         </View>
       </View>
 
@@ -286,7 +401,7 @@ function PostCard({
         colors={colors}
         isDark={isDark}
       />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -496,6 +611,7 @@ function CommentSheet({
               sheetStyle,
               sheetHeightStyle,
               { backgroundColor: colors.background },
+              Shadows[isDark ? "dark" : "light"]["soft-xl"],
             ]}
           >
             <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
@@ -653,6 +769,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: Spacing.md,
     borderBottomWidth: 0.5,
+    overflow: "hidden",
   },
   headerTitle: {
     ...Typography.h3,
@@ -681,18 +798,27 @@ const styles = StyleSheet.create({
     ...Typography.body,
   },
   postCard: {
-    paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
   },
   card: {
-    borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     padding: Spacing.base,
   },
   postHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: Spacing.sm,
+  },
+  postHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  moreBtn: {
+    padding: 4,
   },
   avatar: {
     width: 36,
@@ -719,12 +845,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 1,
   },
+  mediaWrap: {
+    marginHorizontal: -Spacing.base,
+    marginBottom: Spacing.sm,
+  },
   postImage: {
     width: "100%",
-    height: 300,
-    borderRadius: Radius.md,
-    marginBottom: Spacing.sm,
+    height: 320,
     backgroundColor: "#00000010",
+  },
+  heartOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
   },
   caption: {
     ...Typography.bodySmall,
@@ -757,8 +890,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     overflow: "hidden",
   },
   sheetHandle: {
