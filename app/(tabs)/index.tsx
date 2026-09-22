@@ -17,7 +17,8 @@ import { router } from "expo-router";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
+  Easing,
   runOnJS,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -311,8 +312,8 @@ function CommentSheet({
 
   useEffect(() => {
     if (visible) {
-      translateY.value = withSpring(0, { damping: 30, stiffness: 350 });
-      overlayOpacity.value = withSpring(1, { damping: 30, stiffness: 350 });
+      translateY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) });
+      overlayOpacity.value = withTiming(1, { duration: 300 });
       setLoading(true);
       api
         .get(API.comments.list(postId))
@@ -322,8 +323,8 @@ function CommentSheet({
         .catch(() => {})
         .finally(() => setLoading(false));
     } else {
-      translateY.value = withSpring(SCREEN_HEIGHT, { damping: 30, stiffness: 350 });
-      overlayOpacity.value = withSpring(0, { damping: 30, stiffness: 350 });
+      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 350, easing: Easing.in(Easing.cubic) });
+      overlayOpacity.value = withTiming(0, { duration: 250 });
     }
   }, [visible, postId]);
 
@@ -342,7 +343,7 @@ function CommentSheet({
       if (e.translationY > 120 || e.velocityY > 800) {
         dismiss();
       } else {
-        translateY.value = withSpring(0, { damping: 30, stiffness: 350 });
+        translateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
       }
     });
 
