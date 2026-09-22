@@ -9,8 +9,7 @@ import {
   Share,
   TextInput,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
+  Dimensions,
   ActivityIndicator,
 } from "react-native";
 import { useCallback, useEffect, useState, useRef } from "react";
@@ -320,63 +319,60 @@ function CommentModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.modalHeader, { borderBottomColor: colors.border + "66" }]}>
-          <Text style={[styles.modalTitle, { color: colors.foreground }]}>Comments</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Icon name="close-square" set="light" size={22} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={[styles.sheetContent, { backgroundColor: colors.background, height: Math.round(Dimensions.get("window").height * 3 / 7) }]}>
+          <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
 
-        {loading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : (
-          <FlatList
-            data={comments}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.commentList}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No comments yet</Text>
-              </View>
-            }
-            renderItem={({ item }) => (
-              <View style={[styles.commentRow, { borderBottomColor: colors.border + "30" }]}>
-                <View style={[styles.commentAvatar, { backgroundColor: colors.muted }]}>
-                  <Icon name="user" set="light" size={14} color={colors.mutedForeground} />
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <FlatList
+              data={comments}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.commentList}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No comments yet</Text>
                 </View>
-                <View style={styles.commentBody}>
-                  <Text style={[styles.commentUser, { color: colors.foreground }]}>
-                    {item.author?.username || "User"}
-                  </Text>
-                  <Text style={[styles.commentText, { color: colors.foreground }]}>{item.text || item.content}</Text>
+              }
+              renderItem={({ item }) => (
+                <View style={[styles.commentRow, { borderBottomColor: colors.border + "30" }]}>
+                  <View style={[styles.commentAvatar, { backgroundColor: colors.muted }]}>
+                    <Icon name="user" set="light" size={14} color={colors.mutedForeground} />
+                  </View>
+                  <View style={styles.commentBody}>
+                    <Text style={[styles.commentUser, { color: colors.foreground }]}>
+                      {item.author?.username || "User"}
+                    </Text>
+                    <Text style={[styles.commentText, { color: colors.foreground }]}>{item.text || item.content}</Text>
+                  </View>
                 </View>
-              </View>
-            )}
-          />
-        )}
-
-        <View style={[styles.commentInput, { borderTopColor: colors.border + "66", backgroundColor: colors.card }]}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            placeholder="Add a comment..."
-            placeholderTextColor={colors.mutedForeground + "80"}
-            style={[styles.commentTextInput, { color: colors.foreground }]}
-          />
-          <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
-            <Icon
-              name="send"
-              set="bold"
-              size={20}
-              color={text.trim() ? colors.primary : colors.mutedForeground + "40"}
+              )}
             />
-          </TouchableOpacity>
-        </View>
-      </View>
+          )}
+
+          <View style={[styles.commentInput, { borderTopColor: colors.border + "66", backgroundColor: colors.card }]}>
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder="Add a comment..."
+              placeholderTextColor={colors.mutedForeground + "80"}
+              style={[styles.commentTextInput, { color: colors.foreground }]}
+            />
+            <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
+              <Icon
+                name="send"
+                set="bold"
+                size={20}
+                color={text.trim() ? colors.primary : colors.mutedForeground + "40"}
+              />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -480,20 +476,23 @@ const styles = StyleSheet.create({
   actionText: {
     ...Typography.caption,
   },
-  modalContainer: {
+  sheetOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
   },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 12,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
+  sheetContent: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    overflow: "hidden",
   },
-  modalTitle: {
-    ...Typography.h3,
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 8,
   },
   commentList: {
     padding: Spacing.lg,
