@@ -12,8 +12,15 @@ import {
   Dimensions,
   ActivityIndicator,
 } from "react-native";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { router } from "expo-router";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
@@ -23,6 +30,24 @@ import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { Icon } from "../../src/components/ui/Icon";
 import type { Post, Comment } from "../../src/types";
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+const SHEET_HEIGHT = Math.round(SCREEN_HEIGHT * 3 / 7);
+
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return "now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w`;
+  const months = Math.floor(days / 30);
+  return `${months}mo`;
+}
 
 export default function FeedScreen() {
   const isDark = useThemeStore((s) => s.isDark);
@@ -74,9 +99,7 @@ export default function FeedScreen() {
     } catch {
       setPosts((prev) =>
         prev.map((p) =>
-          p.id === post.id
-            ? { ...p, isLiked: wasLiked, likesCount: wasCount }
-            : p
+          p.id === post.id ? { ...p, isLiked: wasLiked, likesCount: wasCount } : p
         )
       );
     }
@@ -106,13 +129,6 @@ export default function FeedScreen() {
       await Share.share({
         message: post.caption || "Check out this post on AuraLenz",
       });
-    } catch {}
-  }, []);
-
-  const handleDelete = useCallback(async (postId: string) => {
-    try {
-      await api.delete(API.posts.byId(postId));
-      setPosts((prev) => prev.filter((p) => p.id !== postId));
     } catch {}
   }, []);
 
@@ -167,7 +183,6 @@ export default function FeedScreen() {
             onLike={handleLike}
             onSave={handleSave}
             onShare={handleShare}
-            onDelete={handleDelete}
           />
         )}
       />
@@ -182,7 +197,6 @@ function PostCard({
   onLike,
   onSave,
   onShare,
-  onDelete,
 }: {
   post: Post;
   colors: any;
@@ -190,7 +204,6 @@ function PostCard({
   onLike: (p: Post) => void;
   onSave: (p: Post) => void;
   onShare: (p: Post) => void;
-  onDelete: (id: string) => void;
 }) {
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const firstMedia = post.media?.[0];
@@ -209,6 +222,9 @@ function PostCard({
           <View style={styles.postMeta}>
             <Text style={[styles.username, { color: colors.foreground }]}>
               {post.author?.username || "User"}
+            </Text>
+            <Text style={[styles.timeAgo, { color: colors.mutedForeground }]}>
+              {timeAgo(post.createdAt)}
             </Text>
           </View>
         </View>
@@ -260,7 +276,7 @@ function PostCard({
         </View>
       </View>
 
-      <CommentModal
+      <CommentSheet
         visible={commentModalVisible}
         onClose={() => setCommentModalVisible(false)}
         postId={post.id}
@@ -271,7 +287,7 @@ function PostCard({
   );
 }
 
-function CommentModal({
+function CommentSheet({
   visible,
   onClose,
   postId,
@@ -288,29 +304,81 @@ function CommentModal({
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
+
+  const translateY = useSharedValue(SCREEN_HEIGHT);
+  const overlayOpacity = useSharedValue(0);
 
   useEffect(() => {
-    if (!visible) return;
-    setLoading(true);
-    api
-      .get(API.comments.list(postId))
-      .then(({ data }) => {
-        setComments(data.comments || data.data || data || []);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    if (visible) {
+      translateY.value = withSpring(0, { damping: 30, stiffness: 350 });
+      overlayOpacity.value = withSpring(1, { damping: 30, stiffness: 350 });
+      setLoading(true);
+      api
+        .get(API.comments.list(postId))
+        .then(({ data }) => {
+          setComments(data.comments || data.data || data || []);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      translateY.value = withSpring(SCREEN_HEIGHT, { damping: 30, stiffness: 350 });
+      overlayOpacity.value = withSpring(0, { damping: 30, stiffness: 350 });
+    }
   }, [visible, postId]);
+
+  const dismiss = () => {
+    "worklet";
+    runOnJS(onClose)();
+  };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      if (e.translationY > 0) {
+        translateY.value = e.translationY;
+      }
+    })
+    .onEnd((e) => {
+      if (e.translationY > 120 || e.velocityY > 800) {
+        dismiss();
+      } else {
+        translateY.value = withSpring(0, { damping: 30, stiffness: 350 });
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
 
   const handleSend = async () => {
     if (!text.trim() || sending) return;
     setSending(true);
+    const payload: any = { text: text.trim() };
+    if (replyTo) {
+      payload.parentComment = replyTo.id;
+    }
     try {
-      const { data } = await api.post(`/api/comments/post/${postId}`, { text: text.trim() });
+      const { data } = await api.post(`/api/comments/post/${postId}`, payload);
       const newComment = data.comment;
       if (newComment) {
-        setComments((prev) => [...prev, newComment]);
+        if (replyTo) {
+          setComments((prev) =>
+            prev.map((c) =>
+              c.id === replyTo.id
+                ? { ...c, replies: [...(c.replies || []), newComment] }
+                : c
+            )
+          );
+        } else {
+          setComments((prev) => [...prev, newComment]);
+        }
       }
       setText("");
+      setReplyTo(null);
     } catch (e: any) {
       console.log("Comment error:", e?.response?.status, e?.message);
     } finally {
@@ -318,62 +386,187 @@ function CommentModal({
     }
   };
 
+  const handleLikeComment = async (comment: Comment) => {
+    const wasLiked = comment.isLiked;
+    const wasCount = comment.likesCount;
+    const updateComment = (c: Comment): Comment => {
+      if (c.id === comment.id) {
+        return { ...c, isLiked: !wasLiked, likesCount: wasLiked ? wasCount - 1 : wasCount + 1 };
+      }
+      if (c.replies) {
+        return { ...c, replies: c.replies.map(updateComment) };
+      }
+      return c;
+    };
+    setComments((prev) => prev.map(updateComment));
+    try {
+      await api.post(API.comments.like(comment.id));
+    } catch {
+      const rollback = (c: Comment): Comment => {
+        if (c.id === comment.id) {
+          return { ...c, isLiked: wasLiked, likesCount: wasCount };
+        }
+        if (c.replies) {
+          return { ...c, replies: c.replies.map(rollback) };
+        }
+        return c;
+      };
+      setComments((prev) => prev.map(rollback));
+    }
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} style={[styles.sheetContent, { backgroundColor: colors.background, height: Math.round(Dimensions.get("window").height * 3 / 7) }]}>
-          <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
+    <Modal visible={visible} transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
+      <View style={styles.sheetRoot}>
+        <Animated.View style={[styles.sheetOverlay, overlayStyle]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+        </Animated.View>
 
-          {loading ? (
-            <View style={styles.centered}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : (
-            <FlatList
-              data={comments}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.commentList}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No comments yet</Text>
-                </View>
-              }
-              renderItem={({ item }) => (
-                <View style={[styles.commentRow, { borderBottomColor: colors.border + "30" }]}>
-                  <View style={[styles.commentAvatar, { backgroundColor: colors.muted }]}>
-                    <Icon name="user" set="light" size={14} color={colors.mutedForeground} />
-                  </View>
-                  <View style={styles.commentBody}>
-                    <Text style={[styles.commentUser, { color: colors.foreground }]}>
-                      {item.author?.username || "User"}
-                    </Text>
-                    <Text style={[styles.commentText, { color: colors.foreground }]}>{item.text || item.content}</Text>
-                  </View>
-                </View>
-              )}
-            />
-          )}
+        <GestureDetector gesture={panGesture}>
+          <Animated.View
+            style={[
+              styles.sheetContent,
+              sheetStyle,
+              { backgroundColor: colors.background, height: SHEET_HEIGHT },
+            ]}
+          >
+            <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
 
-          <View style={[styles.commentInput, { borderTopColor: colors.border + "66", backgroundColor: colors.card }]}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="Add a comment..."
-              placeholderTextColor={colors.mutedForeground + "80"}
-              style={[styles.commentTextInput, { color: colors.foreground }]}
-            />
-            <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
-              <Icon
-                name="send"
-                set="bold"
-                size={20}
-                color={text.trim() ? colors.primary : colors.mutedForeground + "40"}
+            {loading ? (
+              <View style={styles.centered}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : (
+              <FlatList
+                data={comments}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.commentList}
+                ListEmptyComponent={
+                  <View style={styles.emptyState}>
+                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No comments yet</Text>
+                  </View>
+                }
+                renderItem={({ item }) => (
+                  <CommentItem
+                    comment={item}
+                    colors={colors}
+                    isDark={isDark}
+                    onLike={handleLikeComment}
+                    onReply={(c) => {
+                      setReplyTo(c);
+                    }}
+                    depth={0}
+                  />
+                )}
               />
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </TouchableOpacity>
+            )}
+
+            {replyTo && (
+              <View style={[styles.replyBanner, { backgroundColor: colors.card, borderLeftColor: colors.primary }]}>
+                <Text style={[styles.replyText, { color: colors.mutedForeground }]} numberOfLines={1}>
+                  Replying to {replyTo.author?.username}
+                </Text>
+                <TouchableOpacity onPress={() => setReplyTo(null)}>
+                  <Icon name="close-square" set="light" size={16} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={[styles.commentInput, { borderTopColor: colors.border + "66", backgroundColor: colors.card }]}>
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder={replyTo ? `Reply to ${replyTo.author?.username}...` : "Add a comment..."}
+                placeholderTextColor={colors.mutedForeground + "80"}
+                style={[styles.commentTextInput, { color: colors.foreground }]}
+              />
+              <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
+                <Icon
+                  name="send"
+                  set="bold"
+                  size={20}
+                  color={text.trim() ? colors.primary : colors.mutedForeground + "40"}
+                />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </GestureDetector>
+      </View>
     </Modal>
+  );
+}
+
+function CommentItem({
+  comment,
+  colors,
+  isDark,
+  onLike,
+  onReply,
+  depth,
+}: {
+  comment: Comment;
+  colors: any;
+  isDark: boolean;
+  onLike: (c: Comment) => void;
+  onReply: (c: Comment) => void;
+  depth: number;
+}) {
+  const hasReplies = comment.replies && comment.replies.length > 0;
+
+  return (
+    <View style={[styles.commentItem, depth > 0 && { marginLeft: 36 }]}>
+      <View style={styles.commentRow}>
+        <View style={[styles.commentAvatar, { backgroundColor: colors.muted }]}>
+          {comment.author?.avatarUrl ? (
+            <Image source={{ uri: comment.author.avatarUrl }} style={styles.commentAvatarImg} />
+          ) : (
+            <Icon name="user" set="light" size={12} color={colors.mutedForeground} />
+          )}
+        </View>
+        <View style={styles.commentBody}>
+          <Text style={[styles.commentUser, { color: colors.foreground }]}>
+            {comment.author?.username || "User"}
+          </Text>
+          <Text style={[styles.commentText, { color: colors.foreground }]}>{comment.text || comment.content}</Text>
+          <View style={styles.commentActions}>
+            <Text style={[styles.commentTime, { color: colors.mutedForeground }]}>
+              {timeAgo(comment.createdAt)}
+            </Text>
+            <TouchableOpacity style={styles.commentActionBtn} onPress={() => onLike(comment)}>
+              <Icon
+                name="heart"
+                set={comment.isLiked ? "bold" : "light"}
+                size={13}
+                color={comment.isLiked ? Colors.light.destructive : colors.mutedForeground}
+              />
+              {comment.likesCount > 0 && (
+                <Text style={[styles.commentActionText, { color: comment.isLiked ? Colors.light.destructive : colors.mutedForeground }]}>
+                  {comment.likesCount}
+                </Text>
+              )}
+            </TouchableOpacity>
+            {depth === 0 && (
+              <TouchableOpacity style={styles.commentActionBtn} onPress={() => onReply(comment)}>
+                <Text style={[styles.commentActionText, { color: colors.mutedForeground }]}>Reply</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {hasReplies &&
+        comment.replies!.map((reply) => (
+          <CommentItem
+            key={reply.id}
+            comment={reply}
+            colors={colors}
+            isDark={isDark}
+            onLike={onLike}
+            onReply={onReply}
+            depth={depth + 1}
+          />
+        ))}
+    </View>
   );
 }
 
@@ -450,6 +643,10 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     fontWeight: "600",
   },
+  timeAgo: {
+    fontSize: 11,
+    marginTop: 1,
+  },
   postImage: {
     width: "100%",
     height: 300,
@@ -476,12 +673,18 @@ const styles = StyleSheet.create({
   actionText: {
     ...Typography.caption,
   },
-  sheetOverlay: {
+  sheetRoot: {
     flex: 1,
+  },
+  sheetOverlay: {
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
   },
   sheetContent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     overflow: "hidden",
@@ -496,11 +699,14 @@ const styles = StyleSheet.create({
   },
   commentList: {
     padding: Spacing.lg,
+    paddingBottom: 8,
+  },
+  commentItem: {
+    marginBottom: 4,
   },
   commentRow: {
     flexDirection: "row",
     paddingVertical: 10,
-    borderBottomWidth: 0.5,
   },
   commentAvatar: {
     width: 30,
@@ -509,6 +715,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
+    overflow: "hidden",
+  },
+  commentAvatarImg: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
   commentBody: {
     flex: 1,
@@ -521,6 +733,36 @@ const styles = StyleSheet.create({
   commentText: {
     ...Typography.bodySmall,
     lineHeight: 18,
+  },
+  commentActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginTop: 6,
+  },
+  commentTime: {
+    fontSize: 11,
+  },
+  commentActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  commentActionText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  replyBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 8,
+    borderLeftWidth: 3,
+  },
+  replyText: {
+    ...Typography.caption,
+    flex: 1,
   },
   commentInput: {
     flexDirection: "row",
