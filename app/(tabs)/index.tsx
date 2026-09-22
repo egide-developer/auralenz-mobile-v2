@@ -33,7 +33,9 @@ import { Icon } from "../../src/components/ui/Icon";
 import type { Post, Comment } from "../../src/types";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
-const SHEET_HEIGHT = Math.round(SCREEN_HEIGHT * 3 / 7);
+const SHEET_HEIGHT_DEFAULT = Math.round(SCREEN_HEIGHT * 2 / 3);
+const SHEET_HEIGHT_EXPANDED = Math.round(SCREEN_HEIGHT * 0.8);
+const EXPAND_AFTER_ITEMS = 10;
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -327,12 +329,16 @@ function CommentSheet({
   const [sending, setSending] = useState(false);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const expandedRef = useRef(false);
 
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const overlayOpacity = useSharedValue(0);
+  const sheetHeight = useSharedValue(SHEET_HEIGHT_DEFAULT);
 
   useEffect(() => {
     if (visible) {
+      expandedRef.current = false;
+      sheetHeight.value = SHEET_HEIGHT_DEFAULT;
       translateY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) });
       overlayOpacity.value = withTiming(1, { duration: 300 });
       setLoading(true);
@@ -369,9 +375,22 @@ function CommentSheet({
       }
     });
 
+  const sheetHeightStyle = useAnimatedStyle(() => ({
+    height: sheetHeight.value,
+  }));
+
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
   }));
+
+  const handleScroll = (e: any) => {
+    if (expandedRef.current) return;
+    const y = e.nativeEvent.contentOffset.y;
+    if (y > 200 && !expandedRef.current) {
+      expandedRef.current = true;
+      sheetHeight.value = withTiming(SHEET_HEIGHT_EXPANDED, { duration: 350, easing: Easing.out(Easing.cubic) });
+    }
+  };
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,
@@ -475,7 +494,8 @@ function CommentSheet({
             style={[
               styles.sheetContent,
               sheetStyle,
-              { backgroundColor: colors.background, height: SHEET_HEIGHT },
+              sheetHeightStyle,
+              { backgroundColor: colors.background },
             ]}
           >
             <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
@@ -489,6 +509,8 @@ function CommentSheet({
                 data={comments}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.commentList}
+                onScroll={handleScroll}
+                scrollEventThrottle={100}
                 ListEmptyComponent={
                   <View style={styles.emptyState}>
                     <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No comments yet</Text>
