@@ -12,7 +12,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from "react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { router } from "expo-router";
 import Animated, {
   useSharedValue,
@@ -326,6 +326,7 @@ function CommentSheet({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const overlayOpacity = useSharedValue(0);
@@ -401,6 +402,7 @@ function CommentSheet({
       }
       setText("");
       setReplyTo(null);
+      setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e: any) {
       console.log("Comment error:", e?.response?.status, e?.message);
     } finally {
@@ -520,11 +522,13 @@ function CommentSheet({
 
             <View style={[styles.commentInput, { borderTopColor: colors.border + "66", backgroundColor: colors.card }]}>
               <TextInput
+                ref={inputRef}
                 value={text}
                 onChangeText={setText}
                 placeholder={replyTo ? `Reply to ${replyTo.author?.username}...` : "Add a comment..."}
                 placeholderTextColor={colors.mutedForeground + "80"}
                 style={[styles.commentTextInput, { color: colors.foreground }]}
+                blurOnSubmit={false}
               />
               <TouchableOpacity onPress={handleSend} disabled={!text.trim() || sending}>
                 <Icon
