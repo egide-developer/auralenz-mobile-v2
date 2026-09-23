@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { CachedImage } from "../ui/CachedImage";
 import Animated, { FadeIn } from "react-native-reanimated";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
@@ -100,7 +101,11 @@ export function StoryBar({ colors, isDark }: { colors: any; isDark: boolean }) {
               onPress={() => router.push(`/story/${group.userId}`)}
             >
               <View style={styles.ringSlot}>
-                <GradientRing hasUnviewed={group.hasUnviewed} isDark={isDark}>
+                <GradientRing
+                  hasUnviewed={group.hasUnviewed}
+                  isDark={isDark}
+                  isCloseFriends={group.stories[group.stories.length - 1]?.visibility === "close_friends"}
+                >
                   <Avatar uri={group.user?.avatarUrl} colors={colors} />
                 </GradientRing>
               </View>
@@ -118,21 +123,23 @@ export function StoryBar({ colors, isDark }: { colors: any; isDark: boolean }) {
 function GradientRing({
   hasUnviewed,
   isDark,
+  isCloseFriends,
   children,
 }: {
   hasUnviewed: boolean;
   isDark: boolean;
+  isCloseFriends?: boolean;
   children: React.ReactNode;
 }) {
   const colors = isDark ? Colors.dark : Colors.light;
   if (!hasUnviewed) {
     return (
-      <View style={[styles.plainRing, { borderColor: colors.border }]}>{children}</View>
+      <View style={[styles.plainRing, { borderColor: isCloseFriends ? "#2ECC71" : colors.border }]}>{children}</View>
     );
   }
   return (
     <LinearGradient
-      colors={colors.storyGradient}
+      colors={isCloseFriends ? ["#2ECC71", "#27AE60"] : colors.storyGradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.gradientRing}
@@ -146,7 +153,7 @@ function Avatar({ uri, colors }: { uri?: string; colors: any }) {
   return (
     <View style={[styles.avatarBase, { backgroundColor: colors.muted }]}>
       {uri ? (
-        <Image source={{ uri }} style={styles.avatarImg} />
+        <CachedImage source={{ uri }} style={styles.avatarImg} />
       ) : (
         <Icon name="user" set="light" size={22} color={colors.mutedForeground} />
       )}

@@ -172,6 +172,19 @@ export interface Story {
   viewsCount: number;
   reactions: StoryReaction[];
   createdAt: string;
+  visibility?: "public" | "followers" | "close_friends";
+  stickers?: StorySticker[];
+}
+
+export interface StorySticker {
+  _id: string;
+  type: "poll" | "quiz" | "question";
+  position: { x: number; y: number };
+  question: string;
+  options?: { text: string; isCorrect?: boolean }[];
+  aggregate?: number[];
+  hasResponded?: boolean;
+  myResponse?: { optionIndex?: number; text?: string };
 }
 
 export interface StoryReaction {

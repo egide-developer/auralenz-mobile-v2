@@ -17,6 +17,8 @@ function normalizeStory(raw: any): Story {
       emoji: r.emoji,
     })),
     createdAt: raw.createdAt,
+    visibility: raw.visibility,
+    stickers: raw.stickers,
   };
 }
 

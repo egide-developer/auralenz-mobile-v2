@@ -1,4 +1,5 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, Image, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useCallback, useEffect, useState } from "react";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -330,7 +331,7 @@ export default function SearchScreen() {
             return (
               <TouchableOpacity style={styles.discoverGridItem} onPress={() => openPost(item)} activeOpacity={0.85}>
                 {thumb ? (
-                  <Image source={{ uri: thumb.url }} style={styles.discoverGridImage} resizeMode="cover" />
+                  <CachedImage source={{ uri: thumb.url }} style={styles.discoverGridImage} contentFit="cover" />
                 ) : (
                   <View style={[styles.discoverGridImage, { backgroundColor: colors.muted }]} />
                 )}
@@ -357,7 +358,7 @@ function Avatar({ user, colors, size }: { user: SearchUser; colors: any; size: n
       ]}
     >
       {user.avatarUrl ? (
-        <Image
+        <CachedImage
           source={{ uri: user.avatarUrl }}
           style={{ width: size, height: size, borderRadius: size / 2 }}
         />

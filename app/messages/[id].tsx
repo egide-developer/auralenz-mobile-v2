@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Image,
   StyleSheet,
   ActivityIndicator,
   Modal,
@@ -17,6 +16,7 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
@@ -295,7 +295,7 @@ function MessageRow({
                 {showAvatar ? (
                   <View style={[styles.msgAvatar, { backgroundColor: colors.muted }]}>
                     {other?.avatarUrl ? (
-                      <Image source={{ uri: other.avatarUrl }} style={styles.msgAvatarImg} />
+                      <CachedImage source={{ uri: other.avatarUrl }} style={styles.msgAvatarImg} />
                     ) : (
                       <Icon name="user" set="light" size={12} color={colors.mutedForeground} />
                     )}
@@ -353,14 +353,14 @@ function MessageRow({
               {hasImages && (
                 <View style={styles.imageGrid}>
                   {message.images.map((uri: string, i: number) => (
-                    <Image
+                    <CachedImage
                       key={i}
                       source={{ uri }}
                       style={[
                         styles.chatImage,
                         message.images.length > 1 && styles.chatImageMulti,
                       ]}
-                      resizeMode="cover"
+                      contentFit="cover"
                     />
                   ))}
                 </View>
@@ -1119,7 +1119,7 @@ export default function ChatDetailScreen() {
             <>
               <View style={[styles.headerAvatar, { backgroundColor: colors.muted }]}>
                 {avatarUrl ? (
-                  <Image source={{ uri: avatarUrl }} style={styles.headerAvatarImg} />
+                  <CachedImage source={{ uri: avatarUrl }} style={styles.headerAvatarImg} />
                 ) : (
                   <Icon name="user" set="light" size={16} color={colors.mutedForeground} />
                 )}
@@ -1262,7 +1262,7 @@ export default function ChatDetailScreen() {
             {attachments.map((a) => (
               <View key={a.id} style={styles.attachChip}>
                 {a.kind === "image" ? (
-                  <Image source={{ uri: a.uri }} style={styles.attachThumb} />
+                  <CachedImage source={{ uri: a.uri }} style={styles.attachThumb} />
                 ) : (
                   <View style={[styles.attachFileThumb, { backgroundColor: colors.muted }]}>
                     <Icon name="document" set="light" size={20} color={colors.mutedForeground} />

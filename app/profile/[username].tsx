@@ -3,14 +3,15 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
@@ -104,6 +105,26 @@ export default function UserProfileScreen() {
     });
   }, []);
 
+  const archivePost = useCallback(async (post: Post) => {
+    try {
+      await api.put(API.posts.byId(post.id), { archived: true });
+      setPosts((prev) => prev.filter((p) => p.id !== post.id));
+    } catch {
+      Alert.alert("Couldn't archive post", "Please try again.");
+    }
+  }, []);
+
+  const onGridItemLongPress = useCallback(
+    (post: Post) => {
+      if (!isSelf) return;
+      Alert.alert("Archive post?", "It will be hidden from your profile and the feed until you unarchive it.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Archive", style: "destructive", onPress: () => archivePost(post) },
+      ]);
+    },
+    [isSelf, archivePost]
+  );
+
   if (loading) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }]}>
@@ -152,7 +173,7 @@ export default function UserProfileScreen() {
         <View style={styles.avatarWrap}>
           <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
             {profile.avatarUrl ? (
-              <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
+              <CachedImage source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
             ) : (
               <Icon name="user" set="light" size={36} color={colors.mutedForeground} />
             )}
@@ -234,9 +255,15 @@ export default function UserProfileScreen() {
         {posts.map((post) => {
           const thumb = post.media?.[0];
           return (
-            <TouchableOpacity key={post.id} style={styles.gridItem} onPress={() => openPost(post)} activeOpacity={0.85}>
+            <TouchableOpacity
+              key={post.id}
+              style={styles.gridItem}
+              onPress={() => openPost(post)}
+              onLongPress={() => onGridItemLongPress(post)}
+              activeOpacity={0.85}
+            >
               {thumb ? (
-                <Image source={{ uri: thumb.url }} style={styles.gridImage} resizeMode="cover" />
+                <CachedImage source={{ uri: thumb.url }} style={styles.gridImage} contentFit="cover" />
               ) : (
                 <View style={[styles.gridImage, { backgroundColor: colors.muted }]} />
               )}

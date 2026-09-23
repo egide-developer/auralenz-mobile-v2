@@ -1,8 +1,9 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { useEffect, useState } from "react";
 import { router } from "expo-router";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
+import { CachedImage } from "../ui/CachedImage";
 import { FontFamily } from "../../theme/typography";
 import type { HighlightSummary } from "../../types";
 
@@ -36,7 +37,7 @@ export function HighlightsRow({ userId, colors }: { userId: string; colors: any 
           activeOpacity={0.8}
         >
           <View style={[styles.circle, { borderColor: colors.border, backgroundColor: colors.muted }]}>
-            {h.coverImage ? <Image source={{ uri: h.coverImage }} style={styles.circleImg} /> : null}
+            {h.coverImage ? <CachedImage source={{ uri: h.coverImage }} style={styles.circleImg} /> : null}
           </View>
           <Text numberOfLines={1} style={[styles.label, { color: colors.foreground }]}>
             {h.title}

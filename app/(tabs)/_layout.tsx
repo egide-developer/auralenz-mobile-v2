@@ -25,6 +25,7 @@ export default function TabLayout() {
       >
         <Tabs.Screen name="index" options={{ title: "Home" }} />
         <Tabs.Screen name="search" options={{ title: "Search" }} />
+        <Tabs.Screen name="reels" options={{ title: "Reels" }} />
         <Tabs.Screen name="messages" options={{ title: "Messages" }} />
         <Tabs.Screen name="profile" options={{ title: "Profile" }} />
         <Tabs.Screen

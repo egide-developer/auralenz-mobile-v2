@@ -1,8 +1,11 @@
-import { View, Text, TouchableOpacity, Dimensions, TextInput, Image } from "react-native";
+import { View, Text, TouchableOpacity, Dimensions, TextInput } from "react-native";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useVideoPlayer, VideoView } from "expo-video";
+import { VideoView } from "expo-video";
+import { useCachedVideoPlayer } from "../../src/hooks/useCachedVideoPlayer";
+import { prefetchVideo } from "../../src/utils/videoCache";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
@@ -11,7 +14,7 @@ import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { normalizeStoryGroups, extractStoryGroupsPayload } from "../../src/utils/stories";
 import { AddToHighlightSheet } from "../../src/components/ui/AddToHighlightSheet";
-import type { Story, StoryGroup } from "../../src/types";
+import type { Story, StoryGroup, StorySticker } from "../../src/types";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 const STORY_DURATION = 5000;
@@ -38,6 +41,11 @@ export default function StoryViewerScreen() {
 
   const story = storyGroup?.stories[currentIndex];
   const isOwn = story?.userId === user?.id;
+
+  const [activeSticker, setActiveSticker] = useState<StorySticker | null>(story?.stickers?.[0] ?? null);
+  useEffect(() => {
+    setActiveSticker(storyGroup?.stories[currentIndex]?.stickers?.[0] ?? null);
+  }, [currentIndex, storyGroup]);
 
   useEffect(() => {
     (async () => {
@@ -78,6 +86,15 @@ export default function StoryViewerScreen() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [currentIndex, story?.id]);
 
+  // Warm the cache for the next story's video as soon as the current one
+  // starts, so swiping forward doesn't hit a cold re-buffer.
+  useEffect(() => {
+    const next = storyGroup?.stories[currentIndex + 1];
+    if (next?.type === "video") {
+      prefetchVideo(next.mediaUrl);
+    }
+  }, [currentIndex, storyGroup]);
+
   const goNext = () => {
     if (!storyGroup) return;
     if (currentIndex < storyGroup.stories.length - 1) {
@@ -107,6 +124,14 @@ export default function StoryViewerScreen() {
     setReply("");
   };
 
+  const respondToSticker = async (payload: { optionIndex?: number; text?: string }) => {
+    if (!story || !activeSticker) return;
+    try {
+      const { data } = await api.post(API.stories.respondToSticker(story.id, activeSticker._id), payload);
+      setActiveSticker(data.sticker);
+    } catch {}
+  };
+
   if (!story) {
     return (
       <View style={{ flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center" }}>
@@ -118,6 +143,18 @@ export default function StoryViewerScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <StoryMedia story={story} paused={showReactions} />
+
+      {activeSticker ? (
+        <StickerOverlay
+          sticker={activeSticker}
+          screenW={SCREEN_W}
+          onRespond={respondToSticker}
+          onFocusPause={() => {
+            if (timerRef.current) clearInterval(timerRef.current);
+          }}
+          onBlurResume={startTimer}
+        />
+      ) : null}
       {isOwn && (
         <TouchableOpacity
           style={{
@@ -327,7 +364,7 @@ export default function StoryViewerScreen() {
 
 function StoryMedia({ story, paused }: { story: Story; paused: boolean }) {
   const isVideo = story.type === "video";
-  const videoPlayer = useVideoPlayer(isVideo ? story.mediaUrl : null, (player) => {
+  const { player: videoPlayer } = useCachedVideoPlayer(isVideo ? story.mediaUrl : null, (player) => {
     player.loop = true;
   });
 
@@ -349,10 +386,108 @@ function StoryMedia({ story, paused }: { story: Story; paused: boolean }) {
   }
 
   return (
-    <Image
+    <CachedImage
       source={{ uri: story.mediaUrl }}
       style={{ width: SCREEN_W, height: SCREEN_H, backgroundColor: "#1a1a1a" }}
-      resizeMode="contain"
+      contentFit="contain"
     />
+  );
+}
+
+function StickerOverlay({
+  sticker,
+  screenW,
+  onRespond,
+  onFocusPause,
+  onBlurResume,
+}: {
+  sticker: StorySticker;
+  screenW: number;
+  onRespond: (payload: { optionIndex?: number; text?: string }) => void;
+  onFocusPause: () => void;
+  onBlurResume: () => void;
+}) {
+  const [answerText, setAnswerText] = useState("");
+  const left = Math.max(12, sticker.position.x * screenW - 130);
+  const boxStyle = {
+    position: "absolute" as const,
+    top: `${sticker.position.y * 100}%` as any,
+    left,
+    width: 260,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 16,
+    padding: 14,
+    gap: 8,
+  };
+  const questionTextStyle = { color: "#fff", fontFamily: FontFamily.semibold, fontSize: 14 };
+
+  if (sticker.type === "question") {
+    if (sticker.hasResponded) {
+      return (
+        <View style={boxStyle} pointerEvents="none">
+          <Text style={questionTextStyle}>{sticker.question}</Text>
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12 }}>Your answer sent ✓</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={boxStyle}>
+        <Text style={questionTextStyle}>{sticker.question}</Text>
+        <TextInput
+          value={answerText}
+          onChangeText={setAnswerText}
+          placeholder="Type your answer..."
+          placeholderTextColor="rgba(255,255,255,0.6)"
+          onFocus={onFocusPause}
+          onBlur={onBlurResume}
+          onSubmitEditing={() => {
+            if (answerText.trim()) {
+              onRespond({ text: answerText.trim() });
+              setAnswerText("");
+            }
+          }}
+          style={{ color: "#fff", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13 }}
+        />
+      </View>
+    );
+  }
+
+  // poll / quiz
+  const options = sticker.options || [];
+  const aggregate = sticker.aggregate;
+  return (
+    <View style={boxStyle}>
+      <Text style={questionTextStyle}>{sticker.question}</Text>
+      {options.map((opt, i) => {
+        const isMine = sticker.myResponse?.optionIndex === i;
+        const isCorrectAnswer = sticker.type === "quiz" && sticker.hasResponded && opt.isCorrect;
+        return (
+          <TouchableOpacity
+            key={i}
+            disabled={sticker.hasResponded}
+            onPress={() => {
+              onFocusPause();
+              onRespond({ optionIndex: i });
+            }}
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              backgroundColor: isCorrectAnswer ? "rgba(46,204,113,0.35)" : "rgba(255,255,255,0.15)",
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 9,
+              borderWidth: isMine ? 1.5 : 0,
+              borderColor: "#fff",
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 13, flexShrink: 1 }}>{opt.text}</Text>
+            {sticker.hasResponded && aggregate ? (
+              <Text style={{ color: "#fff", fontSize: 12, fontFamily: FontFamily.semibold }}>{aggregate[i]}%</Text>
+            ) : null}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
 }

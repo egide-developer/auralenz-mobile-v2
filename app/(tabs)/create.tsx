@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Image,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
@@ -23,6 +22,7 @@ import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { PressableScale } from "../../src/components/ui/PressableScale";
 import { MentionSuggestions, useMentionQuery, applyMentionSelection } from "../../src/components/ui/MentionSuggestions";
 import api from "../../src/api/client";
@@ -236,10 +236,10 @@ export default function CreateScreen() {
             <>
               <View style={[styles.previewWrap, { backgroundColor: colors.muted }]}>
                 {activeMedia && (
-                  <Image
+                  <CachedImage
                     source={{ uri: activeMedia.type === "video" ? activeMedia.thumbnailUri : activeMedia.uri }}
                     style={styles.previewImage}
-                    resizeMode="cover"
+                    contentFit="cover"
                   />
                 )}
                 {activeMedia?.type === "video" && (
@@ -272,10 +272,10 @@ export default function CreateScreen() {
                       { borderColor: i === activeIndex ? colors.primary : "transparent" },
                     ]}
                   >
-                    <Image
+                    <CachedImage
                       source={{ uri: m.type === "video" ? m.thumbnailUri : m.uri }}
                       style={[styles.stripThumb, { backgroundColor: colors.muted }]}
-                      resizeMode="cover"
+                      contentFit="cover"
                     />
                     {m.type === "video" && (
                       <View style={styles.stripPlayBadge}>
@@ -308,10 +308,10 @@ export default function CreateScreen() {
           <View style={styles.detailsHeaderRow}>
             <View style={[styles.detailsThumbWrap, { backgroundColor: colors.muted }]}>
               {media[0] && (
-                <Image
+                <CachedImage
                   source={{ uri: media[0].type === "video" ? media[0].thumbnailUri : media[0].uri }}
                   style={styles.detailsThumb}
-                  resizeMode="cover"
+                  contentFit="cover"
                 />
               )}
               {media.length > 1 && (
@@ -368,7 +368,7 @@ export default function CreateScreen() {
           <View style={styles.postingAsRow}>
             <View style={[styles.postingAsAvatar, { backgroundColor: colors.muted }]}>
               {user?.avatarUrl ? (
-                <Image source={{ uri: user.avatarUrl }} style={styles.postingAsAvatarImg} />
+                <CachedImage source={{ uri: user.avatarUrl }} style={styles.postingAsAvatarImg} />
               ) : (
                 <Icon name="user" set="light" size={14} color={colors.mutedForeground} />
               )}

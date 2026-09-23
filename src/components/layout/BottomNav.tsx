@@ -18,8 +18,13 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
+  withRepeat,
+  withSequence,
+  Easing,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "../ui/Icon";
 import { PlusSolid } from "../ui/icons/plus-solid";
 import { useThemeStore } from "../../stores/themeStore";
@@ -38,6 +43,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { name: "home", icon: "home", path: "/" },
   { name: "search", icon: "search", path: "/search" },
+  { name: "reels", icon: "video", path: "/reels" },
   { name: "messages", icon: "chat", path: "/messages", badge: true },
   { name: "profile", icon: "user", path: "/profile" },
 ];
@@ -51,9 +57,14 @@ export function BottomNav() {
   const dockMaxWidth = Math.min(screenWidth - 20, MAX_DOCK_WIDTH);  const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const isDark = useThemeStore((s) => s.isDark);
+  const themeIsDark = useThemeStore((s) => s.isDark);
   const totalUnread = useUnreadStore((s) => s.totalUnread);
   const isCreate = pathname.startsWith("/create");
+  // Reels is a full-bleed black video background regardless of app theme —
+  // force the pill into its dark glass variant there so it doesn't read as
+  // a jarring light chip floating over video, matching Instagram/TikTok.
+  const isReelsTab = pathname === "/reels";
+  const isDark = isReelsTab || themeIsDark;
 
   const [pillWidth, setPillWidth] = useState(0);
   const tabWidth = pillWidth > 0 ? pillWidth / NAV_ITEMS.length : 0;
@@ -65,6 +76,24 @@ export function BottomNav() {
 
   const indicatorX = useSharedValue(0);
   const fabRotation = useSharedValue(0);
+  // "Liquid mode" — a soft highlight blob that slowly drifts side to side,
+  // like light moving across the surface of liquid glass.
+  const liquidShift = useSharedValue(0);
+
+  useEffect(() => {
+    liquidShift.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 4200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 4200, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      false
+    );
+  }, []);
+
+  const liquidBlobStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -18 + liquidShift.value * 36 }],
+  }));
 
   React.useEffect(() => {
     if (tabWidth > 0) {
@@ -119,19 +148,66 @@ export function BottomNav() {
     <Animated.View style={[styles.container, keyboardStyle, { paddingBottom: 8 + insets.bottom }]}>
       <View style={[styles.dockWrapper, { maxWidth: dockMaxWidth }]}>
         <View style={styles.dockRow}>
-          {/* Main pill with 4 tabs */}
+          {/* Main pill with 4 tabs — outer view casts the shadow (needs
+              unclipped bounds), inner view clips the blur/gradient layers
+              to the pill shape (needs overflow:hidden) */}
+          <View
+            style={[
+              styles.pillShadowWrap,
+              { shadowColor: isDark ? "#000000" : "#1A1A1A" },
+            ]}
+          >
           <View
             onLayout={onPillLayout}
             style={[
               styles.pill,
               {
-                borderColor: isDark ? Colors.dark.border + "99" : Colors.light.border + "99",
-                backgroundColor: isDark ? Colors.dark.card + "D9" : Colors.light.card + "D9",
+                borderColor: isDark ? "#FFFFFF26" : "#FFFFFF99",
               },
             ]}
           >
-            {/* Top hairline glow */}
-            <View style={styles.hairlineGlow} />
+            <BlurView
+              intensity={isDark ? 55 : 65}
+              tint={isDark ? "dark" : "light"}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Translucent color wash on top of the blur so the pill still
+                reads as the app's surface color, not just raw frosted glass */}
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: isDark ? Colors.dark.card + "8C" : Colors.light.card + "73" },
+              ]}
+            />
+            {/* Top edge highlight — the light-catching rim of a glass surface */}
+            <LinearGradient
+              colors={
+                isDark
+                  ? ["#FFFFFF29", "#FFFFFF00"]
+                  : ["#FFFFFFB3", "#FFFFFF00"]
+              }
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 0.6 }}
+            />
+            {/* Liquid mode — a full-width sheen that slowly drifts across
+                the whole pill, like light moving across liquid glass, not
+                a separate floating shape */}
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.liquidBlob, liquidBlobStyle]}
+            >
+              <LinearGradient
+                colors={
+                  isDark
+                    ? ["#FFFFFF00", "#FFFFFF1F", "#FFFFFF00"]
+                    : ["#FFFFFF00", "#FFFFFF80", "#FFFFFF00"]
+                }
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+              />
+            </Animated.View>
 
             {/* Animated sliding indicator */}
             {tabWidth > 0 && (
@@ -164,6 +240,7 @@ export function BottomNav() {
                 />
               );
             })}
+          </View>
           </View>
 
           {/* Create FAB */}
@@ -206,14 +283,27 @@ function TabButton({
   unreadCount: number;
   onPress: () => void;
 }) {
+  const squish = useSharedValue(1);
+  const squishStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: squish.value }],
+  }));
+
   return (
     <TouchableOpacity
       onPress={onPress}
+      onPressIn={() => {
+        // Liquid squish — dips low with a wobbly overshoot on release,
+        // like a droplet settling back into shape.
+        squish.value = withTiming(0.82, { duration: 90 });
+      }}
+      onPressOut={() => {
+        squish.value = withSpring(1, { damping: 6, stiffness: 220, mass: 0.6 });
+      }}
       activeOpacity={0.7}
       style={styles.tabButton}
       accessibilityLabel={item.name}
     >
-      <View style={styles.tabContent}>
+      <Animated.View style={[styles.tabContent, squishStyle]}>
         <Icon
           name={item.icon}
           set={isActive ? "bold" : "light"}
@@ -232,7 +322,7 @@ function TabButton({
             </Text>
           </View>
         )}
-      </View>
+      </Animated.View>
     </TouchableOpacity>
   );
 }
@@ -257,6 +347,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 11,
   },
+  pillShadowWrap: {
+    flex: 1,
+    borderRadius: Radius.pill,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 24,
+    shadowOpacity: 0.18,
+    elevation: 10,
+  },
   pill: {
     flex: 1,
     flexDirection: "row",
@@ -268,14 +366,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
-  hairlineGlow: {
-    position: "absolute",
-    top: -0.5,
-    left: 40,
-    right: 40,
-    height: 1,
-    opacity: 0.5,
-  },
   activeIndicator: {
     position: "absolute",
     top: 1,
@@ -283,6 +373,13 @@ const styles = StyleSheet.create({
     left: 3,
     borderRadius: Radius.pill,
     borderWidth: 1,
+  },
+  liquidBlob: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: "-40%",
+    width: "180%",
   },
   tabButton: {
     flex: 1,

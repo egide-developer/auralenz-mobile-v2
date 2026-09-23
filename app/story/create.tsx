@@ -19,6 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as VideoThumbnails from "expo-video-thumbnails";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
@@ -35,6 +36,13 @@ interface PickedMedia {
   thumbnailUri?: string;
 }
 
+type StickerType = "poll" | "quiz" | "question";
+const STICKER_KINDS: { type: StickerType; label: string; icon: string }[] = [
+  { type: "poll", label: "Poll", icon: "bar-chart-outline" },
+  { type: "quiz", label: "Quiz", icon: "help-circle-outline" },
+  { type: "question", label: "Question", icon: "chatbubble-ellipses-outline" },
+];
+
 export default function CreateStoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -44,8 +52,17 @@ export default function CreateStoryScreen() {
   const [media, setMedia] = useState<PickedMedia | null>(null);
   const [text, setText] = useState("");
   const [showTextInput, setShowTextInput] = useState(false);
+  const [closeFriendsOnly, setCloseFriendsOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pickAttempted, setPickAttempted] = useState(false);
+
+  // Story stickers — v1 caps composer at one sticker per story (schema
+  // supports more, but keeping the picker scoped to one keeps this UI simple).
+  const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
+  const [stickerType, setStickerType] = useState<StickerType | null>(null);
+  const [stickerQuestion, setStickerQuestion] = useState("");
+  const [stickerOptions, setStickerOptions] = useState(["", ""]);
+  const [stickerCorrectIndex, setStickerCorrectIndex] = useState<number | null>(null);
 
   const videoPlayer = useVideoPlayer(media?.type === "video" ? media.uri : null, (player) => {
     player.loop = true;
@@ -96,6 +113,22 @@ export default function CreateStoryScreen() {
       const formData = new FormData();
       formData.append("media", { uri: media.uri, type: media.mimeType, name: media.fileName } as any);
       if (text.trim()) formData.append("text", text.trim());
+      formData.append("visibility", closeFriendsOnly ? "close_friends" : "public");
+
+      if (stickerType && stickerQuestion.trim()) {
+        const options =
+          stickerType === "question"
+            ? []
+            : stickerOptions
+                .filter((o) => o.trim())
+                .map((o, i) => ({ text: o.trim(), isCorrect: stickerType === "quiz" ? i === stickerCorrectIndex : undefined }));
+        if (stickerType === "question" || options.length >= 2) {
+          formData.append(
+            "stickers",
+            JSON.stringify([{ type: stickerType, position: { x: 0.5, y: 0.7 }, question: stickerQuestion.trim(), options }])
+          );
+        }
+      }
 
       await api.post(API.stories.create, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -106,7 +139,7 @@ export default function CreateStoryScreen() {
       setLoading(false);
       Alert.alert("Error", e?.response?.data?.message || "Failed to share story");
     }
-  }, [media, text, router]);
+  }, [media, text, closeFriendsOnly, stickerType, stickerQuestion, stickerOptions, stickerCorrectIndex, router]);
 
   if (!media) {
     return (
@@ -141,14 +174,36 @@ export default function CreateStoryScreen() {
             <Icon name="close-square" set="bold" size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.topTitle}>Your story</Text>
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => setShowTextInput((v) => !v)}
-            hitSlop={8}
-          >
-            <Icon name="edit-square" set="bold" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.iconBtn, closeFriendsOnly && { backgroundColor: "#2ECC71" }]}
+              onPress={() => setCloseFriendsOnly((v) => !v)}
+              hitSlop={8}
+            >
+              <Icon name="star" set={closeFriendsOnly ? "bold" : "light"} size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setShowTextInput((v) => !v)}
+              hitSlop={8}
+            >
+              <Icon name="edit-square" set="bold" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setStickerPickerOpen((v) => !v)}
+              hitSlop={8}
+            >
+              <Ionicons name="apps-outline" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
+        {closeFriendsOnly ? (
+          <View style={styles.closeFriendsBadge}>
+            <Icon name="star" set="bold" size={12} color="#FFFFFF" />
+            <Text style={styles.closeFriendsBadgeText}>Close Friends</Text>
+          </View>
+        ) : null}
 
         {showTextInput ? (
           <View style={styles.textOverlayEditRow}>
@@ -167,6 +222,91 @@ export default function CreateStoryScreen() {
         ) : text ? (
           <TouchableOpacity style={styles.textOverlayDisplay} onPress={() => setShowTextInput(true)} activeOpacity={0.85}>
             <Text style={styles.textOverlayText}>{text}</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {stickerPickerOpen && !stickerType ? (
+          <View style={styles.stickerChooser}>
+            {STICKER_KINDS.map((k) => (
+              <TouchableOpacity
+                key={k.type}
+                style={styles.stickerChooserItem}
+                onPress={() => setStickerType(k.type)}
+              >
+                <Ionicons name={k.icon as any} size={22} color="#FFFFFF" />
+                <Text style={styles.stickerChooserLabel}>{k.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        {stickerPickerOpen && stickerType ? (
+          <View style={styles.stickerEditor}>
+            <TextInput
+              autoFocus
+              value={stickerQuestion}
+              onChangeText={setStickerQuestion}
+              placeholder={stickerType === "question" ? "Ask a question..." : "Ask something..."}
+              placeholderTextColor="rgba(255,255,255,0.6)"
+              maxLength={200}
+              style={styles.stickerQuestionInput}
+            />
+            {stickerType !== "question" &&
+              stickerOptions.map((opt, i) => (
+                <View key={i} style={styles.stickerOptionRow}>
+                  <TextInput
+                    value={opt}
+                    onChangeText={(v) => setStickerOptions((prev) => prev.map((o, idx) => (idx === i ? v : o)))}
+                    placeholder={`Option ${i + 1}`}
+                    placeholderTextColor="rgba(255,255,255,0.6)"
+                    maxLength={60}
+                    style={styles.stickerOptionInput}
+                  />
+                  {stickerType === "quiz" ? (
+                    <TouchableOpacity onPress={() => setStickerCorrectIndex(i)} hitSlop={8}>
+                      <Ionicons
+                        name={stickerCorrectIndex === i ? "checkmark-circle" : "checkmark-circle-outline"}
+                        size={22}
+                        color={stickerCorrectIndex === i ? "#2ECC71" : "rgba(255,255,255,0.6)"}
+                      />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ))}
+            {stickerType !== "question" && stickerOptions.length < 4 ? (
+              <TouchableOpacity onPress={() => setStickerOptions((prev) => [...prev, ""])}>
+                <Text style={styles.stickerAddOption}>+ Add option</Text>
+              </TouchableOpacity>
+            ) : null}
+            <View style={styles.stickerEditorActions}>
+              <TouchableOpacity
+                onPress={() => {
+                  setStickerType(null);
+                  setStickerQuestion("");
+                  setStickerOptions(["", ""]);
+                  setStickerCorrectIndex(null);
+                  setStickerPickerOpen(false);
+                }}
+              >
+                <Text style={styles.stickerRemoveText}>Remove</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setStickerPickerOpen(false)}>
+                <Text style={styles.stickerDoneText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+
+        {!stickerPickerOpen && stickerType && stickerQuestion.trim() ? (
+          <TouchableOpacity style={styles.stickerPreviewChip} onPress={() => setStickerPickerOpen(true)}>
+            <Ionicons
+              name={STICKER_KINDS.find((k) => k.type === stickerType)?.icon as any}
+              size={14}
+              color="#FFFFFF"
+            />
+            <Text style={styles.stickerPreviewText} numberOfLines={1}>
+              {stickerQuestion}
+            </Text>
           </TouchableOpacity>
         ) : null}
 
@@ -212,6 +352,22 @@ const styles = StyleSheet.create({
     ...Typography.h4,
     color: "#FFFFFF",
   },
+  closeFriendsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    gap: 4,
+    backgroundColor: "#2ECC71",
+    borderRadius: Radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  closeFriendsBadgeText: {
+    ...Typography.caption,
+    color: "#FFFFFF",
+    fontFamily: FontFamily.semibold,
+  },
   textOverlayEditRow: {
     position: "absolute",
     left: Spacing.lg,
@@ -239,6 +395,94 @@ const styles = StyleSheet.create({
     ...Typography.h4,
     color: "#FFFFFF",
     textAlign: "center",
+  },
+  stickerChooser: {
+    position: "absolute",
+    left: Spacing.lg,
+    right: Spacing.lg,
+    top: "35%",
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+  },
+  stickerChooserItem: {
+    alignItems: "center",
+    gap: 6,
+  },
+  stickerChooserLabel: {
+    ...Typography.caption,
+    color: "#FFFFFF",
+  },
+  stickerEditor: {
+    position: "absolute",
+    left: Spacing.lg,
+    right: Spacing.lg,
+    top: "30%",
+    backgroundColor: "rgba(0,0,0,0.65)",
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    gap: 10,
+  },
+  stickerQuestionInput: {
+    ...Typography.h4,
+    color: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.3)",
+    paddingBottom: 6,
+  },
+  stickerOptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  stickerOptionInput: {
+    flex: 1,
+    ...Typography.bodySmall,
+    color: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: Radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  stickerAddOption: {
+    ...Typography.bodySmall,
+    color: "rgba(255,255,255,0.8)",
+  },
+  stickerEditorActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  stickerRemoveText: {
+    ...Typography.bodySmall,
+    color: "#FF6B6B",
+    fontFamily: FontFamily.semibold,
+  },
+  stickerDoneText: {
+    ...Typography.bodySmall,
+    color: "#2ECC71",
+    fontFamily: FontFamily.semibold,
+  },
+  stickerPreviewChip: {
+    position: "absolute",
+    left: Spacing.lg,
+    right: Spacing.lg,
+    top: "35%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: Radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignSelf: "center",
+  },
+  stickerPreviewText: {
+    ...Typography.bodySmall,
+    color: "#FFFFFF",
+    flexShrink: 1,
   },
   bottomBar: {
     position: "absolute",

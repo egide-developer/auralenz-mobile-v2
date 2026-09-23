@@ -3,7 +3,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ActivityIndicator,
   Dimensions,
@@ -12,6 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Spacing } from "../../src/theme/spacing";
@@ -100,7 +100,7 @@ export default function TagResultsScreen() {
             return (
               <TouchableOpacity style={styles.gridItem} onPress={() => openPost(item)} activeOpacity={0.85}>
                 {thumb ? (
-                  <Image source={{ uri: thumb.url }} style={styles.gridImage} resizeMode="cover" />
+                  <CachedImage source={{ uri: thumb.url }} style={styles.gridImage} contentFit="cover" />
                 ) : (
                   <View style={[styles.gridImage, { backgroundColor: colors.muted }]} />
                 )}

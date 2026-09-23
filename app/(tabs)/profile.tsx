@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
@@ -7,6 +7,7 @@ import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { HighlightsRow } from "../../src/components/profile/HighlightsRow";
 
 export default function ProfileScreen() {
@@ -21,6 +22,8 @@ export default function ProfileScreen() {
     { icon: "notification", label: "Notifications", route: "/(modals)/notifications" },
     { icon: "bookmark", label: "Saved", route: "/(modals)/saved-posts" },
     { icon: "folder", label: "Library", route: "/(modals)/library" },
+    { icon: "bookmark", label: "Archived Posts", route: "/(modals)/archived-posts" },
+    { icon: "star", label: "Close Friends", route: "/(modals)/close-friends" },
     { icon: "shield", label: "Admin", route: "/(modals)/admin", adminOnly: true as const },
   ];
 
@@ -42,7 +45,7 @@ export default function ProfileScreen() {
       <View style={styles.profileSection}>
         <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
           {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
+            <CachedImage source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
           ) : (
             <Icon name="user" set="light" size={36} color={colors.mutedForeground} />
           )}

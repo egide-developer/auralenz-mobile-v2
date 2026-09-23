@@ -24,6 +24,8 @@ export const API = {
     blocked: "/api/users/blocked",
     block: (id: string) => `/api/users/${id}/block`,
     pushToken: "/api/users/push-token",
+    closeFriends: "/api/users/close-friends",
+    closeFriend: (id: string) => `/api/users/close-friends/${id}`,
   },
   posts: {
     list: "/api/posts",
@@ -72,6 +74,8 @@ export const API = {
     reply: (id: string) => `/api/stories/${id}/reply`,
     delete: (id: string) => `/api/stories/${id}`,
     insights: (id: string) => `/api/stories/${id}/insights`,
+    respondToSticker: (storyId: string, stickerId: string) =>
+      `/api/stories/${storyId}/stickers/${stickerId}/respond`,
   },
   library: {
     list: "/api/library",

@@ -18,11 +18,21 @@ import { Typography, FontFamily } from "../../../src/theme/typography";
 import api from "../../../src/api/client";
 import { API } from "../../../src/api/endpoints";
 
+interface StickerResult {
+  id: string;
+  type: "poll" | "quiz" | "question";
+  question: string;
+  options?: { text: string; isCorrect?: boolean; count: number; percentage: number }[];
+  totalResponses?: number;
+  answers?: { username?: string; avatarUrl?: string; text?: string; createdAt: string }[];
+}
+
 interface StoryInsights {
   stats: { views: number; reactions: number; replies: number; totalEngagement: number; engagementRate: number };
   topReactions: { emoji: string; count: number }[];
   viewersData: { total: number; list: { username: string; avatarUrl?: string; viewedAt: string }[] };
   timing: { hoursRemaining: number };
+  stickerResults?: StickerResult[];
 }
 
 export default function StoryInsightsScreen() {
@@ -77,6 +87,15 @@ export default function StoryInsightsScreen() {
               <StatBlock label="Engagement" value={`${insights.stats.engagementRate}%`} colors={colors} />
             </View>
           }
+          ListFooterComponent={
+            insights.stickerResults && insights.stickerResults.length > 0 ? (
+              <View style={{ paddingHorizontal: Spacing.lg, gap: 16, marginTop: 8 }}>
+                {insights.stickerResults.map((s) => (
+                  <StickerResultCard key={s.id} sticker={s} colors={colors} />
+                ))}
+              </View>
+            ) : null
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.viewerRow}
@@ -102,6 +121,53 @@ export default function StoryInsightsScreen() {
           }
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         />
+      )}
+    </View>
+  );
+}
+
+function StickerResultCard({ sticker, colors }: { sticker: StickerResult; colors: any }) {
+  return (
+    <View style={{ backgroundColor: colors.card, borderRadius: 14, padding: 14, gap: 8 }}>
+      <Text style={{ color: colors.foreground, fontFamily: FontFamily.semibold, fontSize: 14 }}>
+        {sticker.type === "poll" ? "📊" : sticker.type === "quiz" ? "❓" : "💬"} {sticker.question}
+      </Text>
+      {sticker.type === "question" ? (
+        (sticker.answers || []).length === 0 ? (
+          <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>No answers yet</Text>
+        ) : (
+          (sticker.answers || []).map((a, i) => (
+            <View key={i} style={{ flexDirection: "row", gap: 6 }}>
+              <Text style={{ color: colors.foreground, fontFamily: FontFamily.medium, fontSize: 13 }}>
+                {a.username || "Someone"}:
+              </Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 13, flexShrink: 1 }}>{a.text}</Text>
+            </View>
+          ))
+        )
+      ) : (
+        (sticker.options || []).map((o, i) => (
+          <View key={i} style={{ gap: 2 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={{ color: colors.foreground, fontSize: 13 }}>
+                {o.text}
+                {sticker.type === "quiz" && o.isCorrect ? " ✓" : ""}
+              </Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                {o.count} ({o.percentage}%)
+              </Text>
+            </View>
+            <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.muted, overflow: "hidden" }}>
+              <View
+                style={{
+                  height: "100%",
+                  width: `${o.percentage}%`,
+                  backgroundColor: o.isCorrect ? "#2ECC71" : colors.primary,
+                }}
+              />
+            </View>
+          </View>
+        ))
       )}
     </View>
   );

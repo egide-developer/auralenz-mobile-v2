@@ -4,9 +4,10 @@
 // and/or username is shown across the app so navigation-to-profile and
 // open-story-on-avatar-tap behave identically everywhere instead of each
 // screen reimplementing it slightly differently.
-import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { Icon } from "./Icon";
+import { CachedImage } from "./CachedImage";
 
 export interface UserLinkUser {
   id?: string;
@@ -68,7 +69,7 @@ export function UserLink({
             ]}
           >
             {user.avatarUrl ? (
-              <Image
+              <CachedImage
                 source={{ uri: user.avatarUrl }}
                 style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
               />

@@ -8,7 +8,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   TextInput,
   StyleSheet,
   ActivityIndicator,
@@ -17,8 +16,10 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useVideoPlayer, VideoView } from "expo-video";
+import { VideoView } from "expo-video";
+import { useCachedVideoPlayer } from "../../src/hooks/useCachedVideoPlayer";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
@@ -66,7 +67,7 @@ export default function PostDetailScreen() {
   const media = post?.media?.[0];
   const isVideo = media?.type === "video";
 
-  const videoPlayer = useVideoPlayer(isVideo && media ? media.url : null, (player) => {
+  const { player: videoPlayer } = useCachedVideoPlayer(isVideo && media ? media.url : null, (player) => {
     player.loop = true;
     player.play();
   });
@@ -178,7 +179,7 @@ export default function PostDetailScreen() {
 
       {media ? (
         <View style={[styles.mediaWrap, { backgroundColor: colors.muted }]}>
-          <Image source={{ uri: media.url }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+          <CachedImage source={{ uri: media.url }} style={StyleSheet.absoluteFill} contentFit="contain" />
           {isVideo ? (
             <VideoView player={videoPlayer} style={StyleSheet.absoluteFill} contentFit="contain" nativeControls={false} />
           ) : null}

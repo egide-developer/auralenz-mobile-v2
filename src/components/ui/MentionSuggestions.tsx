@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, Image, FlatList } from "react-native";
+import { View, Text, TouchableOpacity, FlatList } from "react-native";
 import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
+import { CachedImage } from "./CachedImage";
 
 // Matches a trailing "@partialname" at the cursor-less end of the text —
 // composers here don't track cursor position, so this only triggers
@@ -81,7 +82,7 @@ export function MentionSuggestions({
               }}
             >
               {item.avatarUrl ? (
-                <Image source={{ uri: item.avatarUrl }} style={{ width: 30, height: 30 }} />
+                <CachedImage source={{ uri: item.avatarUrl }} style={{ width: 30, height: 30 }} />
               ) : null}
             </View>
             <Text style={{ color: colors.foreground, fontSize: 14 }}>{item.username}</Text>

@@ -5,7 +5,6 @@ import {
   RefreshControl,
   TouchableOpacity,
   StyleSheet,
-  Image,
   Share,
   TextInput,
   Modal,
@@ -30,7 +29,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
-import { useVideoPlayer, VideoView } from "expo-video";
+import { VideoView } from "expo-video";
+import { useCachedVideoPlayer } from "../../src/hooks/useCachedVideoPlayer";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
@@ -585,7 +586,7 @@ function MediaSlide({
       ? media.url.replace("?", ".jpg?")
       : `${media.url}.jpg`
     : "";
-  const videoPlayer = useVideoPlayer(isVideo ? media.url : null, (player) => {
+  const { player: videoPlayer } = useCachedVideoPlayer(isVideo ? media.url : null, (player) => {
     player.loop = true;
     player.muted = true;
   });
@@ -607,10 +608,10 @@ function MediaSlide({
 
   return (
     <View style={[styles.mediaSlide, { width: MEDIA_WIDTH, height, backgroundColor: colors.muted }]}>
-      <Image
+      <CachedImage
         source={{ uri: isVideo ? videoThumbUrl : media.url }}
         style={StyleSheet.absoluteFill}
-        resizeMode="contain"
+        contentFit="contain"
       />
       {isVideo && isActive ? (
         <TouchableOpacity activeOpacity={1} style={StyleSheet.absoluteFill} onPress={onOpenReel}>

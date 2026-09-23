@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, Alert, ScrollView, Image } from "react-native";
+import { View, Text, TouchableOpacity, Modal, StyleSheet, TextInput, Alert, ScrollView } from "react-native";
 import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { CachedImage } from "./CachedImage";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
 import type { HighlightSummary } from "../../types";
@@ -66,7 +67,7 @@ export function AddToHighlightSheet({
             {highlights.map((h) => (
               <TouchableOpacity key={h.id} style={styles.row} onPress={() => addToExisting(h.id)}>
                 <View style={[styles.thumb, { backgroundColor: colors.muted }]}>
-                  {h.coverImage ? <Image source={{ uri: h.coverImage }} style={styles.thumbImg} /> : null}
+                  {h.coverImage ? <CachedImage source={{ uri: h.coverImage }} style={styles.thumbImg} /> : null}
                 </View>
                 <Text style={[styles.rowText, { color: colors.foreground }]}>{h.title}</Text>
               </TouchableOpacity>

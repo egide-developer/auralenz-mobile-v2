@@ -5,7 +5,6 @@ import {
   RefreshControl,
   TouchableOpacity,
   StyleSheet,
-  Image,
   TextInput,
   Modal,
   ActivityIndicator,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import Animated, {
   FadeInDown,
   FadeIn,
@@ -452,7 +452,7 @@ export default function MessagesScreen() {
                   >
                     <View style={[styles.personAvatar, { backgroundColor: colors.muted }]}>
                       {item.avatarUrl ? (
-                        <Image source={{ uri: item.avatarUrl }} style={styles.personAvatarImg} />
+                        <CachedImage source={{ uri: item.avatarUrl }} style={styles.personAvatarImg} />
                       ) : (
                         <Icon name="user" set="light" size={20} color={colors.mutedForeground} />
                       )}

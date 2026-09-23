@@ -7,7 +7,7 @@ const TOKEN_KEY = "auth_token";
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
 });
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {

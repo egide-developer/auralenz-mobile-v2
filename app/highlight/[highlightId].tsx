@@ -1,8 +1,10 @@
-import { View, Text, TouchableOpacity, Dimensions, Image } from "react-native";
+import { View, Text, TouchableOpacity, Dimensions } from "react-native";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useVideoPlayer, VideoView } from "expo-video";
+import { VideoView } from "expo-video";
+import { useCachedVideoPlayer } from "../../src/hooks/useCachedVideoPlayer";
+import { CachedImage } from "../../src/components/ui/CachedImage";
 import { FontFamily } from "../../src/theme/typography";
 import { Colors } from "../../src/theme/colors";
 import api from "../../src/api/client";
@@ -103,7 +105,7 @@ export default function HighlightViewerScreen() {
           style={{ width: 32, height: 32, borderRadius: 16, overflow: "hidden", backgroundColor: Colors.dark.primary, marginRight: 8 }}
         >
           {highlight.owner?.avatarUrl ? (
-            <Image source={{ uri: highlight.owner.avatarUrl }} style={{ width: 32, height: 32 }} />
+            <CachedImage source={{ uri: highlight.owner.avatarUrl }} style={{ width: 32, height: 32 }} />
           ) : null}
         </View>
         <Text style={{ color: "#fff", fontFamily: FontFamily.semibold, fontSize: 14, flex: 1 }} numberOfLines={1}>
@@ -139,7 +141,7 @@ export default function HighlightViewerScreen() {
 
 function HighlightMedia({ item }: { item: HighlightItem }) {
   const isVideo = item.media.type === "video";
-  const videoPlayer = useVideoPlayer(isVideo ? item.media.url : null, (player) => {
+  const { player: videoPlayer } = useCachedVideoPlayer(isVideo ? item.media.url : null, (player) => {
     player.loop = true;
     player.play();
   });
@@ -149,10 +151,10 @@ function HighlightMedia({ item }: { item: HighlightItem }) {
   }
 
   return (
-    <Image
+    <CachedImage
       source={{ uri: item.media.url }}
       style={{ width: SCREEN_W, height: SCREEN_H, backgroundColor: "#1a1a1a" }}
-      resizeMode="contain"
+      contentFit="contain"
     />
   );
 }

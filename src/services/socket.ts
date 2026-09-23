@@ -17,6 +17,7 @@ export async function connectSocket(): Promise<Socket> {
     reconnectionAttempts: 10,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
+    extraHeaders: { "ngrok-skip-browser-warning": "true" },
   });
 
   socket.on("connect", () => {
