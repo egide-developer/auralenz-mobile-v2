@@ -320,12 +320,16 @@ export default function MessagesScreen() {
                 <View style={styles.conversationMeta}>
                   <View style={styles.conversationHeader}>
                     {item.user ? (
-                      <UserLink
-                        user={item.user}
-                        colors={colors}
-                        showAvatar={false}
-                        usernameStyle={[styles.name, unread && styles.nameUnread]}
-                      />
+                      <Text
+                        style={[
+                          styles.name,
+                          { color: colors.foreground },
+                          unread && styles.nameUnread,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.user.username}
+                      </Text>
                     ) : (
                       <Text
                         style={[

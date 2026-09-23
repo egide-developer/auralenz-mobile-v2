@@ -43,6 +43,7 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
@@ -647,9 +648,10 @@ export default function ChatDetailScreen() {
     });
     const unsubRead = onMessagesRead((data) => {
       if (data.conversationId !== id) return;
+      const messageIds = data.messageIds || [];
       setMessages((prev) =>
         prev.map((m) => {
-          if (!m.id || !data.messageIds.includes(m.id)) return m;
+          if (!m.id || !messageIds.includes(m.id)) return m;
           const readBy = m.readBy || [];
           if (readBy.some((r) => r.user === data.readBy)) return m;
           return { ...m, readBy: [...readBy, { user: data.readBy, readAt: new Date().toISOString() }] };
@@ -1164,7 +1166,7 @@ export default function ChatDetailScreen() {
         ref={flatListRef}
         data={rows}
         keyExtractor={(item, index) => item.message.clientId || item.message.id || `pending-${index}`}
-        style={{ opacity: initialScrollDone ? 1 : 0 }}
+        style={{ flex: 1, opacity: initialScrollDone ? 1 : 0 }}
         contentContainerStyle={styles.messageList}
         onScroll={handleScroll}
         scrollEventThrottle={150}
@@ -1346,7 +1348,7 @@ export default function ChatDetailScreen() {
                 scaleTo={0.85}
                 style={[styles.sendBtn, { backgroundColor: colors.muted }]}
               >
-                <Icon name="voice" set="bold" size={18} color={colors.mutedForeground} />
+                <Ionicons name="mic" size={18} color={colors.mutedForeground} />
               </PressableScale>
             )}
           </>
