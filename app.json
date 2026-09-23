@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.auralenz.app",
-      "softwareKeyboardLayoutMode": "pan",
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -49,6 +49,20 @@
         "expo-media-library",
         {
           "photosPermission": "Allow AuraLenz to access your media library for posts."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow AuraLenz to access your microphone to record voice messages."
+        }
+      ],
+      "@config-plugins/react-native-webrtc",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#000000"
         }
       ]
     ]

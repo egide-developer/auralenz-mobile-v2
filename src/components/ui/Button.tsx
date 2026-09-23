@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Colors } from "../../theme/colors";
 import { Radius, Spacing } from "../../theme/spacing";
-import { Typography } from "../../theme/typography";
+import { Typography, FontFamily } from "../../theme/typography";
 import { Shadows } from "../../theme/shadows";
 
 type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "action";
@@ -99,7 +99,7 @@ const SIZE_STYLES: Record<ButtonSize, ViewStyle> = {
 
 const SIZE_TEXT_STYLES: Record<ButtonSize, TextStyle> = {
   default: { ...Typography.button },
-  sm: { fontSize: 11, fontWeight: "600" as const },
+  sm: { fontFamily: FontFamily.semibold, fontSize: 11 },
   lg: { ...Typography.button, fontSize: 14 },
   xl: { ...Typography.button, fontSize: 16 },
   icon: { fontSize: 14 },

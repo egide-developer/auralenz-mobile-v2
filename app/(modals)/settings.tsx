@@ -4,7 +4,7 @@ import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
-import { Typography } from "../../src/theme/typography";
+import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
 
@@ -137,5 +137,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  logoutText: { ...Typography.body, fontWeight: "600" },
+  logoutText: { fontFamily: FontFamily.semibold, fontSize: FontSize.base, lineHeight: 21 },
 });

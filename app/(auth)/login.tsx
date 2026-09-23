@@ -73,7 +73,7 @@ export default function LoginScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
               <Icon name="message" set="light" size={18} color={colors.mutedForeground} />
               <TextInput
                 style={[styles.inputField, { color: colors.foreground }]}
@@ -90,7 +90,7 @@ export default function LoginScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80", borderColor: colors.border + "4D" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
               <Icon name="lock" set="light" size={18} color={colors.mutedForeground} />
               <TextInput
                 style={[styles.inputField, styles.passwordField, { color: colors.foreground }]}
@@ -205,7 +205,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 48,
     borderRadius: Radius.pill,
-    borderWidth: 1,
     paddingHorizontal: 16,
     gap: 10,
   },

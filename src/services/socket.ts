@@ -107,33 +107,88 @@ export function onUnreadUpdate(callback: (data: Record<string, number>) => void)
   socket?.on("unread:update", callback);
 }
 
+// ─── Group chat ────────────────────────────────────────────
+export function markGroupRead(groupId: string) {
+  socket?.emit("group_mark_read", { groupId });
+}
+
+export function onNewGroupMessage(callback: (data: { message: any; groupId: string }) => void) {
+  socket?.on("new_group_message", callback);
+  return () => {
+    socket?.off("new_group_message", callback);
+  };
+}
+
 export function onNotification(callback: (notification: any) => void) {
   socket?.on("notification", callback);
 }
 
-export function onCallInvite(callback: (data: { conversationId: string; callerId: string; callerName: string; type: string }) => void) {
-  socket?.on("call:invite", callback);
+// ─── Call signaling (WebRTC) ───────────────────────────────
+// Backend just relays these to the other participant's user room
+// (services/socketService.js#handleCallSignal) and stamps on fromUserId /
+// fromUser — it never inspects sdp/candidate, so payload shapes below only
+// need to match what the mobile client itself sends and reads.
+export interface CallSignalPayload {
+  conversationId: string;
+  callId: string;
+  fromUserId?: string;
+  fromUser?: { id: string; username: string; avatarUrl?: string };
+  [key: string]: any;
 }
 
-export function onCallAccept(callback: (data: { conversationId: string; peerId: string }) => void) {
-  socket?.on("call:accept", callback);
+export function sendCallOffer(data: { conversationId: string; callId: string; kind: "audio" | "video"; sdp: any }) {
+  socket?.emit("call_offer", data);
 }
 
-export function onCallDecline(callback: (data: { conversationId: string }) => void) {
-  socket?.on("call:decline", callback);
+export function sendCallAnswer(data: { conversationId: string; callId: string; sdp: any }) {
+  socket?.emit("call_answer", data);
 }
 
-export function onCallEnd(callback: (data: { conversationId: string }) => void) {
-  socket?.on("call:end", callback);
+export function sendCallIce(data: { conversationId: string; callId: string; candidate: any }) {
+  socket?.emit("call_ice", data);
 }
 
-// ─── Signal Events (WebRTC) ────────────────────────────────
-export function sendSignal(peerId: string, signal: any) {
-  socket?.emit("signal", { peerId, signal });
+export function sendCallEnd(data: { conversationId: string; callId: string }) {
+  socket?.emit("call_end", data);
 }
 
-export function onSignal(callback: (data: { peerId: string; signal: any }) => void) {
-  socket?.on("signal", callback);
+export function sendCallDecline(data: { conversationId: string; callId: string; reason?: string }) {
+  socket?.emit("call_decline", data);
+}
+
+export function onCallOffer(callback: (data: CallSignalPayload & { kind: "audio" | "video"; sdp: any }) => void) {
+  socket?.on("call_offer", callback);
+  return () => {
+    socket?.off("call_offer", callback);
+  };
+}
+
+export function onCallAnswer(callback: (data: CallSignalPayload & { sdp: any }) => void) {
+  socket?.on("call_answer", callback);
+  return () => {
+    socket?.off("call_answer", callback);
+  };
+}
+
+export function onCallIce(callback: (data: CallSignalPayload & { candidate: any }) => void) {
+  socket?.on("call_ice", callback);
+  return () => {
+    socket?.off("call_ice", callback);
+  };
+}
+
+export function onCallEnd(callback: (data: CallSignalPayload) => void) {
+  socket?.on("call_end", callback);
+  return () => {
+    socket?.off("call_end", callback);
+  };
+}
+
+export function onCallDecline(callback: (data: CallSignalPayload & { reason?: string }) => void) {
+  socket?.on("call_decline", callback);
+  return () => {
+    socket?.off("call_decline", callback);
+  };
 }
 
 export function removeListener(event: string) {

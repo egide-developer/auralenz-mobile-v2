@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
@@ -7,6 +7,7 @@ import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
+import { HighlightsRow } from "../../src/components/profile/HighlightsRow";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function ProfileScreen() {
   const menuItems = [
     { icon: "edit-square", label: "Edit Profile", route: "/(modals)/edit-profile" },
     { icon: "notification", label: "Notifications", route: "/(modals)/notifications" },
+    { icon: "bookmark", label: "Saved", route: "/(modals)/saved-posts" },
     { icon: "folder", label: "Library", route: "/(modals)/library" },
     { icon: "shield", label: "Admin", route: "/(modals)/admin", adminOnly: true as const },
   ];
@@ -39,7 +41,11 @@ export default function ProfileScreen() {
 
       <View style={styles.profileSection}>
         <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
-          <Icon name="user" set="light" size={36} color={colors.mutedForeground} />
+          {user?.avatarUrl ? (
+            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
+          ) : (
+            <Icon name="user" set="light" size={36} color={colors.mutedForeground} />
+          )}
         </View>
         <Text style={[styles.username, { color: colors.foreground }]}>
           {user?.username || "User"}
@@ -51,16 +57,34 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           {[
             { label: "Posts", value: user?.postsCount || 0 },
-            { label: "Followers", value: user?.followersCount || 0 },
-            { label: "Following", value: user?.followingCount || 0 },
-          ].map((stat) => (
-            <View key={stat.label} style={styles.stat}>
-              <Text style={[styles.statValue, { color: colors.foreground }]}>{stat.value}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
-            </View>
-          ))}
+            { label: "Followers", value: user?.followersCount || 0, mode: "followers" as const },
+            { label: "Following", value: user?.followingCount || 0, mode: "following" as const },
+          ].map((stat) =>
+            stat.mode && user?.id ? (
+              <TouchableOpacity
+                key={stat.label}
+                style={styles.stat}
+                onPress={() =>
+                  router.push({
+                    pathname: "/profile/follow-list",
+                    params: { userId: user.id, mode: stat.mode, title: stat.label },
+                  })
+                }
+              >
+                <Text style={[styles.statValue, { color: colors.foreground }]}>{stat.value}</Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View key={stat.label} style={styles.stat}>
+                <Text style={[styles.statValue, { color: colors.foreground }]}>{stat.value}</Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
+              </View>
+            )
+          )}
         </View>
       </View>
+
+      {user?.id ? <HighlightsRow userId={user.id} colors={colors} /> : null}
 
       <View style={styles.menuSection}>
         {menuItems
@@ -120,7 +144,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+    overflow: "hidden",
   },
+  avatarImg: { width: 96, height: 96 },
   username: { ...Typography.h2 },
   bio: {
     ...Typography.bodySmall,

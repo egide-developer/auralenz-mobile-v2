@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView } from "react-native";
-import { useEffect, useState } from "react";
-import { router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeIn } from "react-native-reanimated";
 import api from "../../api/client";
@@ -10,6 +10,7 @@ import { Colors } from "../../theme/colors";
 import { Radius, Spacing } from "../../theme/spacing";
 import { Typography } from "../../theme/typography";
 import { Icon } from "../ui/Icon";
+import { normalizeStoryGroups, extractStoryGroupsPayload } from "../../utils/stories";
 import type { StoryGroup } from "../../types";
 
 const RING_SIZE = 68;
@@ -20,19 +21,29 @@ export function StoryBar({ colors, isDark }: { colors: any; isDark: boolean }) {
   const [loading, setLoading] = useState(true);
   const user = useAuthStore((s) => s.user);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get(API.stories.list);
-        const list: StoryGroup[] = data.data || data.storyGroups || data.groups || data || [];
-        setGroups(Array.isArray(list) ? list : []);
-      } catch {
-        setGroups([]);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const fetchGroups = useCallback(async () => {
+    try {
+      const { data } = await api.get(API.stories.list);
+      const list = normalizeStoryGroups(extractStoryGroupsPayload(data));
+      setGroups(list);
+    } catch {
+      setGroups([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
+
+  // Refresh after returning from the story composer so a newly shared story
+  // shows up on the ring without needing a manual pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      fetchGroups();
+    }, [fetchGroups])
+  );
 
   if (loading) return null;
 
@@ -47,13 +58,13 @@ export function StoryBar({ colors, isDark }: { colors: any; isDark: boolean }) {
         contentContainerStyle={styles.scrollContent}
       >
         <Animated.View entering={FadeIn.duration(300)} style={styles.item}>
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={() =>
-              myGroup ? router.push(`/story/${myGroup.userId}`) : router.push("/(tabs)/create")
-            }
-          >
-            <View style={styles.ringSlot}>
+          <View style={styles.ringSlot}>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={() =>
+                myGroup ? router.push(`/story/${myGroup.userId}`) : router.push("/story/create")
+              }
+            >
               {myGroup ? (
                 <GradientRing hasUnviewed={myGroup.hasUnviewed} isDark={isDark}>
                   <Avatar uri={user?.avatarUrl} colors={colors} />
@@ -63,11 +74,16 @@ export function StoryBar({ colors, isDark }: { colors: any; isDark: boolean }) {
                   <Avatar uri={user?.avatarUrl} colors={colors} />
                 </View>
               )}
-              <View style={[styles.addBadge, { backgroundColor: colors.primary, borderColor: colors.background }]}>
-                <Icon name="plus" set="bold" size={11} color={colors.primaryForeground} />
-              </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              hitSlop={6}
+              onPress={() => router.push("/story/create")}
+              style={[styles.addBadge, { backgroundColor: colors.primary, borderColor: colors.background }]}
+            >
+              <Icon name="plus" set="bold" size={11} color={colors.primaryForeground} />
+            </TouchableOpacity>
+          </View>
           <Text numberOfLines={1} style={[styles.label, { color: colors.mutedForeground }]}>
             Your story
           </Text>

@@ -1,12 +1,16 @@
-import { View, Text, TouchableOpacity, Dimensions, TextInput } from "react-native";
+import { View, Text, TouchableOpacity, Dimensions, TextInput, Image } from "react-native";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
+import { FontFamily } from "../../src/theme/typography";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import { normalizeStoryGroups, extractStoryGroupsPayload } from "../../src/utils/stories";
+import { AddToHighlightSheet } from "../../src/components/ui/AddToHighlightSheet";
 import type { Story, StoryGroup } from "../../src/types";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -28,6 +32,7 @@ export default function StoryViewerScreen() {
   const [progress, setProgress] = useState(0);
   const [reply, setReply] = useState("");
   const [showReactions, setShowReactions] = useState(false);
+  const [highlightSheetVisible, setHighlightSheetVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(Date.now());
 
@@ -38,7 +43,7 @@ export default function StoryViewerScreen() {
     (async () => {
       try {
         const { data } = await api.get(API.stories.list);
-        const groups: StoryGroup[] = data.data || data.storyGroups || data;
+        const groups = normalizeStoryGroups(extractStoryGroupsPayload(data));
         const found = groups.find((g) => g.userId === groupId);
         if (found) {
           setStoryGroup(found);
@@ -112,8 +117,53 @@ export default function StoryViewerScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      {/* Story image/video placeholder */}
-      <View style={{ width: SCREEN_W, height: SCREEN_H, backgroundColor: "#1a1a1a" }} />
+      <StoryMedia story={story} paused={showReactions} />
+      {isOwn && (
+        <TouchableOpacity
+          style={{
+            position: "absolute",
+            bottom: 40,
+            left: 12,
+            right: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            paddingVertical: 10,
+          }}
+          onPress={() => {
+            if (timerRef.current) clearInterval(timerRef.current);
+            router.push(`/story/insights/${story.id}`);
+          }}
+        >
+          <Ionicons name="eye-outline" size={18} color="#fff" />
+          <Text style={{ color: "#fff", marginLeft: 6, fontSize: 13 }}>
+            {story.viewsCount} {story.viewsCount === 1 ? "view" : "views"}
+          </Text>
+        </TouchableOpacity>
+      )}
+      {isOwn && (
+        <TouchableOpacity
+          style={{ position: "absolute", bottom: 40, right: 12, padding: 10 }}
+          onPress={() => {
+            if (timerRef.current) clearInterval(timerRef.current);
+            setHighlightSheetVisible(true);
+          }}
+        >
+          <Ionicons name="star-outline" size={22} color="#fff" />
+        </TouchableOpacity>
+      )}
+      {isOwn && user?.id ? (
+        <AddToHighlightSheet
+          visible={highlightSheetVisible}
+          onClose={() => {
+            setHighlightSheetVisible(false);
+            startTimer();
+          }}
+          colors={Colors.dark}
+          storyId={story.id}
+          ownerId={user.id}
+        />
+      ) : null}
 
       {/* Progress bars */}
       <View
@@ -174,7 +224,7 @@ export default function StoryViewerScreen() {
             marginRight: 8,
           }}
         />
-        <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14, flex: 1 }}>
+        <Text style={{ color: "#fff", fontFamily: FontFamily.semibold, fontSize: 14, flex: 1 }}>
           {storyGroup?.user?.username || "User"}
         </Text>
         <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginRight: 12 }}>
@@ -236,8 +286,6 @@ export default function StoryViewerScreen() {
               style={{
                 height: 40,
                 borderRadius: 20,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.3)",
                 paddingHorizontal: 14,
                 color: "#fff",
                 fontSize: 14,
@@ -274,5 +322,37 @@ export default function StoryViewerScreen() {
         </View>
       )}
     </View>
+  );
+}
+
+function StoryMedia({ story, paused }: { story: Story; paused: boolean }) {
+  const isVideo = story.type === "video";
+  const videoPlayer = useVideoPlayer(isVideo ? story.mediaUrl : null, (player) => {
+    player.loop = true;
+  });
+
+  useEffect(() => {
+    if (!isVideo) return;
+    if (paused) videoPlayer.pause();
+    else videoPlayer.play();
+  }, [paused, isVideo, videoPlayer]);
+
+  if (isVideo) {
+    return (
+      <VideoView
+        player={videoPlayer}
+        style={{ width: SCREEN_W, height: SCREEN_H }}
+        contentFit="contain"
+        nativeControls={false}
+      />
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: story.mediaUrl }}
+      style={{ width: SCREEN_W, height: SCREEN_H, backgroundColor: "#1a1a1a" }}
+      resizeMode="contain"
+    />
   );
 }

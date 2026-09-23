@@ -12,6 +12,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  Alert,
 } from "react-native";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { router } from "expo-router";
@@ -23,23 +24,40 @@ import Animated, {
   withSpring,
   Easing,
   runOnJS,
+  withDelay,
   FadeInDown,
   LinearTransition,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Ionicons } from "@expo/vector-icons";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useThemeStore } from "../../src/stores/themeStore";
+import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
-import { Spacing } from "../../src/theme/spacing";
-import { Typography } from "../../src/theme/typography";
+import { Spacing, Radius } from "../../src/theme/spacing";
+import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { Icon } from "../../src/components/ui/Icon";
+import { UserLink } from "../../src/components/ui/UserLink";
 import { PressableScale } from "../../src/components/ui/PressableScale";
+import { renderRichText } from "../../src/components/ui/RichText";
+import { MentionSuggestions, useMentionQuery, applyMentionSelection } from "../../src/components/ui/MentionSuggestions";
+import { ReportSheet } from "../../src/components/ui/ReportSheet";
 import { StoryBar } from "../../src/components/feed/StoryBar";
-import type { Post, Comment } from "../../src/types";
+import type { Post, PostMedia, Comment } from "../../src/types";
 
+const SCREEN_WIDTH = Dimensions.get("window").width;
 const SCREEN_HEIGHT = Dimensions.get("window").height;
+const MEDIA_WIDTH = SCREEN_WIDTH;
+const MIN_MEDIA_HEIGHT = 240;
+const MAX_MEDIA_HEIGHT = Math.round(SCREEN_HEIGHT * 0.75);
+
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(value, min), max);
+}
 const SHEET_HEIGHT_DEFAULT = Math.round(SCREEN_HEIGHT * 2 / 3);
 const SHEET_HEIGHT_EXPANDED = Math.round(SCREEN_HEIGHT * 0.8);
 
@@ -63,14 +81,25 @@ function timeAgo(dateStr: string): string {
 export default function FeedScreen() {
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
+  const currentUserId = useAuthStore((s) => s.user?.id);
   const [posts, setPosts] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activePostId, setActivePostId] = useState<string | null>(null);
+  const [videoMuted, setVideoMuted] = useState(true);
+  const toggleVideoMuted = useCallback(() => setVideoMuted((m) => !m), []);
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    const firstVideo = viewableItems.find((v: any) => v.item?.media?.[0]?.type === "video");
+    setActivePostId(firstVideo ? firstVideo.item.id : null);
+  }).current;
 
   const fetchPosts = useCallback(async () => {
     try {
       const { data } = await api.get(API.posts.list);
-      setPosts(data.posts || data.data || data.items || data);
+      const list = data.posts || data.data || data.items || data;
+      setPosts(Array.isArray(list) ? list : []);
     } catch (e: any) {
       console.log("Fetch posts error:", e?.response?.status, e?.message);
     } finally {
@@ -79,9 +108,20 @@ export default function FeedScreen() {
     }
   }, []);
 
+  // Re-fetch (and immediately drop whatever was cached in local state) any
+  // time the signed-in account changes — the feed tab stays mounted across
+  // logout/login since it lives inside the (tabs) group, so without this a
+  // freshly logged-in account could briefly render the previous account's
+  // feed until a manual pull-to-refresh.
   useEffect(() => {
+    setPosts([]);
+    if (!currentUserId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     fetchPosts();
-  }, []);
+  }, [currentUserId, fetchPosts]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -143,6 +183,40 @@ export default function FeedScreen() {
     } catch {}
   }, []);
 
+  const removePostLocally = useCallback((postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }, []);
+
+  const handleDeletePost = useCallback(async (post: Post) => {
+    removePostLocally(post.id);
+    try {
+      await api.delete(API.posts.byId(post.id));
+    } catch {
+      // Deletion failed server-side — bring it back rather than leaving the
+      // feed silently missing a post that still exists.
+      fetchPosts();
+    }
+  }, [removePostLocally, fetchPosts]);
+
+  const handleUnfollow = useCallback(async (post: Post) => {
+    const authorId = post.author?.id;
+    if (!authorId) return;
+    // Unfollowing removes every post from that author, not just this one —
+    // the feed is following-scoped, so all of their posts belong gone.
+    setPosts((prev) => prev.filter((p) => p.author?.id !== authorId));
+    try {
+      await api.post(API.users.follow(authorId));
+    } catch {
+      fetchPosts();
+    }
+  }, [fetchPosts]);
+
+  const handleReportPost = useCallback(async (post: Post, reason: string) => {
+    try {
+      await api.post(API.reports.create, { targetType: "post", targetId: post.id, reason });
+    } catch {}
+  }, []);
+
   if (loading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.background }]}>
@@ -197,15 +271,28 @@ export default function FeedScreen() {
             </Text>
           </View>
         }
+        viewabilityConfig={viewabilityConfig}
+        onViewableItemsChanged={onViewableItemsChanged}
+        windowSize={5}
+        maxToRenderPerBatch={4}
+        initialNumToRender={4}
+        updateCellsBatchingPeriod={50}
+        removeClippedSubviews={Platform.OS === "android"}
         renderItem={({ item, index }) => (
           <PostCard
             post={item}
             index={index}
             colors={colors}
             isDark={isDark}
+            isActive={item.id === activePostId}
+            videoMuted={videoMuted}
+            onToggleVideoMuted={toggleVideoMuted}
             onLike={handleLike}
             onSave={handleSave}
             onShare={handleShare}
+            onDelete={handleDeletePost}
+            onUnfollow={handleUnfollow}
+            onReport={handleReportPost}
           />
         )}
       />
@@ -218,28 +305,60 @@ function PostCard({
   index,
   colors,
   isDark,
+  isActive,
+  videoMuted,
+  onToggleVideoMuted,
   onLike,
   onSave,
   onShare,
+  onDelete,
+  onUnfollow,
+  onReport,
 }: {
   post: Post;
   index: number;
   colors: any;
   isDark: boolean;
+  isActive: boolean;
+  videoMuted: boolean;
+  onToggleVideoMuted: () => void;
   onLike: (p: Post) => void;
   onSave: (p: Post) => void;
   onShare: (p: Post) => void;
+  onDelete: (p: Post) => void;
+  onUnfollow: (p: Post) => void;
+  onReport: (p: Post, reason: string) => void;
 }) {
   const [commentModalVisible, setCommentModalVisible] = useState(false);
-  const firstMedia = post.media?.[0];
-  const heartScale = useSharedValue(0);
+  const [optionsVisible, setOptionsVisible] = useState(false);
+  const [mediaIndex, setMediaIndex] = useState(0);
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const isOwnPost = !!post.author?.id && post.author.id === currentUserId;
+  const media = post.media || [];
+
+  const openReel = useCallback(() => {
+    router.push({
+      pathname: "/reels/[postId]",
+      params: { postId: post.id, initialPost: JSON.stringify(post) },
+    });
+  }, [post]);
+
+  const rawAspectRatio = media[0]?.aspectRatio;
+  const firstAspectRatio = rawAspectRatio && rawAspectRatio > 0 ? rawAspectRatio : 1;
+  const mediaHeight = clamp(MEDIA_WIDTH / firstAspectRatio, MIN_MEDIA_HEIGHT, MAX_MEDIA_HEIGHT);
+
+  const onMediaScrollEnd = useCallback((e: any) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / MEDIA_WIDTH);
+    setMediaIndex(idx);
+  }, []);
+
+  const heartOpacity = useSharedValue(0);
   const likeBtnScale = useSharedValue(1);
   const saveBtnScale = useSharedValue(1);
 
   const burstHeart = useCallback(() => {
-    heartScale.value = withSpring(1, { damping: 8, stiffness: 200 }, () => {
-      heartScale.value = withTiming(0, { duration: 250, easing: Easing.in(Easing.cubic) });
-    });
+    heartOpacity.value = 1;
+    heartOpacity.value = withDelay(700, withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) }));
   }, []);
 
   const handleDoubleTap = useCallback(() => {
@@ -268,8 +387,7 @@ function PostCard({
   };
 
   const heartOverlayStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: heartScale.value }],
-    opacity: heartScale.value,
+    opacity: heartOpacity.value,
   }));
 
   const likeBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: likeBtnScale.value }] }));
@@ -284,38 +402,87 @@ function PostCard({
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: colors.border + "30" },
+          { backgroundColor: colors.card, borderColor: "#808080" },
         ]}
       >
         <View style={styles.postHeader}>
-          <TouchableOpacity activeOpacity={0.8} style={styles.postHeaderLeft}>
-            <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
-              {post.author?.avatarUrl ? (
-                <Image source={{ uri: post.author.avatarUrl }} style={styles.avatarImg} />
-              ) : (
-                <Icon name="user" set="light" size={18} color={colors.mutedForeground} />
-              )}
-            </View>
+          <View style={styles.postHeaderLeft}>
+            {post.author ? (
+              <UserLink user={post.author} colors={colors} avatarSize={36} showUsername={false} />
+            ) : null}
             <View style={styles.postMeta}>
-              <Text style={[styles.username, { color: colors.foreground }]}>
-                {post.author?.username || "User"}
-              </Text>
+              {post.author ? (
+                <UserLink
+                  user={post.author}
+                  colors={colors}
+                  showAvatar={false}
+                  usernameStyle={styles.username}
+                />
+              ) : (
+                <Text style={[styles.username, { color: colors.foreground }]}>User</Text>
+              )}
               <Text style={[styles.timeAgo, { color: colors.mutedForeground }]}>
                 {timeAgo(post.createdAt)}
               </Text>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.moreBtn} hitSlop={8}>
+          </View>
+          <TouchableOpacity style={styles.moreBtn} hitSlop={8} onPress={() => setOptionsVisible(true)}>
             <Icon name="more-circle" set="light" size={20} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
 
-        {firstMedia && firstMedia.url ? (
+        {media.length > 0 ? (
           <GestureDetector gesture={doubleTapGesture}>
             <View style={styles.mediaWrap}>
-              <Image source={{ uri: firstMedia.url }} style={styles.postImage} resizeMode="cover" />
+              {media.length > 1 ? (
+                <FlatList
+                  data={media}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  style={{ height: mediaHeight }}
+                  keyExtractor={(m, i) => m.id || m.url || String(i)}
+                  onMomentumScrollEnd={onMediaScrollEnd}
+                  renderItem={({ item, index: slideIdx }) => (
+                    <MediaSlide
+                      media={item}
+                      isPostActive={isActive}
+                      isCurrentSlide={slideIdx === mediaIndex}
+                      height={mediaHeight}
+                      colors={colors}
+                      muted={videoMuted}
+                      onToggleMuted={onToggleVideoMuted}
+                      onOpenReel={openReel}
+                    />
+                  )}
+                />
+              ) : (
+                <MediaSlide
+                  media={media[0]}
+                  isPostActive={isActive}
+                  isCurrentSlide
+                  height={mediaHeight}
+                  colors={colors}
+                  muted={videoMuted}
+                  onToggleMuted={onToggleVideoMuted}
+                  onOpenReel={openReel}
+                />
+              )}
+              {media.length > 1 ? (
+                <View pointerEvents="none" style={styles.dotsRow}>
+                  {media.map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.dot,
+                        i === mediaIndex ? styles.dotActive : styles.dotInactive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              ) : null}
               <Animated.View pointerEvents="none" style={[styles.heartOverlay, heartOverlayStyle]}>
-                <Icon name="heart" set="bold" size={84} color="#FFFFFF" />
+                <Ionicons name="heart" size={84} color="#FFFFFF" />
               </Animated.View>
             </View>
           </GestureDetector>
@@ -323,17 +490,21 @@ function PostCard({
 
         {post.caption ? (
           <Text style={[styles.caption, { color: colors.foreground }]}>
-            <Text style={{ fontWeight: "700" }}>{post.author?.username} </Text>
-            {post.caption}
+            <Text
+              style={{ fontFamily: FontFamily.bold }}
+              onPress={() => post.author && router.push(`/profile/${post.author.username}`)}
+            >
+              {post.author?.username}{" "}
+            </Text>
+            {renderRichText(post.caption, colors.primary, `cap-${post.id}`)}
           </Text>
         ) : null}
 
         <View style={styles.postActions}>
           <AnimatedTouchable style={[styles.actionBtn, likeBtnStyle]} onPress={handleLikePress} activeOpacity={0.75}>
-            <Icon
-              name="heart"
-              set={post.isLiked ? "bold" : "light"}
-              size={19}
+            <Ionicons
+              name={post.isLiked ? "heart" : "heart-outline"}
+              size={20}
               color={post.isLiked ? Colors.light.destructive : colors.mutedForeground}
             />
             <Text style={[styles.actionText, { color: post.isLiked ? Colors.light.destructive : colors.mutedForeground }]}>
@@ -372,7 +543,188 @@ function PostCard({
         colors={colors}
         isDark={isDark}
       />
+
+      <PostOptionsSheet
+        visible={optionsVisible}
+        onClose={() => setOptionsVisible(false)}
+        colors={colors}
+        isOwnPost={isOwnPost}
+        authorUsername={post.author?.username}
+        onShare={() => onShare(post)}
+        onDelete={() => onDelete(post)}
+        onUnfollow={() => onUnfollow(post)}
+        onReport={(reason) => onReport(post, reason)}
+      />
     </Animated.View>
+  );
+}
+
+function MediaSlide({
+  media,
+  isPostActive,
+  isCurrentSlide,
+  height,
+  colors,
+  muted,
+  onToggleMuted,
+  onOpenReel,
+}: {
+  media: PostMedia;
+  isPostActive: boolean;
+  isCurrentSlide: boolean;
+  height: number;
+  colors: any;
+  muted: boolean;
+  onToggleMuted: () => void;
+  onOpenReel: () => void;
+}) {
+  const isVideo = media.type === "video";
+  const isActive = isPostActive && isCurrentSlide;
+  const videoThumbUrl = isVideo
+    ? media.url.includes("?")
+      ? media.url.replace("?", ".jpg?")
+      : `${media.url}.jpg`
+    : "";
+  const videoPlayer = useVideoPlayer(isVideo ? media.url : null, (player) => {
+    player.loop = true;
+    player.muted = true;
+  });
+
+  useEffect(() => {
+    if (!isVideo) return;
+    if (isActive) {
+      videoPlayer.play();
+    } else {
+      videoPlayer.pause();
+      videoPlayer.currentTime = 0;
+    }
+  }, [isActive, isVideo, videoPlayer]);
+
+  useEffect(() => {
+    if (!isVideo) return;
+    videoPlayer.muted = muted;
+  }, [muted, isVideo, videoPlayer]);
+
+  return (
+    <View style={[styles.mediaSlide, { width: MEDIA_WIDTH, height, backgroundColor: colors.muted }]}>
+      <Image
+        source={{ uri: isVideo ? videoThumbUrl : media.url }}
+        style={StyleSheet.absoluteFill}
+        resizeMode="contain"
+      />
+      {isVideo && isActive ? (
+        <TouchableOpacity activeOpacity={1} style={StyleSheet.absoluteFill} onPress={onOpenReel}>
+          <VideoView
+            player={videoPlayer}
+            style={StyleSheet.absoluteFill}
+            contentFit="contain"
+            nativeControls={false}
+          />
+        </TouchableOpacity>
+      ) : null}
+      {isVideo ? (
+        <TouchableOpacity style={styles.videoBadge} onPress={onToggleMuted} hitSlop={8}>
+          <Icon
+            name={!isActive ? "video" : muted ? "volume-off" : "volume-up"}
+            set="bold"
+            size={14}
+            color="#FFFFFF"
+          />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
+function PostOptionsSheet({
+  visible,
+  onClose,
+  colors,
+  isOwnPost,
+  authorUsername,
+  onShare,
+  onDelete,
+  onUnfollow,
+  onReport,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  colors: any;
+  isOwnPost: boolean;
+  authorUsername?: string;
+  onShare: () => void;
+  onDelete: () => void;
+  onUnfollow: () => void;
+  onReport: (reason: string) => void;
+}) {
+  const [reportVisible, setReportVisible] = useState(false);
+
+  const confirmDelete = () => {
+    onClose();
+    Alert.alert("Delete post?", "This can't be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: onDelete },
+    ]);
+  };
+
+  const confirmUnfollow = () => {
+    onClose();
+    Alert.alert(`Unfollow ${authorUsername || "this user"}?`, undefined, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Unfollow", style: "destructive", onPress: onUnfollow },
+    ]);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose} />
+      <View style={[styles.optionsSheet, { backgroundColor: colors.card }]}>
+        {isOwnPost ? (
+          <TouchableOpacity style={styles.optionRow} onPress={confirmDelete}>
+            <Icon name="delete" set="light" size={20} color={Colors.light.destructive} />
+            <Text style={[styles.optionText, { color: Colors.light.destructive }]}>Delete post</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.optionRow} onPress={confirmUnfollow}>
+            <Icon name="close-square" set="light" size={20} color={Colors.light.destructive} />
+            <Text style={[styles.optionText, { color: Colors.light.destructive }]}>Unfollow</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={styles.optionRow}
+          onPress={() => {
+            onClose();
+            onShare();
+          }}
+        >
+          <Icon name="send" set="light" size={20} color={colors.foreground} />
+          <Text style={[styles.optionText, { color: colors.foreground }]}>Share</Text>
+        </TouchableOpacity>
+        {!isOwnPost ? (
+          <TouchableOpacity
+            style={styles.optionRow}
+            onPress={() => {
+              onClose();
+              setReportVisible(true);
+            }}
+          >
+            <Ionicons name="flag-outline" size={20} color={Colors.light.destructive} />
+            <Text style={[styles.optionText, { color: Colors.light.destructive }]}>Report</Text>
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity style={[styles.optionRow, styles.optionCancel]} onPress={onClose}>
+          <Text style={[styles.optionText, { color: colors.mutedForeground, textAlign: "center", flex: 1 }]}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <ReportSheet
+        visible={reportVisible}
+        onClose={() => setReportVisible(false)}
+        colors={colors}
+        onSubmit={onReport}
+      />
+    </Modal>
   );
 }
 
@@ -396,7 +748,7 @@ function normalizeComment(c: any): Comment {
   };
 }
 
-function CommentSheet({
+export function CommentSheet({
   visible,
   onClose,
   postId,
@@ -414,6 +766,7 @@ function CommentSheet({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
+  const mentionQuery = useMentionQuery(text);
   const inputRef = useRef<TextInput>(null);
   const expandedRef = useRef(false);
 
@@ -629,6 +982,12 @@ function CommentSheet({
               </View>
             )}
 
+            <MentionSuggestions
+              query={mentionQuery}
+              colors={colors}
+              onSelect={(username) => setText((t) => applyMentionSelection(t, username))}
+            />
+
             <View style={[styles.commentInput, { borderTopColor: colors.border + "66", backgroundColor: colors.card }]}>
               <TextInput
                 ref={inputRef}
@@ -675,18 +1034,22 @@ function CommentItem({
   return (
     <View style={[styles.commentItem, depth > 0 && { marginLeft: 36 }]}>
       <View style={styles.commentRow}>
-        <View style={[styles.commentAvatar, { backgroundColor: colors.muted }]}>
-          {comment.author?.avatarUrl ? (
-            <Image source={{ uri: comment.author.avatarUrl }} style={styles.commentAvatarImg} />
-          ) : (
+        {comment.author ? (
+          <UserLink user={comment.author} colors={colors} avatarSize={28} showUsername={false} />
+        ) : (
+          <View style={[styles.commentAvatar, { backgroundColor: colors.muted }]}>
             <Icon name="user" set="light" size={12} color={colors.mutedForeground} />
-          )}
-        </View>
+          </View>
+        )}
         <View style={styles.commentBody}>
-          <Text style={[styles.commentUser, { color: colors.foreground }]}>
-            {comment.author?.username || "User"}
+          {comment.author ? (
+            <UserLink user={comment.author} colors={colors} showAvatar={false} usernameStyle={styles.commentUser} />
+          ) : (
+            <Text style={[styles.commentUser, { color: colors.foreground }]}>User</Text>
+          )}
+          <Text style={[styles.commentText, { color: colors.foreground }]}>
+            {renderRichText(comment.text || comment.content, colors.primary, `cmt-${comment.id}`)}
           </Text>
-          <Text style={[styles.commentText, { color: colors.foreground }]}>{comment.text || comment.content}</Text>
           <View style={styles.commentActions}>
             <Text style={[styles.commentTime, { color: colors.mutedForeground }]}>
               {timeAgo(comment.createdAt)}
@@ -769,12 +1132,12 @@ const styles = StyleSheet.create({
     ...Typography.body,
   },
   postCard: {
-    marginBottom: Spacing.md,
-    marginTop: Spacing.xs,
+    marginBottom: 0,
+    marginTop: 0,
   },
   card: {
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0,
     padding: Spacing.base,
   },
   postHeader: {
@@ -809,8 +1172,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   username: {
-    ...Typography.bodySmall,
-    fontWeight: "600",
+    fontFamily: FontFamily.semibold,
+    fontSize: Typography.bodySmall.fontSize,
+    lineHeight: Typography.bodySmall.lineHeight,
   },
   timeAgo: {
     fontSize: 11,
@@ -825,10 +1189,43 @@ const styles = StyleSheet.create({
     height: 320,
     backgroundColor: "#00000010",
   },
+  mediaSlide: {
+    overflow: "hidden",
+  },
   heartOverlay: {
     ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
+  },
+  videoBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  dotsRow: {
+    position: "absolute",
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 5,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dotActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  dotInactive: {
+    backgroundColor: "rgba(255,255,255,0.45)",
   },
   caption: {
     ...Typography.bodySmall,
@@ -902,8 +1299,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   commentUser: {
-    ...Typography.bodySmall,
-    fontWeight: "600",
+    fontFamily: FontFamily.semibold,
+    fontSize: Typography.bodySmall.fontSize,
+    lineHeight: Typography.bodySmall.lineHeight,
     marginBottom: 2,
   },
   commentText: {
@@ -925,8 +1323,8 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   commentActionText: {
+    fontFamily: FontFamily.semibold,
     fontSize: 12,
-    fontWeight: "600",
   },
   commentLikeBtn: {
     flexDirection: "row",
@@ -964,5 +1362,34 @@ const styles = StyleSheet.create({
     flex: 1,
     ...Typography.body,
     paddingVertical: 8,
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  optionsSheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+  },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 16,
+  },
+  optionText: {
+    ...Typography.body,
+    fontFamily: FontFamily.semibold,
+  },
+  optionCancel: {
+    justifyContent: "center",
+    marginTop: 4,
   },
 });

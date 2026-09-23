@@ -22,7 +22,6 @@ export function Input({ isDark = false, style, ...props }: InputProps) {
           styles.input,
           {
             color: isDark ? Colors.dark.foreground : Colors.light.foreground,
-            borderColor: isDark ? Colors.dark.border + "4D" : Colors.light.border + "4D", // 30%
             backgroundColor: isDark ? Colors.dark.card + "80" : Colors.light.card + "80", // 50%
           },
           Shadows[isDark ? "dark" : "light"]["soft"],
@@ -39,7 +38,6 @@ const styles = StyleSheet.create({
   input: {
     height: 48,
     borderRadius: Radius.pill,
-    borderWidth: 1,
     paddingHorizontal: 20,
     paddingVertical: 12,
     fontSize: Typography.body.fontSize,

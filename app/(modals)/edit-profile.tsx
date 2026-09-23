@@ -6,7 +6,7 @@ import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
-import { Typography } from "../../src/theme/typography";
+import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
 
@@ -77,7 +77,6 @@ export default function EditProfileScreen() {
             style={[styles.input, {
               color: colors.foreground,
               backgroundColor: colors.card + "80",
-              borderColor: colors.border + "4D",
             }, Shadows[isDark ? "dark" : "light"]["soft"]]}
           />
         </View>
@@ -92,7 +91,6 @@ export default function EditProfileScreen() {
             style={[styles.bioInput, {
               color: colors.foreground,
               backgroundColor: colors.card + "80",
-              borderColor: colors.border + "4D",
             }, Shadows[isDark ? "dark" : "light"]["soft"]]}
           />
         </View>
@@ -116,7 +114,7 @@ const styles = StyleSheet.create({
   headerTitle: { ...Typography.h4 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   saveBtn: { paddingHorizontal: 8 },
-  saveText: { ...Typography.body, fontWeight: "600" },
+  saveText: { fontFamily: FontFamily.semibold, fontSize: FontSize.base, lineHeight: 21 },
   avatarSection: { alignItems: "center", paddingVertical: Spacing.xl },
   avatar: {
     width: 96,
@@ -125,21 +123,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  changePhoto: { ...Typography.bodySmall, fontWeight: "600", marginTop: 8 },
+  changePhoto: { fontFamily: FontFamily.semibold, fontSize: FontSize.sm, lineHeight: 20, marginTop: 8 },
   form: { paddingHorizontal: Spacing.lg, gap: 16 },
   inputGroup: { gap: 6 },
   label: { ...Typography.label, paddingHorizontal: 4 },
   input: {
     height: 48,
     borderRadius: Radius.lg,
-    borderWidth: 1,
     paddingHorizontal: 14,
     ...Typography.body,
   },
   bioInput: {
     height: 100,
     borderRadius: Radius.lg,
-    borderWidth: 1,
     paddingHorizontal: 14,
     paddingTop: 12,
     ...Typography.body,

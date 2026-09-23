@@ -23,6 +23,7 @@ export const API = {
     search: "/api/users/search/users",
     blocked: "/api/users/blocked",
     block: (id: string) => `/api/users/${id}/block`,
+    pushToken: "/api/users/push-token",
   },
   posts: {
     list: "/api/posts",
@@ -52,6 +53,7 @@ export const API = {
     list: "/api/groups",
     byId: (id: string) => `/api/groups/${id}`,
     messages: (id: string) => `/api/groups/${id}/messages`,
+    read: (id: string) => `/api/groups/${id}/read`,
     participants: (id: string) => `/api/groups/${id}/participants`,
     join: (id: string) => `/api/groups/${id}/participants`,
     leave: (id: string, uid: string) => `/api/groups/${id}/participants/${uid}`,
@@ -63,10 +65,13 @@ export const API = {
   },
   stories: {
     list: "/api/stories",
+    create: "/api/stories",
     byId: (id: string) => `/api/stories/${id}`,
     view: (id: string) => `/api/stories/${id}/view`,
     react: (id: string) => `/api/stories/${id}/react`,
     reply: (id: string) => `/api/stories/${id}/reply`,
+    delete: (id: string) => `/api/stories/${id}`,
+    insights: (id: string) => `/api/stories/${id}/insights`,
   },
   library: {
     list: "/api/library",
@@ -81,6 +86,16 @@ export const API = {
     items: (id: string) => `/api/collections/${id}/items`,
     addItem: (id: string) => `/api/collections/${id}/items`,
     removeItem: (id: string, aid: string) => `/api/collections/${id}/items/${aid}`,
+  },
+  reports: {
+    create: "/api/reports",
+  },
+  highlights: {
+    create: "/api/highlights",
+    byUser: (userId: string) => `/api/highlights/user/${userId}`,
+    byId: (id: string) => `/api/highlights/${id}`,
+    addItem: (id: string) => `/api/highlights/${id}/items`,
+    removeItem: (id: string, itemId: string) => `/api/highlights/${id}/items/${itemId}`,
   },
   admin: {
     dashboard: "/api/admin/dashboard",

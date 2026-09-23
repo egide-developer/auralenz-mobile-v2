@@ -55,7 +55,6 @@ export default function ChangePasswordScreen() {
               style={[styles.input, {
                 color: colors.foreground,
                 backgroundColor: colors.card + "80",
-                borderColor: colors.border + "4D",
               }, Shadows[isDark ? "dark" : "light"]["soft"]]}
             />
           </View>
@@ -95,7 +94,6 @@ const styles = StyleSheet.create({
   input: {
     height: 48,
     borderRadius: Radius.lg,
-    borderWidth: 1,
     paddingHorizontal: 14,
     ...Typography.body,
   },

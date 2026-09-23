@@ -1,7 +1,7 @@
 // AuraLenz BottomNav — mirrors web MobileNav.tsx
 // Floating glass pill with 4 tabs + separate Create FAB
 // Animated sliding active pill indicator
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   StyleSheet,
   useWindowDimensions,
   LayoutChangeEvent,
+  Keyboard,
+  Platform,
 } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import Animated, {
@@ -24,6 +26,7 @@ import { useThemeStore } from "../../stores/themeStore";
 import { useUnreadStore } from "../../stores/unreadStore";
 import { Colors } from "../../theme/colors";
 import { Radius } from "../../theme/spacing";
+import { FontFamily } from "../../theme/typography";
 
 interface NavItem {
   name: string;
@@ -81,6 +84,25 @@ export function BottomNav() {
     transform: [{ rotate: `${fabRotation.value}deg` }],
   }));
 
+  const keyboardY = useSharedValue(0);
+  const keyboardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: keyboardY.value }],
+  }));
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      keyboardY.value = withTiming(e.endCoordinates.height, { duration: 250 });
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      keyboardY.value = withTiming(0, { duration: 250 });
+    });
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   const onPillLayout = (e: LayoutChangeEvent) => {
     setPillWidth(e.nativeEvent.layout.width - 4); // minus paddingHorizontal*2
   };
@@ -94,7 +116,7 @@ export function BottomNav() {
   };
 
     return (
-    <View style={[styles.container, { paddingBottom: 8 + insets.bottom }]}>
+    <Animated.View style={[styles.container, keyboardStyle, { paddingBottom: 8 + insets.bottom }]}>
       <View style={[styles.dockWrapper, { maxWidth: dockMaxWidth }]}>
         <View style={styles.dockRow}>
           {/* Main pill with 4 tabs */}
@@ -167,7 +189,7 @@ export function BottomNav() {
           </Animated.View>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -295,8 +317,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   badgeText: {
+    fontFamily: FontFamily.bold,
     fontSize: 10,
-    fontWeight: "700",
     lineHeight: 14,
   },
 });

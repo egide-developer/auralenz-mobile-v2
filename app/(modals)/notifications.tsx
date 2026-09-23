@@ -4,11 +4,40 @@ import { useRouter } from "expo-router";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Spacing } from "../../src/theme/spacing";
-import { Typography } from "../../src/theme/typography";
+import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { UserLink } from "../../src/components/ui/UserLink";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { AppNotification } from "../../src/types";
+
+function notificationText(n: AppNotification): string {
+  const name = n.sender?.username || "Someone";
+  switch (n.type) {
+    case "like":
+      return `${name} liked your post`;
+    case "comment":
+      return n.comment?.text ? `${name} commented: "${n.comment.text}"` : `${name} commented on your post`;
+    case "reply":
+      return n.comment?.text ? `${name} replied: "${n.comment.text}"` : `${name} replied to your comment`;
+    case "follow":
+      return `${name} started following you`;
+    case "mention":
+      return `${name} mentioned you`;
+    case "story_view":
+      return `${name} viewed your story`;
+    case "story_reply":
+      return `${name} replied to your story`;
+    case "message":
+      return `${name} sent you a message`;
+    case "group_invite":
+      return n.group?.name ? `${name} invited you to "${n.group.name}"` : `${name} invited you to a group`;
+    case "group_join":
+      return n.group?.name ? `${name} joined "${n.group.name}"` : `${name} joined your group`;
+    default:
+      return `${name} sent you a notification`;
+  }
+}
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -20,7 +49,8 @@ export default function NotificationsScreen() {
     (async () => {
       try {
         const { data } = await api.get(API.notifications.list);
-        setNotifications(data.data || data.notifications || data);
+        const list = data.data || data.notifications || data;
+        setNotifications(Array.isArray(list) ? list : []);
       } catch {}
     })();
   }, []);
@@ -46,7 +76,7 @@ export default function NotificationsScreen() {
 
       <FlatList
         data={notifications}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id || item.id}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -56,11 +86,15 @@ export default function NotificationsScreen() {
         }
         renderItem={({ item }) => (
           <View style={[styles.notifRow, { borderBottomColor: colors.border + "30", opacity: item.isRead ? 0.6 : 1 }]}>
-            <View style={[styles.notifAvatar, { backgroundColor: colors.muted }]}>
-              <Icon name="notification" set="light" size={16} color={colors.mutedForeground} />
-            </View>
+            {item.sender ? (
+              <UserLink user={item.sender} colors={colors} avatarSize={40} showUsername={false} />
+            ) : (
+              <View style={[styles.notifAvatar, { backgroundColor: colors.muted }]}>
+                <Icon name="notification" set="light" size={16} color={colors.mutedForeground} />
+              </View>
+            )}
             <View style={styles.notifMeta}>
-              <Text style={[styles.notifMessage, { color: colors.foreground }]}>{item.message}</Text>
+              <Text style={[styles.notifMessage, { color: colors.foreground }]}>{notificationText(item)}</Text>
               <Text style={[styles.notifDate, { color: colors.mutedForeground }]}>
                 {new Date(item.createdAt).toLocaleDateString()}
               </Text>
@@ -89,7 +123,7 @@ const styles = StyleSheet.create({
   headerTitle: { ...Typography.h4 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   markReadBtn: { paddingHorizontal: 8 },
-  markReadText: { ...Typography.bodySmall, fontWeight: "600" },
+  markReadText: { fontFamily: FontFamily.semibold, fontSize: FontSize.sm, lineHeight: 20 },
   listContent: { paddingHorizontal: Spacing.lg },
   emptyState: {
     paddingVertical: 80,
@@ -109,7 +143,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
+  notifAvatarImg: { width: 40, height: 40 },
   notifMeta: { flex: 1 },
   notifMessage: { ...Typography.bodySmall, lineHeight: 20 },
   notifDate: { ...Typography.caption, marginTop: 4 },

@@ -21,6 +21,9 @@ export interface UserPreview {
   displayName?: string;
   avatarUrl?: string;
   isVerified: boolean;
+  isOnline?: boolean;
+  hasStory?: boolean;
+  hasUnviewedStory?: boolean;
 }
 
 export interface Post {
@@ -45,6 +48,7 @@ export interface PostMedia {
   type: "image" | "video" | "audio";
   width?: number;
   height?: number;
+  aspectRatio?: number;
   thumbnailUrl?: string;
   duration?: number;
 }
@@ -84,24 +88,64 @@ export interface MessageReadEntry {
   readAt: string;
 }
 
+export interface MessageReplyPreview {
+  id?: string;
+  _id?: string;
+  text?: string;
+  isDeleted?: boolean;
+  sender?: { username?: string };
+}
+
+export interface MessageFile {
+  url: string;
+  mimeType?: string;
+  originalName?: string;
+  size?: number;
+}
+
 export interface Message {
   id: string;
-  conversationId: string;
+  conversationId?: string;
+  groupId?: string;
   senderId: string;
   sender: UserPreview;
   text: string;
   images: string[];
   audioUrl?: string | null;
+  audioDuration?: number | null;
+  files?: MessageFile[];
   messageType: "text" | "image" | "audio" | "file";
   reactions: { emoji: string; users: string[] }[];
   readBy: MessageReadEntry[];
   isDeleted: boolean;
   createdAt: string;
+  replyTo?: MessageReplyPreview | null;
   /** Client-generated id used as a stable list key across the optimistic → confirmed transition. */
   clientId?: string;
   /** True while an optimistically-added message is still in flight to the server. */
   pending?: boolean;
   failed?: boolean;
+}
+
+export interface GroupParticipant {
+  id: string;
+  username: string;
+  avatarUrl?: string;
+  isOnline?: boolean;
+  role: "admin" | "member";
+}
+
+export interface ChatGroup {
+  id: string;
+  name: string;
+  description?: string;
+  avatarUrl?: string;
+  createdBy?: string;
+  participants: GroupParticipant[];
+  lastMessage: LastMessage | null;
+  unreadCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LinkPreview {
@@ -135,13 +179,50 @@ export interface StoryReaction {
   emoji: string;
 }
 
+export interface HighlightSummary {
+  id: string;
+  title: string;
+  coverImage?: string;
+  itemCount: number;
+  createdAt: string;
+}
+
+export interface HighlightItem {
+  _id: string;
+  storyId?: string;
+  media: { url: string; type: "image" | "video"; thumbnail?: string };
+  text?: string;
+  originalCreatedAt: string;
+}
+
+export interface Highlight {
+  _id: string;
+  title: string;
+  coverImage?: string;
+  owner: UserPreview;
+  items: HighlightItem[];
+}
+
 export interface AppNotification {
   id: string;
-  type: "like" | "comment" | "follow" | "message" | "story_view" | "group_invite" | "mention";
-  actor: UserPreview;
-  targetId?: string;
-  targetType?: string;
-  message: string;
+  _id?: string;
+  type:
+    | "like"
+    | "comment"
+    | "follow"
+    | "mention"
+    | "reply"
+    | "story_view"
+    | "message"
+    | "group_invite"
+    | "group_join"
+    | "story_reply";
+  sender: UserPreview;
+  post?: { id: string; caption?: string; media?: PostMedia[] };
+  comment?: { id: string; text?: string };
+  story?: { id: string };
+  message?: { id: string; text?: string };
+  group?: { id: string; name?: string };
   isRead: boolean;
   createdAt: string;
 }

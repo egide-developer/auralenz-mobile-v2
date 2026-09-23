@@ -4,7 +4,19 @@ import { router } from "expo-router";
 import api, { TOKEN_KEY } from "../api/client";
 import { API } from "../api/endpoints";
 import { connectSocket, disconnectSocket } from "../services/socket";
+import { useCallStore } from "./callStore";
+import {
+  registerForPushNotifications,
+  unregisterPushToken,
+} from "../services/pushNotifications";
 import type { User } from "../types";
+
+function connectSocketAndCallListeners() {
+  connectSocket()
+    .then(() => useCallStore.getState().initListeners())
+    .catch(() => {});
+  registerForPushNotifications();
+}
 
 function normalizeUser(raw: any): User | null {
   if (!raw) return null;
@@ -40,7 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { data } = await api.get(API.auth.profile);
         const user = normalizeUser(data.user || data.data || data);
         set({ user, token, isAuthenticated: true, isLoading: false });
-        connectSocket().catch(() => {});
+        connectSocketAndCallListeners();
       } else {
         set({ isLoading: false });
       }
@@ -60,7 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync("refresh_token", res.refreshToken);
     }
     set({ user, token, isAuthenticated: true });
-    connectSocket().catch(() => {});
+    connectSocketAndCallListeners();
   },
 
   register: async (username, email, password) => {
@@ -77,10 +89,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await SecureStore.setItemAsync("refresh_token", res.refreshToken);
     }
     set({ user, token, isAuthenticated: true });
-    connectSocket().catch(() => {});
+    connectSocketAndCallListeners();
   },
 
   logout: async () => {
+    await unregisterPushToken();
     try {
       await api.post(API.auth.logout);
     } catch {}
