@@ -138,6 +138,16 @@ export const API = {
     react: (id: string) => `/api/notes/${id}/reactions`,
     remove: (id: string) => `/api/notes/${id}`,
   },
+  channels: {
+    list: "/api/channels",
+    create: "/api/channels",
+    discover: "/api/channels/discover",
+    byId: (id: string) => `/api/channels/${id}`,
+    join: (id: string) => `/api/channels/${id}/join`,
+    leave: (id: string) => `/api/channels/${id}/leave`,
+    messages: (id: string) => `/api/channels/${id}/messages`,
+    remove: (id: string) => `/api/channels/${id}`,
+  },
   admin: {
     dashboard: "/api/admin/dashboard",
     users: "/api/admin/users",

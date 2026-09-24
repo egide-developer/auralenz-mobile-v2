@@ -249,6 +249,12 @@ export default function MessagesScreen() {
           </PressableScale>
           <PressableScale
             style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+            onPress={() => router.push("/(modals)/channels")}
+          >
+            <Ionicons name="megaphone-outline" size={19} color={colors.mutedForeground} />
+          </PressableScale>
+          <PressableScale
+            style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
             onPress={() => router.push("/(modals)/groups")}
           >
             <Ionicons name="people-outline" size={19} color={colors.mutedForeground} />

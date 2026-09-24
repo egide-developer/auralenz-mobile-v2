@@ -188,6 +188,27 @@ export interface NoteEntry {
   expiresAt: string;
 }
 
+/** A broadcast channel: one-to-many, owner (and promoted admins) write to a subscribed audience. */
+export interface Channel {
+  id: string;
+  name: string;
+  description: string;
+  avatarUrl: string;
+  owner: { id: string; username?: string; avatarUrl?: string };
+  memberCount: number;
+  isJoined: boolean;
+  myRole: "owner" | "admin" | "member" | null;
+}
+
+export interface ChannelMessage {
+  id: string;
+  channel: string;
+  sender: UserPreview;
+  text: string;
+  createdAt: string;
+  editedAt?: string | null;
+}
+
 export interface Story {
   id: string;
   userId: string;
