@@ -13,6 +13,9 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  Modal,
+  TextInput,
+  Alert,
 } from "react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TipSheet } from "../monetization/TipSheet";
@@ -30,14 +33,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { VideoView } from "expo-video";
 import { useCachedVideoPlayer } from "../../hooks/useCachedVideoPlayer";
 import { useThemeStore } from "../../stores/themeStore";
+import { useAuthStore } from "../../stores/authStore";
 import { Colors } from "../../theme/colors";
 import { Typography, FontFamily } from "../../theme/typography";
+import { showToast } from "../../stores/toastStore";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
 import { Icon } from "../ui/Icon";
 import { UserLink } from "../ui/UserLink";
 import { renderRichText } from "../ui/RichText";
-import type { Post } from "../../types";
+import type { Post, UserPreview } from "../../types";
 import { CommentSheet } from "../../../app/(tabs)/index";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -304,6 +309,7 @@ function ReelItem({
   insets: { top: number; bottom: number; left: number; right: number };
 }) {
   const [tipVisible, setTipVisible] = useState(false);
+  const [collabVisible, setCollabVisible] = useState(false);
   const media = post.media?.find((m) => m.type === "video") || post.media?.[0];
   const isVideo = media?.type === "video";
 
@@ -412,6 +418,16 @@ function ReelItem({
               )}
               <Text style={styles.reelTime}>· {timeAgo(post.createdAt)}</Text>
             </View>
+            {post.collaborators && post.collaborators.length > 0 ? (
+              <Text style={styles.reelCollaborators} numberOfLines={1}>
+                with {post.collaborators.map((c) => `@${c.username}`).join(" · ")}
+              </Text>
+            ) : null}
+            {post.isRemix && post.remixSource?.username ? (
+              <Text style={styles.reelRemix} numberOfLines={1}>
+                Remixed from @{post.remixSource.username}
+              </Text>
+            ) : null}
             {post.caption ? (
               <Text style={styles.reelCaption}>
                 {renderRichText(post.caption, Colors.dark.primary, `reel-cap-${post.id}`)}
@@ -435,6 +451,13 @@ function ReelItem({
             <TouchableOpacity style={styles.reelActionBtn} onPress={() => onShare(post)}>
               <Icon name="send" set="bold" size={26} color="#FFFFFF" />
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.reelActionBtn}
+              onPress={() => setCollabVisible(true)}
+              accessibilityLabel="Remix or collaborate"
+            >
+              <Ionicons name="git-network-outline" size={27} color="#FFFFFF" />
+            </TouchableOpacity>
             {post.author?.id ? (
               <TouchableOpacity
                 style={styles.reelActionBtn}
@@ -456,8 +479,185 @@ function ReelItem({
             postId={post.id}
           />
         ) : null}
+
+        <CollabSheet
+          visible={collabVisible}
+          onClose={() => setCollabVisible(false)}
+          post={post}
+        />
       </View>
     </GestureDetector>
+  );
+}
+
+function CollabSheet({
+  visible,
+  onClose,
+  post,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  post: Post;
+}) {
+  const isDark = useThemeStore((s) => s.isDark);
+  const colors = isDark ? Colors.dark : Colors.light;
+  const currentUser = useAuthStore((s) => s.user);
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<UserPreview[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const isAuthor = post.author?.id && currentUser?.id && post.author.id === currentUser.id;
+
+  useEffect(() => {
+    if (!visible || !isAuthor || query.trim().length < 2) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+    let active = true;
+    setSearching(true);
+    const handle = setTimeout(() => {
+      api
+        .get(`${API.users.search}?q=${encodeURIComponent(query.trim())}`)
+        .then(({ data }) => {
+          if (active) setResults(data.data || data.users || data || []);
+        })
+        .catch(() => {
+          if (active) setResults([]);
+        })
+        .finally(() => {
+          if (active) setSearching(false);
+        });
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(handle);
+    };
+  }, [visible, query, isAuthor]);
+
+  useEffect(() => {
+    if (!visible) setQuery("");
+  }, [visible]);
+
+  const remix = useCallback(async () => {
+    setBusy(true);
+    try {
+      await api.post(API.posts.remix(post.id), {
+        publish: true,
+        caption: `Remixed from @${post.author.username}`,
+      });
+      showToast("Remix published to your profile", "info");
+      onClose();
+    } catch (e: any) {
+      Alert.alert("Remix failed", e?.response?.data?.message || "Could not create remix");
+    } finally {
+      setBusy(false);
+    }
+  }, [post, onClose]);
+
+  const addCollab = useCallback(
+    async (user: UserPreview) => {
+      setBusy(true);
+      try {
+        await api.post(API.posts.addCollaborator(post.id, user.id));
+        showToast(`@${user.username} added as a collaborator`, "info");
+        onClose();
+      } catch (e: any) {
+        Alert.alert("Collaborator failed", e?.response?.data?.message || "Could not add collaborator");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [post, onClose]
+  );
+
+  const alreadyCollab = (id: string) => (post.collaborators || []).some((c) => c.id === id);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+      <View style={styles.sheetBackdrop}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+        <View style={[styles.sheetCard, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sheetTitle, { color: colors.foreground }]}>Create with this reel</Text>
+
+          <TouchableOpacity
+            style={[styles.sheetRow, { borderBottomColor: colors.border + "40" }]}
+            onPress={remix}
+            disabled={busy}
+          >
+            <View style={[styles.sheetIcon, { backgroundColor: colors.primary + "14" }]}>
+              <Ionicons name="git-network-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.sheetRowMeta}>
+              <Text style={[styles.sheetRowTitle, { color: colors.foreground }]}>Remix this reel</Text>
+              <Text style={[styles.sheetRowSub, { color: colors.mutedForeground }]}>
+                Repost the video as your own, credited to @{post.author.username}
+              </Text>
+            </View>
+            {busy ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+          </TouchableOpacity>
+
+          {isAuthor ? (
+            <>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Add a collaborator by username..."
+                placeholderTextColor={colors.mutedForeground + "80"}
+                style={[styles.sheetInput, { backgroundColor: colors.background, color: colors.foreground }]}
+                autoCapitalize="none"
+              />
+              {searching ? (
+                <ActivityIndicator size="small" color={colors.mutedForeground} style={{ paddingVertical: 12 }} />
+              ) : query.trim().length >= 2 ? (
+                <View style={{ maxHeight: 180 }}>
+                  {results.map((u) => {
+                    const already = alreadyCollab(u.id);
+                    return (
+                      <TouchableOpacity
+                        key={u.id}
+                        style={styles.personRow}
+                        onPress={() => !already && addCollab(u)}
+                        disabled={already || busy}
+                      >
+                        <View style={[styles.personAvatar, { backgroundColor: colors.muted }]}>
+                          {u.avatarUrl ? (
+                            <CachedImage source={{ uri: u.avatarUrl }} style={styles.personAvatarImg} />
+                          ) : (
+                            <Icon name="user" set="light" size={16} color={colors.mutedForeground} />
+                          )}
+                        </View>
+                        <Text style={[styles.personName, { color: colors.foreground }]} numberOfLines={1}>
+                          @{u.username}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.personAction,
+                            { color: already ? colors.mutedForeground : colors.primary },
+                          ]}
+                        >
+                          {already ? "Added" : "Add"}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <Text style={[styles.sheetHint, { color: colors.mutedForeground }]}>
+              Only the post author can invite collaborators. You can still remix.
+            </Text>
+          )}
+
+          <TouchableOpacity onPress={onClose} style={styles.sheetCancel} hitSlop={8}>
+            <Text style={[styles.sheetCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -546,4 +746,74 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: FontFamily.semibold,
   },
+  reelCollaborators: {
+    ...Typography.bodySmall,
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: FontFamily.medium,
+    marginBottom: 2,
+  },
+  reelRemix: {
+    ...Typography.bodySmall,
+    color: "rgba(255,255,255,0.65)",
+    marginBottom: 2,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "#00000066",
+  },
+  sheetCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 28,
+  },
+  sheetTitle: {
+    ...Typography.h4,
+    marginBottom: 8,
+  },
+  sheetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+  },
+  sheetIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetRowMeta: { flex: 1 },
+  sheetRowTitle: { ...Typography.body, fontFamily: FontFamily.semibold },
+  sheetRowSub: { ...Typography.bodySmall, marginTop: 2 },
+  sheetInput: {
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 12,
+    ...Typography.bodySmall,
+  },
+  sheetHint: { ...Typography.bodySmall, marginTop: 12 },
+  personRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+  },
+  personAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  personAvatarImg: { width: 36, height: 36, borderRadius: 18 },
+  personName: { ...Typography.bodySmall, flex: 1, fontFamily: FontFamily.medium },
+  personAction: { ...Typography.bodySmall, fontFamily: FontFamily.semibold },
+  sheetCancel: { alignItems: "center", marginTop: 16 },
+  sheetCancelText: { ...Typography.bodySmall, fontFamily: FontFamily.medium },
 });

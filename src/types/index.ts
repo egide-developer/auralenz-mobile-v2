@@ -30,6 +30,10 @@ export interface Post {
   id: string;
   userId: string;
   author: UserPreview;
+  collaborators?: UserPreview[];
+  remixOf?: string;
+  remixSource?: UserPreview | null;
+  isRemix?: boolean;
   caption?: string;
   media: PostMedia[];
   tags: string[];

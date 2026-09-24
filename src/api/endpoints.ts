@@ -40,6 +40,9 @@ export const API = {
     search: "/api/posts/search",
     saved: "/api/posts/saved",
     byUser: (id: string) => `/api/posts/user/${id}`,
+    addCollaborator: (id: string, userId: string) => `/api/posts/${id}/collaborators/${userId}`,
+    removeCollaborator: (id: string, userId: string) => `/api/posts/${id}/collaborators/${userId}`,
+    remix: (id: string) => `/api/posts/${id}/remix`,
   },
   comments: {
     list: (postId: string) => `/api/comments/post/${postId}`,
