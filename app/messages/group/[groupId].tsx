@@ -249,7 +249,10 @@ export default function GroupChatScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={8}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
+        <TouchableOpacity
+          style={styles.headerCenter}
+          onPress={() => router.push({ pathname: "/(modals)/group-info", params: { groupId } })}
+        >
           <View style={[styles.headerAvatar, { backgroundColor: colors.muted }]}>
             {group.avatarUrl ? (
               <Image source={{ uri: group.avatarUrl }} style={styles.headerAvatarImg} />
@@ -265,8 +268,14 @@ export default function GroupChatScreen() {
               {group.participants.length} members
             </Text>
           </View>
-        </View>
-        <View style={styles.iconBtn} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: "/(modals)/group-info", params: { groupId } })}
+          style={styles.iconBtn}
+          hitSlop={8}
+        >
+          <Icon name="info-square" set="light" size={22} color={colors.foreground} />
+        </TouchableOpacity>
       </View>
 
       <FlatList

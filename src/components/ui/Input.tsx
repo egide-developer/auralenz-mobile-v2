@@ -5,24 +5,28 @@ import { Colors } from "../../theme/colors";
 import { Radius } from "../../theme/spacing";
 import { Typography } from "../../theme/typography";
 import { Shadows } from "../../theme/shadows";
+import { useThemeStore } from "../../stores/themeStore";
 
 interface InputProps extends TextInputProps {
+  /** Overrides the app theme. Only needed for surfaces that are always dark, like the video editor. */
   isDark?: boolean;
 }
 
-export function Input({ isDark = false, style, ...props }: InputProps) {
+export function Input({ isDark: isDarkOverride, style, ...props }: InputProps) {
+  const themeIsDark = useThemeStore((s) => s.isDark);
+  const isDark = isDarkOverride ?? themeIsDark;
   const colors = isDark ? Colors.dark : Colors.light;
 
   return (
     <View style={[styles.wrapper, style]}>
       <TextInput
         {...props}
-        placeholderTextColor={isDark ? Colors.dark.mutedForeground + "80" : Colors.light.mutedForeground + "80"}
+        placeholderTextColor={colors.mutedForeground + "80"}
         style={[
           styles.input,
           {
-            color: isDark ? Colors.dark.foreground : Colors.light.foreground,
-            backgroundColor: isDark ? Colors.dark.card + "80" : Colors.light.card + "80", // 50%
+            color: colors.foreground,
+            backgroundColor: colors.card + "80", // 50%
           },
           Shadows[isDark ? "dark" : "light"]["soft"],
         ]}

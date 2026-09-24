@@ -59,6 +59,11 @@ export const API = {
     participants: (id: string) => `/api/groups/${id}/participants`,
     join: (id: string) => `/api/groups/${id}/participants`,
     leave: (id: string, uid: string) => `/api/groups/${id}/participants/${uid}`,
+    update: (id: string) => `/api/groups/${id}`,
+    avatar: (id: string) => `/api/groups/${id}/avatar`,
+    remove: (id: string) => `/api/groups/${id}`,
+    promote: (id: string, uid: string) => `/api/groups/${id}/promote/${uid}`,
+    demote: (id: string, uid: string) => `/api/groups/${id}/demote/${uid}`,
   },
   notifications: {
     list: "/api/notifications",

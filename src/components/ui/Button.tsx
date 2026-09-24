@@ -12,6 +12,7 @@ import { Colors } from "../../theme/colors";
 import { Radius, Spacing } from "../../theme/spacing";
 import { Typography, FontFamily } from "../../theme/typography";
 import { Shadows } from "../../theme/shadows";
+import { useThemeStore } from "../../stores/themeStore";
 
 type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "action";
 type ButtonSize = "default" | "sm" | "lg" | "xl" | "icon" | "icon-sm" | "icon-lg";
@@ -117,7 +118,9 @@ export function Button({
   style,
   textStyle,
 }: ButtonProps) {
-  const isDark = false; // TODO: use theme store
+  // Read from the store like every other themed surface in the app. This was
+  // hardcoded to light, which would have rendered light chrome on dark screens.
+  const isDark = useThemeStore((s) => s.isDark);
   const variantStyle = VARIANT_STYLES[variant](isDark);
   const variantTextStyle = VARIANT_TEXT_STYLES[variant](isDark);
   const sizeStyle = SIZE_STYLES[size];

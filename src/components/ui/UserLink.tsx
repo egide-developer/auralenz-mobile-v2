@@ -8,6 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { Icon } from "./Icon";
 import { CachedImage } from "./CachedImage";
+import { usePresenceStore } from "../../stores/presenceStore";
 
 export interface UserLinkUser {
   id?: string;
@@ -38,7 +39,14 @@ export function UserLink({
   gap?: number;
   row?: boolean;
 }) {
+  // Subscribed before the early return so the hook order stays stable.
+  // Live presence wins over whatever the REST payload said, which goes
+  // stale the moment the other user connects or drops.
+  const livePresence = usePresenceStore((s) => (user?.id ? s.presence[user.id] : undefined));
+
   if (!user?.username) return null;
+
+  const showOnline = livePresence ? livePresence.isOnline : user.isOnline === true;
 
   const goToProfile = () => router.push(`/profile/${user.username}`);
   const openAvatar = () => {
@@ -76,7 +84,7 @@ export function UserLink({
             ) : (
               <Icon name="user" set="light" size={Math.round(avatarSize * 0.5)} color={colors.mutedForeground} />
             )}
-            {user.isOnline ? (
+            {showOnline ? (
               <View
                 style={[
                   styles.onlineDot,
