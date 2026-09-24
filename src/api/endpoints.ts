@@ -107,5 +107,8 @@ export const API = {
     logs: "/api/admin/logs",
     setUserRole: (id: string) => `/api/admin/users/${id}/role`,
     setVerified: (id: string) => `/api/admin/users/${id}/verified`,
+    setAccess: (id: string) => `/api/admin/users/${id}/access`,
+    posts: "/api/admin/posts",
+    deletePost: (id: string) => `/api/admin/posts/${id}`,
   },
 } as const;

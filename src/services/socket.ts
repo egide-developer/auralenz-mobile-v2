@@ -17,7 +17,6 @@ export async function connectSocket(): Promise<Socket> {
     reconnectionAttempts: 10,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
-    extraHeaders: { "ngrok-skip-browser-warning": "true" },
   });
 
   socket.on("connect", () => {
@@ -71,6 +70,25 @@ export function markRead(conversationId: string) {
   socket?.emit("mark_read", { conversationId });
 }
 
+// Joining the group room is what makes the server's group-scoped broadcasts
+// reachable — group typing indicators and AI message updates are both sent
+// to `group_<id>` and are silently lost by any client that never joins.
+export function joinGroup(groupId: string) {
+  socket?.emit("join_group", groupId);
+}
+
+export function leaveGroup(groupId: string) {
+  socket?.emit("leave_group", groupId);
+}
+
+export function startGroupTyping(groupId: string) {
+  socket?.emit("group_typing_start", { groupId });
+}
+
+export function stopGroupTyping(groupId: string) {
+  socket?.emit("group_typing_stop", { groupId });
+}
+
 // ─── Event Listeners ───────────────────────────────────────
 // Each returns an unsubscribe function so multiple screens can listen to the
 // same event concurrently without stepping on each other's listeners.
@@ -104,8 +122,32 @@ export function onTypingStop(callback: (data: { userId: string; conversationId: 
   };
 }
 
-export function onUnreadUpdate(callback: (data: Record<string, number>) => void) {
-  socket?.on("unread:update", callback);
+/**
+ * Server-side rejections arrive here: an unauthorized room join, or a message
+ * to someone who has blocked you. Without a listener these fail silently and
+ * the user is left looking at a tap that did nothing.
+ */
+export function onSocketError(callback: (data: { message: string }) => void) {
+  socket?.on("error", callback);
+  return () => {
+    socket?.off("error", callback);
+  };
+}
+
+export function onUserStatusChange(
+  callback: (data: { userId: string; isOnline: boolean; lastSeen: string | null }) => void
+) {
+  socket?.on("user_status_change", callback);
+  return () => {
+    socket?.off("user_status_change", callback);
+  };
+}
+
+export function onMessageUpdated(callback: (data: { message: any; conversationId?: string; groupId?: string }) => void) {
+  socket?.on("message_updated", callback);
+  return () => {
+    socket?.off("message_updated", callback);
+  };
 }
 
 // ─── Group chat ────────────────────────────────────────────
@@ -120,8 +162,54 @@ export function onNewGroupMessage(callback: (data: { message: any; groupId: stri
   };
 }
 
+export function onGroupTypingStart(callback: (data: { userId: string; groupId: string }) => void) {
+  socket?.on("group_typing_start", callback);
+  return () => {
+    socket?.off("group_typing_start", callback);
+  };
+}
+
+export function onGroupTypingStop(callback: (data: { userId: string; groupId: string }) => void) {
+  socket?.on("group_typing_stop", callback);
+  return () => {
+    socket?.off("group_typing_stop", callback);
+  };
+}
+
+/**
+ * The group lifecycle family. The server broadcasts each of these on any
+ * group mutation; without listeners the UI only reflects a change after a
+ * manual refresh.
+ */
+export type GroupLifecycleEvent =
+  | "group_created"
+  | "group_updated"
+  | "group_deleted"
+  | "group_removed"
+  | "group_avatar_updated"
+  | "group_participants_added"
+  | "group_participant_removed"
+  | "group_role_updated";
+
+export function onGroupLifecycle(
+  events: GroupLifecycleEvent[],
+  callback: (event: GroupLifecycleEvent, data: any) => void
+) {
+  const handlers = events.map((event) => {
+    const handler = (data: any) => callback(event, data);
+    socket?.on(event, handler);
+    return { event, handler };
+  });
+  return () => {
+    handlers.forEach(({ event, handler }) => socket?.off(event, handler));
+  };
+}
+
 export function onNotification(callback: (notification: any) => void) {
   socket?.on("notification", callback);
+  return () => {
+    socket?.off("notification", callback);
+  };
 }
 
 // ─── Call signaling (WebRTC) ───────────────────────────────
@@ -189,6 +277,14 @@ export function onCallDecline(callback: (data: CallSignalPayload & { reason?: st
   socket?.on("call_decline", callback);
   return () => {
     socket?.off("call_decline", callback);
+  };
+}
+
+/** Every call-signalling failure path on the server reports through this. */
+export function onCallError(callback: (data: { message: string; event?: string }) => void) {
+  socket?.on("call_error", callback);
+  return () => {
+    socket?.off("call_error", callback);
   };
 }
 

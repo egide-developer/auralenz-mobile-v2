@@ -11,8 +11,10 @@ import {
   onCallIce,
   onCallEnd,
   onCallDecline,
+  onCallError,
 } from "../services/socket";
 import { getWebRTC, isCallingAvailable } from "../services/webrtc";
+import { showToast } from "./toastStore";
 import type { UserPreview } from "../types";
 
 export type CallKind = "audio" | "video";
@@ -221,6 +223,14 @@ export const useCallStore = create<CallState>((set, get) => {
     onCallDecline((data) => {
       const state = get();
       if (data.callId && state.callId && data.callId !== state.callId) return;
+      cleanup();
+    });
+
+    // Without this, a signalling failure leaves the caller staring at a
+    // "calling…" screen forever, since no other event will ever arrive.
+    onCallError((data) => {
+      if (get().status === "idle") return;
+      showToast(data?.message || "Call failed", "error");
       cleanup();
     });
   };

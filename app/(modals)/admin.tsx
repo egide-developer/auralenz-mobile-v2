@@ -84,11 +84,15 @@ export default function AdminScreen() {
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Quick Actions</Text>
         <View style={[styles.actionsCard, { backgroundColor: colors.card, borderColor: colors.border + "30" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
           {[
-            { icon: "user", label: "Manage Users" },
-            { icon: "document", label: "Manage Posts" },
-            { icon: "paper", label: "System Logs" },
+            { icon: "user", label: "Manage Users", href: "/(modals)/admin-users" },
+            { icon: "document", label: "Manage Posts", href: "/(modals)/admin-posts" },
+            { icon: "paper", label: "System Logs", href: "/(modals)/admin-logs" },
           ].map((item, i) => (
-            <TouchableOpacity key={item.label} style={[styles.actionRow, i < 2 && { borderBottomColor: colors.border + "30", borderBottomWidth: 0.5 }]}>
+            <TouchableOpacity
+              key={item.label}
+              onPress={() => router.push(item.href as any)}
+              style={[styles.actionRow, i < 2 && { borderBottomColor: colors.border + "30", borderBottomWidth: 0.5 }]}
+            >
               <Icon name={item.icon} set="light" size={20} color={colors.foreground} />
               <Text style={[styles.actionLabel, { color: colors.foreground }]}>{item.label}</Text>
               <Icon name="arrow-right" set="light" size={16} color={colors.mutedForeground} />

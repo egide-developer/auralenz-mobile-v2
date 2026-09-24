@@ -15,6 +15,8 @@ import { useAuthStore } from "../src/stores/authStore";
 import { useThemeStore } from "../src/stores/themeStore";
 import { Colors } from "../src/theme/colors";
 import { CallListener } from "../src/components/layout/CallListener";
+import { SocketListener } from "../src/components/layout/SocketListener";
+import { ToastHost } from "../src/components/ui/Toast";
 import { initPushNotificationListeners } from "../src/services/pushNotifications";
 
 SplashScreen.preventAutoHideAsync();
@@ -48,6 +50,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style={isDark ? "light" : "dark"} />
         <CallListener />
+        <SocketListener />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -58,6 +61,8 @@ export default function RootLayout() {
             },
           }}
         />
+        {/* Last child so toasts render above every screen in the stack. */}
+        <ToastHost />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

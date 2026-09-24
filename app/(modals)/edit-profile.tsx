@@ -1,7 +1,11 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet, ActivityIndicator } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import api from "../../src/api/client";
+import { API } from "../../src/api/endpoints";
+import { CachedImage } from "../../src/components/ui/CachedImage";
+import { showToast } from "../../src/stores/toastStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
@@ -19,6 +23,9 @@ export default function EditProfileScreen() {
   const [username, setUsername] = useState(user?.username || "");
   const [bio, setBio] = useState(user?.bio || "");
   const [loading, setLoading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const mergeUser = useAuthStore((s) => s.mergeUser);
 
   const handleSave = async () => {
     setLoading(true);
@@ -33,13 +40,47 @@ export default function EditProfileScreen() {
   };
 
   const pickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showToast("Photo access is needed to change your avatar", "error");
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
+      quality: 0.85,
     });
-    if (!result.canceled) {
-      // TODO: upload avatar
+    if (result.canceled || result.assets.length === 0) return;
+
+    const asset = result.assets[0];
+    // Show the new image straight away; the upload that follows is what
+    // makes it stick, but waiting on the network to reflect the user's
+    // own choice feels broken.
+    setAvatarPreview(asset.uri);
+    setUploadingAvatar(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("avatar", {
+        uri: asset.uri,
+        type: asset.mimeType || "image/jpeg",
+        name: asset.fileName || `avatar_${Date.now()}.jpg`,
+      } as any);
+
+      const { data } = await api.put(API.auth.avatar, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const nextUrl = data?.user?.avatarUrl || data?.avatarUrl;
+      if (nextUrl) mergeUser({ avatarUrl: nextUrl });
+      showToast("Profile photo updated", "success");
+    } catch (e: any) {
+      setAvatarPreview(null);
+      showToast(e?.response?.data?.message || "Could not upload that photo", "error");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -58,13 +99,24 @@ export default function EditProfileScreen() {
       </View>
 
       <View style={styles.avatarSection}>
-        <TouchableOpacity onPress={pickAvatar}>
+        <TouchableOpacity onPress={pickAvatar} disabled={uploadingAvatar}>
           <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
-            <Icon name="camera" set="light" size={28} color={colors.mutedForeground} />
+            {avatarPreview || user?.avatarUrl ? (
+              <CachedImage source={{ uri: avatarPreview || user?.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <Icon name="camera" set="light" size={28} color={colors.mutedForeground} />
+            )}
+            {uploadingAvatar ? (
+              <View style={styles.avatarOverlay}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              </View>
+            ) : null}
           </View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={pickAvatar}>
-          <Text style={[styles.changePhoto, { color: colors.primary }]}>Change Photo</Text>
+        <TouchableOpacity onPress={pickAvatar} disabled={uploadingAvatar}>
+          <Text style={[styles.changePhoto, { color: colors.primary, opacity: uploadingAvatar ? 0.5 : 1 }]}>
+            {uploadingAvatar ? "Uploading..." : "Change Photo"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -122,6 +174,18 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: { width: 96, height: 96 },
+  avatarOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#00000066",
   },
   changePhoto: { fontFamily: FontFamily.semibold, fontSize: FontSize.sm, lineHeight: 20, marginTop: 8 },
   form: { paddingHorizontal: Spacing.lg, gap: 16 },

@@ -37,6 +37,8 @@ interface AuthState {
   logout: () => Promise<void>;
   loadToken: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  /** Merges fields into the cached user without a round trip, for callers that already have the server's response. */
+  mergeUser: (data: Partial<User>) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -109,4 +111,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = normalizeUser(data.user || data.data || data);
     set((s) => ({ user: { ...s.user!, ...user } }));
   },
+
+  mergeUser: (data) => set((s) => (s.user ? { user: { ...s.user, ...data } } : {})),
 }));

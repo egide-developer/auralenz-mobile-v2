@@ -27,6 +27,8 @@ import { PressableScale } from "../../src/components/ui/PressableScale";
 import { MentionSuggestions, useMentionQuery, applyMentionSelection } from "../../src/components/ui/MentionSuggestions";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import { useVideoEditorStore } from "../../src/stores/videoEditorStore";
+import { isNoOpSpec, serializeSpec } from "../../src/types/videoEdit";
 
 const MAX_ITEMS = 10;
 
@@ -38,6 +40,9 @@ interface MediaItem {
   fileName: string;
   /** Generated separately for videos — Image can't render a video file directly. */
   thumbnailUri?: string;
+  width?: number;
+  height?: number;
+  durationMs?: number;
 }
 
 type Step = "select" | "details";
@@ -51,6 +56,7 @@ export default function CreateScreen() {
 
   const [step, setStep] = useState<Step>("select");
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const editorStore = useVideoEditorStore();
   const [activeIndex, setActiveIndex] = useState(0);
   const [caption, setCaption] = useState("");
   const mentionQuery = useMentionQuery(caption);
@@ -94,6 +100,10 @@ export default function CreateScreen() {
       type: a.type === "video" ? "video" : "image",
       mimeType: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg"),
       fileName: a.fileName || `media_${Date.now()}_${i}.${a.type === "video" ? "mp4" : "jpg"}`,
+      width: a.width || 0,
+      height: a.height || 0,
+      // expo-image-picker reports video duration in milliseconds.
+      durationMs: a.duration ?? 0,
     }));
 
     setMedia((prev) => {
@@ -105,6 +115,26 @@ export default function CreateScreen() {
 
     picked.filter((m) => m.type === "video").forEach((m) => generateThumbnail(m.id, m.uri));
   }, [media.length, generateThumbnail]);
+
+  const openEditor = useCallback(
+    (item: MediaItem) => {
+      // Re-entering the editor for the same clip keeps the existing spec, so
+      // a second visit resumes the edit rather than discarding it.
+      if (editorStore.source?.id !== item.id) {
+        editorStore.begin({
+          id: item.id,
+          uri: item.uri,
+          mimeType: item.mimeType,
+          fileName: item.fileName,
+          durationMs: item.durationMs || 0,
+          width: item.width || 0,
+          height: item.height || 0,
+        });
+      }
+      router.push("/editor/video");
+    },
+    [editorStore, router]
+  );
 
   const removeMedia = useCallback((id: string) => {
     setMedia((prev) => {
@@ -150,6 +180,23 @@ export default function CreateScreen() {
         formData.append("media", { uri: m.uri, type: m.mimeType, name: m.fileName } as any);
       });
 
+      // Edits are sent as a spec rather than a re-encoded file: the phone
+      // uploads the original clip and the server renders the final cut.
+      const editorSource = editorStore.source;
+      const editorSpec = editorStore.spec;
+      const editedItem = editorSource ? media.find((m) => m.id === editorSource.id) : null;
+
+      if (editedItem && !isNoOpSpec(editorSpec, editorSource?.durationMs)) {
+        formData.append("editSpec", JSON.stringify(serializeSpec(editorSpec)));
+        if (editorStore.overlayImageUri) {
+          formData.append("overlayImage", {
+            uri: editorStore.overlayImageUri,
+            type: "image/png",
+            name: "overlay.png",
+          } as any);
+        }
+      }
+
       await api.post(API.posts.list, formData, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 120000,
@@ -160,7 +207,7 @@ export default function CreateScreen() {
     } finally {
       setLoading(false);
     }
-  }, [media, caption, location, tagsInput, router]);
+  }, [media, caption, location, tagsInput, router, editorStore]);
 
   // This screen lives inside the (tabs) group, which Expo Router keeps
   // mounted across visits (it's pushed/popped via the Create FAB, not
@@ -175,6 +222,9 @@ export default function CreateScreen() {
         setCaption("");
         setLocation("");
         setTagsInput("");
+        // The editor draft is module-level state, so it outlives this screen
+        // unless it is cleared alongside everything else.
+        useVideoEditorStore.getState().reset();
       };
     }, [])
   );
@@ -253,6 +303,17 @@ export default function CreateScreen() {
                       {activeIndex + 1}/{media.length}
                     </Text>
                   </View>
+                )}
+                {activeMedia?.type === "video" && (
+                  <TouchableOpacity onPress={() => openEditor(activeMedia)} style={styles.editVideoBtn}>
+                    <Icon name="edit-square" set="bold" size={16} color="#fff" />
+                    <Text style={styles.editVideoText}>
+                      {editorStore.source?.id === activeMedia.id &&
+                      !isNoOpSpec(editorStore.spec, activeMedia.durationMs)
+                        ? "Edited"
+                        : "Edit"}
+                    </Text>
+                  </TouchableOpacity>
                 )}
               </View>
 
@@ -406,6 +467,19 @@ const styles = StyleSheet.create({
   emptyBtnText: { fontFamily: FontFamily.semibold, fontSize: FontSize.sm, lineHeight: 20 },
 
   previewWrap: { width: "100%", aspectRatio: 1, position: "relative" },
+  editVideoBtn: {
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    backgroundColor: "#000000AA",
+  },
+  editVideoText: { color: "#fff", fontFamily: FontFamily.semibold, fontSize: FontSize.sm },
   previewImage: { width: "100%", height: "100%" },
   previewPlayBadge: {
     position: "absolute",

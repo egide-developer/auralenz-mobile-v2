@@ -26,7 +26,17 @@ import { Typography, FontFamily } from "../../../src/theme/typography";
 import { Icon } from "../../../src/components/ui/Icon";
 import api from "../../../src/api/client";
 import { API } from "../../../src/api/endpoints";
-import { onNewGroupMessage, markGroupRead } from "../../../src/services/socket";
+import {
+  onNewGroupMessage,
+  markGroupRead,
+  joinGroup,
+  leaveGroup,
+  onGroupTypingStart,
+  onGroupTypingStop,
+  onMessageUpdated,
+  startGroupTyping,
+  stopGroupTyping,
+} from "../../../src/services/socket";
 import type { ChatGroup, Message } from "../../../src/types";
 
 function timeOf(dateStr: string): string {
@@ -46,6 +56,10 @@ export default function GroupChatScreen() {
   const [text, setText] = useState("");
   const [pickedImage, setPickedImage] = useState<{ uri: string; mimeType: string; fileName: string } | null>(null);
   const [sending, setSending] = useState(false);
+  /** userId -> timestamp of their most recent typing event. */
+  const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
+  const typingSentAtRef = useRef(0);
+  const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<FlatList>(null);
 
   const load = useCallback(async () => {
@@ -75,6 +89,14 @@ export default function GroupChatScreen() {
     }, [groupId])
   );
 
+  // The server sends group typing indicators and AI transcription/summary
+  // updates to the `group_<id>` room. Nothing reaches this screen until it
+  // actually joins that room.
+  useEffect(() => {
+    joinGroup(groupId);
+    return () => leaveGroup(groupId);
+  }, [groupId]);
+
   useEffect(() => {
     const unsubscribe = onNewGroupMessage(({ message, groupId: incomingGroupId }) => {
       if (incomingGroupId !== groupId) return;
@@ -85,6 +107,86 @@ export default function GroupChatScreen() {
     });
     return unsubscribe;
   }, [groupId, currentUser?.id]);
+
+  // Audio messages are transcribed asynchronously, so the message is
+  // replaced in place once the worker finishes.
+  useEffect(() => {
+    const unsubscribe = onMessageUpdated(({ message, groupId: incomingGroupId }) => {
+      if (incomingGroupId && incomingGroupId !== groupId) return;
+      const id = message?._id || message?.id;
+      if (!id) return;
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...message } : m)));
+    });
+    return unsubscribe;
+  }, [groupId]);
+
+  useEffect(() => {
+    const clearFor = (userId: string) =>
+      setTypingUsers((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+
+    const unsubscribeStart = onGroupTypingStart(({ userId, groupId: incoming }) => {
+      if (incoming !== groupId || userId === currentUser?.id) return;
+      setTypingUsers((prev) => ({ ...prev, [userId]: Date.now() }));
+      // A client that backgrounds mid-typing never sends the stop event, so
+      // the indicator expires on its own rather than sticking forever.
+      setTimeout(() => clearFor(userId), 6000);
+    });
+
+    const unsubscribeStop = onGroupTypingStop(({ userId, groupId: incoming }) => {
+      if (incoming !== groupId) return;
+      clearFor(userId);
+    });
+
+    return () => {
+      unsubscribeStart?.();
+      unsubscribeStop?.();
+    };
+  }, [groupId, currentUser?.id]);
+
+  // Throttled so a fast typist sends one start event every few seconds
+  // rather than one per keystroke, with a trailing stop once they pause.
+  const handleTextChange = useCallback(
+    (value: string) => {
+      setText(value);
+      if (!value.trim()) return;
+
+      const now = Date.now();
+      if (now - typingSentAtRef.current > 3000) {
+        typingSentAtRef.current = now;
+        startGroupTyping(groupId);
+      }
+
+      if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+      typingStopTimerRef.current = setTimeout(() => {
+        typingSentAtRef.current = 0;
+        stopGroupTyping(groupId);
+      }, 2500);
+    },
+    [groupId]
+  );
+
+  useEffect(
+    () => () => {
+      if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+    },
+    []
+  );
+
+  const typingLabel = (() => {
+    const ids = Object.keys(typingUsers);
+    if (ids.length === 0) return null;
+    const names = ids
+      .map((id) => group?.participants.find((p) => p.id === id)?.username)
+      .filter(Boolean) as string[];
+    if (names.length === 0) return "Someone is typing…";
+    if (names.length === 1) return `${names[0]} is typing…`;
+    if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`;
+    return `${names[0]} and ${names.length - 1} others are typing…`;
+  })();
 
   const pickImage = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -212,13 +314,19 @@ export default function GroupChatScreen() {
         </View>
       ) : null}
 
+      {typingLabel ? (
+        <Text style={[styles.typingLabel, { color: colors.mutedForeground }]} numberOfLines={1}>
+          {typingLabel}
+        </Text>
+      ) : null}
+
       <View style={[styles.inputRow, { borderTopColor: colors.border + "40", paddingBottom: insets.bottom + 8 }]}>
         <TouchableOpacity onPress={pickImage} style={styles.iconBtn} hitSlop={8}>
           <Icon name="image" set="light" size={22} color={colors.mutedForeground} />
         </TouchableOpacity>
         <TextInput
           value={text}
-          onChangeText={setText}
+          onChangeText={handleTextChange}
           placeholder="Message..."
           placeholderTextColor={colors.mutedForeground + "80"}
           style={[styles.textInput, { color: colors.foreground, backgroundColor: colors.card }]}
@@ -270,6 +378,12 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 0.5,
     gap: 8,
+  },
+  typingLabel: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 4,
+    fontFamily: FontFamily.medium,
+    fontSize: 12,
   },
   textInput: {
     flex: 1,

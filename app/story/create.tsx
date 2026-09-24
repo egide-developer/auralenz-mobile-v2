@@ -27,13 +27,19 @@ import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import { useVideoEditorStore } from "../../src/stores/videoEditorStore";
+import { isNoOpSpec, serializeSpec } from "../../src/types/videoEdit";
 
 interface PickedMedia {
+  id: string;
   uri: string;
   type: "image" | "video";
   mimeType: string;
   fileName: string;
   thumbnailUri?: string;
+  width?: number;
+  height?: number;
+  durationMs?: number;
 }
 
 type StickerType = "poll" | "quiz" | "question";
@@ -88,10 +94,14 @@ export default function CreateStoryScreen() {
     }
     const a = result.assets[0];
     const picked: PickedMedia = {
+      id: `story-${Date.now()}`,
       uri: a.uri,
       type: a.type === "video" ? "video" : "image",
       mimeType: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg"),
       fileName: a.fileName || `story_${Date.now()}.${a.type === "video" ? "mp4" : "jpg"}`,
+      width: a.width || 0,
+      height: a.height || 0,
+      durationMs: a.duration ?? 0,
     };
     setMedia(picked);
     if (picked.type === "video") {
@@ -106,12 +116,44 @@ export default function CreateStoryScreen() {
     if (!pickAttempted) pickMedia();
   }, [pickAttempted, pickMedia]);
 
+  const openVideoEditor = useCallback(() => {
+    if (!media || media.type !== "video") return;
+    const editor = useVideoEditorStore.getState();
+    if (editor.source?.id !== media.id) {
+      editor.begin({
+        id: media.id,
+        uri: media.uri,
+        mimeType: media.mimeType,
+        fileName: media.fileName,
+        durationMs: media.durationMs || 0,
+        width: media.width || 0,
+        height: media.height || 0,
+      });
+    }
+    router.push("/editor/video");
+  }, [media, router]);
+
   const handleShare = useCallback(async () => {
     if (!media) return;
     setLoading(true);
     try {
       const formData = new FormData();
       formData.append("media", { uri: media.uri, type: media.mimeType, name: media.fileName } as any);
+
+      // Same arrangement as the post composer: the original clip is uploaded
+      // and the server renders the edit from this spec.
+      const editorState = useVideoEditorStore.getState();
+      if (editorState.source?.id === media.id && !isNoOpSpec(editorState.spec, media.durationMs)) {
+        formData.append("editSpec", JSON.stringify(serializeSpec(editorState.spec)));
+        if (editorState.overlayImageUri) {
+          formData.append("overlayImage", {
+            uri: editorState.overlayImageUri,
+            type: "image/png",
+            name: "overlay.png",
+          } as any);
+        }
+      }
+
       if (text.trim()) formData.append("text", text.trim());
       formData.append("visibility", closeFriendsOnly ? "close_friends" : "public");
 
@@ -175,6 +217,11 @@ export default function CreateStoryScreen() {
           </TouchableOpacity>
           <Text style={styles.topTitle}>Your story</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
+            {media.type === "video" ? (
+              <TouchableOpacity style={styles.iconBtn} onPress={openVideoEditor} hitSlop={8}>
+                <Ionicons name="cut-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={[styles.iconBtn, closeFriendsOnly && { backgroundColor: "#2ECC71" }]}
               onPress={() => setCloseFriendsOnly((v) => !v)}
