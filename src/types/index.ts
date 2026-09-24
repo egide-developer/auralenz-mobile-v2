@@ -209,6 +209,45 @@ export interface ChannelMessage {
   editedAt?: string | null;
 }
 
+export const COMMUNITY_CATEGORIES = [
+  "General",
+  "Tech",
+  "Art & Design",
+  "Music",
+  "Gaming",
+  "Sports",
+  "Photography",
+  "Travel",
+  "Food",
+  "Fashion",
+  "Wellness",
+  "Other",
+] as const;
+
+export interface Community {
+  id: string;
+  name: string;
+  description: string;
+  avatarUrl: string;
+  category: string;
+  rules: string[];
+  owner: { id: string; username?: string; avatarUrl?: string };
+  memberCount: number;
+  myRole: "owner" | "admin" | "member" | null;
+  isJoined: boolean;
+  announcement: { text: string; author: { id: string; username?: string }; createdAt: string } | null;
+}
+
+export interface CommunityMessage {
+  id: string;
+  community: string;
+  author: UserPreview;
+  text: string;
+  images: string[];
+  createdAt: string;
+  editedAt?: string | null;
+}
+
 export interface Story {
   id: string;
   userId: string;

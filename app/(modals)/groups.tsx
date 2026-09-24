@@ -8,6 +8,7 @@ import { Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
 import { PressableScale } from "../../src/components/ui/PressableScale";
+import { Ionicons } from "@expo/vector-icons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { ChatGroup } from "../../src/types";
@@ -69,6 +70,23 @@ export default function GroupsScreen() {
           data={groups}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+          ListHeaderComponent={
+            <TouchableOpacity
+              style={[styles.communitiesRow, { backgroundColor: colors.card, borderColor: colors.border + "20" }]}
+              onPress={() => router.push("/(modals)/communities")}
+            >
+              <View style={[styles.communitiesIcon, { backgroundColor: colors.primary + "18" }]}>
+                <Ionicons name="people" size={17} color={colors.primary} />
+              </View>
+              <View style={styles.meta}>
+                <Text style={[styles.name, { color: colors.foreground }]}>Communities</Text>
+                <Text style={[styles.preview, { color: colors.mutedForeground }]}>
+                  Bigger spaces: join, post, share a topic
+                </Text>
+              </View>
+              <Icon name="arrow-right" set="light" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          }
           ListEmptyComponent={
             <View style={styles.centerFill}>
               <Text style={{ color: colors.mutedForeground }}>No groups yet</Text>
@@ -134,6 +152,18 @@ const styles = StyleSheet.create({
   headerTitle: { ...Typography.h4 },
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 100, gap: 14 },
   newGroupBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
+  communitiesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 0.5,
+    gap: 12,
+  },
+  communitiesIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   row: {
     flexDirection: "row",
     alignItems: "center",
