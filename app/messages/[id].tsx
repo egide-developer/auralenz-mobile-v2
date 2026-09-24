@@ -53,6 +53,7 @@ import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
 import { UserLink } from "../../src/components/ui/UserLink";
 import { PressableScale } from "../../src/components/ui/PressableScale";
+import { AiSummaryModal } from "../../src/components/chat/AiSummaryModal";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import {
@@ -661,6 +662,10 @@ export default function ChatDetailScreen() {
   /** Whether the peer is currently on the user's block list; populated when the header menu opens. */
   const [isBlocked, setIsBlocked] = useState(false);
   const [blocking, setBlocking] = useState(false);
+  /** AI-suggested one-tap replies, shown as chips above the input. */
+  const [smartReplies, setSmartReplies] = useState<string[]>([]);
+  const [smartReplyLoading, setSmartReplyLoading] = useState(false);
+  const [summaryVisible, setSummaryVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   /** Arms the next send as view-once; cleared once that message goes out. */
   const [viewOnceArmed, setViewOnceArmed] = useState(false);
@@ -941,6 +946,84 @@ export default function ChatDetailScreen() {
       setBlocking(false);
     }
   }, [other, isBlocked, blocking]);
+
+  const loadSmartReplies = useCallback(async () => {
+    if (!id || smartReplyLoading) return;
+    setSmartReplyLoading(true);
+    try {
+      const { data } = await api.post(API.ai.smartReplies, { conversationId: id, count: 3 });
+      setSmartReplies(data.replies || []);
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || "Couldn't load suggestions", "error");
+    } finally {
+      setSmartReplyLoading(false);
+    }
+  }, [id, smartReplyLoading]);
+
+  /** One-tap smart reply: a plain text send, mirroring the text-only path of `send`. */
+  const sendSmartReply = useCallback(
+    async (reply: string) => {
+      if (!id || !user || sending) return;
+      setSmartReplies([]);
+      setSending(true);
+      const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      forceScrollRef.current = true;
+      const optimistic: Message = {
+        id: "",
+        clientId,
+        conversationId: id,
+        senderId: user.id,
+        sender: {
+          id: user.id,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+          isVerified: user.isVerified,
+        },
+        text: reply,
+        images: [],
+        files: [],
+        viewOnce: false,
+        messageType: "text",
+        reactions: [],
+        readBy: [],
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        pending: true,
+        replyTo: null,
+      };
+      setMessages((prev) => [...prev, optimistic]);
+      try {
+        const { data } = await api.post(API.messages.send(id), { text: reply });
+        const sent: Message = data.message || data.data || data;
+        if (sent.id) {
+          recentlySentIds.current.add(sent.id);
+          setTimeout(() => recentlySentIds.current.delete(sent.id), 10000);
+        }
+        setMessages((prev) =>
+          prev.map((m) => (m.clientId === clientId ? { ...sent, clientId } : m))
+        );
+      } catch {
+        setMessages((prev) =>
+          prev.map((m) => (m.clientId === clientId ? { ...m, pending: false, failed: true } : m))
+        );
+      } finally {
+        setSending(false);
+      }
+    },
+    [id, user, sending]
+  );
+
+  const loadConversationSummary = useCallback(async () => {
+    if (!id) return null;
+    const { data } = await api.get(API.ai.conversationSummary(id));
+    const s = data.summary || null;
+    return {
+      summary: s?.summary || null,
+      bulletPoints: s?.bulletPoints || [],
+      decisions: s?.decisions || [],
+      actionItems: s?.actionItems || [],
+    };
+  }, [id]);
 
   const handleSwipeReply = useCallback((message: Message) => {
     if (message.isDeleted) return;
@@ -1595,6 +1678,32 @@ export default function ChatDetailScreen() {
         </View>
       )}
 
+      {smartReplies.length > 0 && (
+        <View style={[styles.smartReplyBar, { backgroundColor: colors.background, borderTopColor: colors.border + "20" }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.smartReplyContent}>
+            {smartReplies.map((reply) => (
+              <TouchableOpacity
+                key={reply}
+                onPress={() => sendSmartReply(reply)}
+                disabled={sending}
+                style={[styles.smartReplyChip, { backgroundColor: colors.card, borderColor: colors.border + "40" }]}
+              >
+                <Text style={[styles.smartReplyText, { color: colors.foreground }]} numberOfLines={1}>
+                  {reply}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity
+            onPress={() => setSmartReplies([])}
+            hitSlop={8}
+            style={styles.smartReplyDismiss}
+          >
+            <Icon name="close-square" set="light" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View
         style={[
           styles.inputBar,
@@ -1626,6 +1735,19 @@ export default function ChatDetailScreen() {
           </>
         ) : (
           <>
+            <TouchableOpacity
+              onPress={loadSmartReplies}
+              style={styles.attachBtn}
+              hitSlop={6}
+              disabled={smartReplyLoading}
+              accessibilityLabel="AI smart replies"
+            >
+              {smartReplyLoading ? (
+                <ActivityIndicator size="small" color={colors.mutedForeground} />
+              ) : (
+                <Ionicons name="sparkles" size={19} color={colors.mutedForeground} />
+              )}
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowAttachMenu(true)} style={styles.attachBtn} hitSlop={6}>
               <Icon name="camera" set="light" size={22} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -1716,6 +1838,17 @@ export default function ChatDetailScreen() {
       >
         <Pressable style={styles.attachMenuBackdrop} onPress={() => setHeaderMenuOpen(false)}>
           <View style={[styles.attachMenuCard, { backgroundColor: colors.card, borderColor: colors.border + "40" }]}>
+            <TouchableOpacity
+              style={styles.attachMenuItem}
+              onPress={() => {
+                setHeaderMenuOpen(false);
+                setSummaryVisible(true);
+              }}
+            >
+              <Ionicons name="sparkles" size={19} color={colors.primary} />
+              <Text style={[styles.attachMenuText, { color: colors.foreground }]}>AI summary</Text>
+            </TouchableOpacity>
+            <View style={[styles.attachMenuDivider, { backgroundColor: colors.border + "40" }]} />
             {other && (
               <TouchableOpacity
                 style={styles.attachMenuItem}
@@ -1903,6 +2036,13 @@ export default function ChatDetailScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <AiSummaryModal
+        visible={summaryVisible}
+        title={`Summary${other ? ` with ${other.username}` : ""}`}
+        onClose={() => setSummaryVisible(false)}
+        loadSummary={loadConversationSummary}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -2138,6 +2278,23 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   viewOnceArmedText: { fontSize: 12, fontFamily: FontFamily.medium, flex: 1 },
+  smartReplyBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 0.5,
+    paddingVertical: 8,
+    paddingLeft: Spacing.lg,
+  },
+  smartReplyContent: { gap: 8, paddingRight: Spacing.md },
+  smartReplyChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    maxWidth: 220,
+  },
+  smartReplyText: { fontSize: 13, fontFamily: FontFamily.medium },
+  smartReplyDismiss: { paddingHorizontal: Spacing.md },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",

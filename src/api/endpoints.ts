@@ -127,6 +127,11 @@ export const API = {
     creatorSettings: "/api/monetization/creator-settings",
     creator: (userId: string) => `/api/monetization/creator/${userId}`,
   },
+  ai: {
+    smartReplies: "/api/ai/smart-reply",
+    conversationSummary: (conversationId: string) => `/api/ai/conversations/${conversationId}/summary`,
+    groupDigest: (groupId: string) => `/api/ai/groups/${groupId}/digest`,
+  },
   notes: {
     list: "/api/notes",
     create: "/api/notes",

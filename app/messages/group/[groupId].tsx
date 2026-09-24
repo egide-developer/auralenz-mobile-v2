@@ -28,6 +28,8 @@ import { Colors } from "../../../src/theme/colors";
 import { Spacing, Radius } from "../../../src/theme/spacing";
 import { Typography, FontFamily } from "../../../src/theme/typography";
 import { Icon } from "../../../src/components/ui/Icon";
+import { AiSummaryModal } from "../../../src/components/chat/AiSummaryModal";
+import { Ionicons } from "@expo/vector-icons";
 import api from "../../../src/api/client";
 import { API } from "../../../src/api/endpoints";
 import {
@@ -61,6 +63,7 @@ export default function GroupChatScreen() {
   const [pickedImage, setPickedImage] = useState<{ uri: string; mimeType: string; fileName: string } | null>(null);
   const [sending, setSending] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [summaryVisible, setSummaryVisible] = useState(false);
   /** userId -> timestamp of their most recent typing event. */
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const typingSentAtRef = useRef(0);
@@ -270,6 +273,18 @@ export default function GroupChatScreen() {
     ]);
   }, [groupId]);
 
+  const loadGroupDigest = useCallback(async () => {
+    if (!groupId) return null;
+    const { data } = await api.get(API.ai.groupDigest(groupId));
+    const d = data.digest || null;
+    return {
+      summary: null,
+      bulletPoints: d?.bulletPoints || [],
+      decisions: d?.decisions || [],
+      actionItems: d?.actionItems || [],
+    };
+  }, [groupId]);
+
   if (loading) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }]}>
@@ -421,6 +436,17 @@ export default function GroupChatScreen() {
               style={styles.menuItem}
               onPress={() => {
                 setHeaderMenuOpen(false);
+                setSummaryVisible(true);
+              }}
+            >
+              <Ionicons name="sparkles" size={19} color={colors.primary} />
+              <Text style={[styles.menuItemText, { color: colors.foreground }]}>AI summary</Text>
+            </TouchableOpacity>
+            <View style={[styles.menuDivider, { backgroundColor: colors.border + "40" }]} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setHeaderMenuOpen(false);
                 router.push({ pathname: "/(modals)/group-info", params: { groupId } });
               }}
             >
@@ -456,6 +482,13 @@ export default function GroupChatScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      <AiSummaryModal
+        visible={summaryVisible}
+        title={`Summary — ${group.name}`}
+        onClose={() => setSummaryVisible(false)}
+        loadSummary={loadGroupDigest}
+      />
     </KeyboardAvoidingView>
   );
 }
