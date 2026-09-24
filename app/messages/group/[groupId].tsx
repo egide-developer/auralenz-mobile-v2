@@ -13,6 +13,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -20,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useThemeStore } from "../../../src/stores/themeStore";
 import { useAuthStore } from "../../../src/stores/authStore";
+import { showToast } from "../../../src/stores/toastStore";
 import { Colors } from "../../../src/theme/colors";
 import { Spacing, Radius } from "../../../src/theme/spacing";
 import { Typography, FontFamily } from "../../../src/theme/typography";
@@ -56,6 +60,7 @@ export default function GroupChatScreen() {
   const [text, setText] = useState("");
   const [pickedImage, setPickedImage] = useState<{ uri: string; mimeType: string; fileName: string } | null>(null);
   const [sending, setSending] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   /** userId -> timestamp of their most recent typing event. */
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const typingSentAtRef = useRef(0);
@@ -220,6 +225,51 @@ export default function GroupChatScreen() {
     }
   }, [text, pickedImage, groupId]);
 
+  const isAdmin =
+    !!currentUser &&
+    group?.participants.some((p) => p.id === currentUser.id && p.role === "admin");
+
+  const leaveGroupNow = useCallback(() => {
+    if (!currentUser) return;
+    Alert.alert("Leave group", "You'll stop receiving messages from this group.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Leave",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.delete(API.groups.leave(groupId, currentUser.id));
+            showToast("You left the group", "info");
+            router.dismissAll();
+            router.replace("/(modals)/groups");
+          } catch (e: any) {
+            showToast(e?.response?.data?.message || "Could not leave the group", "error");
+          }
+        },
+      },
+    ]);
+  }, [groupId, currentUser]);
+
+  const deleteGroupNow = useCallback(() => {
+    Alert.alert("Delete group", "This deletes the group and its messages for everyone. This can't be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.delete(API.groups.remove(groupId));
+            showToast("Group deleted", "info");
+            router.dismissAll();
+            router.replace("/(modals)/groups");
+          } catch (e: any) {
+            showToast(e?.response?.data?.message || "Could not delete the group", "error");
+          }
+        },
+      },
+    ]);
+  }, [groupId]);
+
   if (loading) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }]}>
@@ -279,11 +329,11 @@ export default function GroupChatScreen() {
           <Icon name="search" set="light" size={20} color={colors.foreground} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => router.push({ pathname: "/(modals)/group-info", params: { groupId } })}
+          onPress={() => setHeaderMenuOpen(true)}
           style={styles.iconBtn}
           hitSlop={8}
         >
-          <Icon name="info-square" set="light" size={22} color={colors.foreground} />
+          <Icon name="more-square" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
       </View>
 
@@ -358,6 +408,54 @@ export default function GroupChatScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      <Modal
+        transparent
+        visible={headerMenuOpen}
+        animationType="fade"
+        onRequestClose={() => setHeaderMenuOpen(false)}
+      >
+        <Pressable style={styles.menuBackdrop} onPress={() => setHeaderMenuOpen(false)}>
+          <View style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border + "40" }]}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setHeaderMenuOpen(false);
+                router.push({ pathname: "/(modals)/group-info", params: { groupId } });
+              }}
+            >
+              <Icon name="info-square" set="light" size={20} color={colors.foreground} />
+              <Text style={[styles.menuItemText, { color: colors.foreground }]}>Group info</Text>
+            </TouchableOpacity>
+            <View style={[styles.menuDivider, { backgroundColor: colors.border + "40" }]} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setHeaderMenuOpen(false);
+                leaveGroupNow();
+              }}
+            >
+              <Icon name="logout" set="light" size={20} color={colors.foreground} />
+              <Text style={[styles.menuItemText, { color: colors.foreground }]}>Leave group</Text>
+            </TouchableOpacity>
+            {isAdmin && (
+              <>
+                <View style={[styles.menuDivider, { backgroundColor: colors.border + "40" }]} />
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setHeaderMenuOpen(false);
+                    deleteGroupNow();
+                  }}
+                >
+                  <Icon name="delete" set="light" size={20} color={colors.destructive} />
+                  <Text style={[styles.menuItemText, { color: colors.destructive }]}>Delete group</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -412,4 +510,15 @@ const styles = StyleSheet.create({
     maxHeight: 100,
   },
   sendBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  menuBackdrop: { flex: 1, backgroundColor: "#00000055", justifyContent: "flex-end" },
+  menuCard: {
+    borderTopLeftRadius: Radius["2xl"],
+    borderTopRightRadius: Radius["2xl"],
+    paddingTop: 8,
+    paddingBottom: 24,
+    borderTopWidth: 0.5,
+  },
+  menuItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 16 },
+  menuDivider: { height: StyleSheet.hairlineWidth },
+  menuItemText: { fontFamily: FontFamily.medium, fontSize: 15, lineHeight: 21 },
 });

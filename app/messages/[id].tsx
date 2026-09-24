@@ -656,6 +656,11 @@ export default function ChatDetailScreen() {
   const [initialScrollDone, setInitialScrollDone] = useState(false);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  /** Overflow menu on the chat header (view profile / block). */
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  /** Whether the peer is currently on the user's block list; populated when the header menu opens. */
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   /** Arms the next send as view-once; cleared once that message goes out. */
   const [viewOnceArmed, setViewOnceArmed] = useState(false);
@@ -904,6 +909,38 @@ export default function ChatDetailScreen() {
     },
     [id, other, router]
   );
+
+  const openHeaderMenu = useCallback(() => {
+    setHeaderMenuOpen(true);
+    if (!other) return;
+    api
+      .get(API.users.blocked)
+      .then(({ data }) => {
+        const list = data.users || [];
+        setIsBlocked(list.some((u: any) => String(u.id || u._id) === String(other.id)));
+      })
+      .catch(() => setIsBlocked(false));
+  }, [other]);
+
+  const toggleBlock = useCallback(async () => {
+    if (!other || blocking) return;
+    setBlocking(true);
+    try {
+      if (isBlocked) {
+        await api.delete(API.users.unblock(other.id));
+        setIsBlocked(false);
+        showToast(`${other.username} can message you again`, "info");
+      } else {
+        await api.post(API.users.block(other.id));
+        setIsBlocked(true);
+        showToast(`${other.username} is blocked`, "info");
+      }
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || "Couldn't update the block", "error");
+    } finally {
+      setBlocking(false);
+    }
+  }, [other, isBlocked, blocking]);
 
   const handleSwipeReply = useCallback((message: Message) => {
     if (message.isDeleted) return;
@@ -1394,6 +1431,9 @@ export default function ChatDetailScreen() {
           <TouchableOpacity style={styles.iconBtn} hitSlop={8} onPress={() => handleStartCall("video")}>
             <Icon name="video" set="light" size={22} color={colors.foreground} />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} hitSlop={8} onPress={openHeaderMenu}>
+            <Icon name="more-square" set="light" size={20} color={colors.foreground} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -1662,6 +1702,56 @@ export default function ChatDetailScreen() {
             <TouchableOpacity style={styles.attachMenuItem} onPress={pickFiles}>
               <Icon name="document" set="light" size={20} color={colors.foreground} />
               <Text style={[styles.attachMenuText, { color: colors.foreground }]}>File</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Chat-header overflow menu: the peer's profile, and block/unblock. */}
+      <Modal
+        transparent
+        visible={headerMenuOpen}
+        animationType="fade"
+        onRequestClose={() => setHeaderMenuOpen(false)}
+      >
+        <Pressable style={styles.attachMenuBackdrop} onPress={() => setHeaderMenuOpen(false)}>
+          <View style={[styles.attachMenuCard, { backgroundColor: colors.card, borderColor: colors.border + "40" }]}>
+            {other && (
+              <TouchableOpacity
+                style={styles.attachMenuItem}
+                onPress={() => {
+                  setHeaderMenuOpen(false);
+                  router.push(`/profile/${other.username}`);
+                }}
+              >
+                <Icon name="user" set="light" size={20} color={colors.foreground} />
+                <Text style={[styles.attachMenuText, { color: colors.foreground }]}>View profile</Text>
+              </TouchableOpacity>
+            )}
+            <View style={[styles.attachMenuDivider, { backgroundColor: colors.border + "40" }]} />
+            <TouchableOpacity
+              style={styles.attachMenuItem}
+              disabled={blocking || !other}
+              onPress={toggleBlock}
+            >
+              {blocking ? (
+                <ActivityIndicator size="small" color={colors.destructive || colors.foreground} />
+              ) : (
+                <Icon
+                  name={isBlocked ? "user" : "shield-fail"}
+                  set="light"
+                  size={20}
+                  color={isBlocked ? colors.mutedForeground : colors.destructive || colors.foreground}
+                />
+              )}
+              <Text
+                style={[
+                  styles.attachMenuText,
+                  { color: isBlocked ? colors.mutedForeground : colors.destructive || colors.foreground },
+                ]}
+              >
+                {isBlocked ? "Unblock user" : "Block user"}
+              </Text>
             </TouchableOpacity>
           </View>
         </Pressable>

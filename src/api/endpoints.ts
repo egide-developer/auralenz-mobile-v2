@@ -23,6 +23,7 @@ export const API = {
     search: "/api/users/search/users",
     blocked: "/api/users/blocked",
     block: (id: string) => `/api/users/${id}/block`,
+    unblock: (id: string) => `/api/users/${id}/block`,
     pushToken: "/api/users/push-token",
     closeFriends: "/api/users/close-friends",
     closeFriend: (id: string) => `/api/users/close-friends/${id}`,
