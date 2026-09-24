@@ -141,6 +141,15 @@ export const API = {
     react: (id: string) => `/api/notes/${id}/reactions`,
     remove: (id: string) => `/api/notes/${id}`,
   },
+  marketplace: {
+    list: "/api/marketplace",
+    create: "/api/marketplace",
+    mine: "/api/marketplace/mine",
+    byId: (id: string) => `/api/marketplace/${id}`,
+    update: (id: string) => `/api/marketplace/${id}`,
+    buy: (id: string) => `/api/marketplace/${id}/buy`,
+    remove: (id: string) => `/api/marketplace/${id}`,
+  },
   channels: {
     list: "/api/channels",
     create: "/api/channels",

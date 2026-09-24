@@ -364,3 +364,51 @@ export interface PaginatedResponse<T> {
   limit: number;
   hasMore: boolean;
 }
+
+/* ── Stars Marketplace ──────────────────────────────────────────────────── */
+export type ListingCategory =
+  | "Art"
+  | "Fashion"
+  | "Tech"
+  | "Home"
+  | "Digital"
+  | "Services"
+  | "Other";
+
+export type ListingStatus = "active" | "sold" | "removed";
+
+export interface ListingSellerRef {
+  id: string;
+  username: string;
+  avatarUrl?: string;
+}
+
+export interface ListingBuyerRef {
+  id: string;
+  username?: string;
+}
+
+export interface MarketplaceListing {
+  id: string;
+  seller: ListingSellerRef | string;
+  title: string;
+  description: string;
+  images: string[];
+  priceStars: number;
+  category: ListingCategory;
+  status: ListingStatus;
+  buyer: ListingBuyerRef | null;
+  soldAt: string | null;
+  isMine: boolean;
+  createdAt: string;
+}
+
+export const LISTING_CATEGORIES = [
+  "Art",
+  "Fashion",
+  "Tech",
+  "Home",
+  "Digital",
+  "Services",
+  "Other",
+] as const;

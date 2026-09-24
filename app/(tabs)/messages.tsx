@@ -261,6 +261,12 @@ export default function MessagesScreen() {
           </PressableScale>
           <PressableScale
             style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+            onPress={() => router.push("/(modals)/marketplace")}
+          >
+            <Ionicons name="storefront-outline" size={19} color={colors.mutedForeground} />
+          </PressableScale>
+          <PressableScale
+            style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
             onPress={openCompose}
           >
             <Icon name="edit-square" set="light" size={19} color={colors.mutedForeground} />
