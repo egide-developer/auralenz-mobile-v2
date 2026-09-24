@@ -24,6 +24,8 @@ export default function ProfileScreen() {
     { icon: "folder", label: "Library", route: "/(modals)/library" },
     { icon: "bookmark", label: "Archived Posts", route: "/(modals)/archived-posts" },
     { icon: "star", label: "Close Friends", route: "/(modals)/close-friends" },
+    { icon: "wallet", label: "Wallet & Stars", route: "/(modals)/wallet" },
+    { icon: "ticket", label: "Subscriptions", route: "/(modals)/subscriptions" },
     { icon: "shield", label: "Admin", route: "/(modals)/admin", adminOnly: true as const },
   ];
 

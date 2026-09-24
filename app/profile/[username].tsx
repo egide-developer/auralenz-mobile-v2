@@ -19,6 +19,7 @@ import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
 import { Ionicons } from "@expo/vector-icons";
+import { TipSheet } from "../../src/components/monetization/TipSheet";
 import { ReportSheet } from "../../src/components/ui/ReportSheet";
 import { HighlightsRow } from "../../src/components/profile/HighlightsRow";
 import api from "../../src/api/client";
@@ -53,6 +54,7 @@ export default function UserProfileScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
+  const [tipVisible, setTipVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
 
   const isSelf = currentUser?.username === username;
@@ -222,11 +224,13 @@ export default function UserProfileScreen() {
       </View>
 
       {!isSelf ? (
+        <View style={styles.actionRow}>
         <TouchableOpacity
           onPress={toggleFollow}
           disabled={followLoading}
           style={[
             styles.followBtn,
+            styles.followBtnFlex,
             profile.isFollowing
               ? { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
               : { backgroundColor: colors.primary },
@@ -245,7 +249,23 @@ export default function UserProfileScreen() {
             </Text>
           )}
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setTipVisible(true)}
+          style={[styles.tipBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+          accessibilityLabel={`Send Stars to ${profile.username}`}
+        >
+          <Ionicons name="star-outline" size={16} color={colors.foreground} />
+          <Text style={[styles.followBtnText, { color: colors.foreground }]}>Stars</Text>
+        </TouchableOpacity>
+        </View>
       ) : null}
+
+      <TipSheet
+        visible={tipVisible}
+        onClose={() => setTipVisible(false)}
+        recipientId={profile.id}
+        recipientUsername={profile.username}
+      />
 
       <HighlightsRow userId={profile.id} colors={colors} />
 
@@ -341,6 +361,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   followBtnText: { fontFamily: FontFamily.semibold, fontSize: 14 },
+  actionRow: { flexDirection: "row", alignItems: "center" },
+  followBtnFlex: { flex: 1, marginRight: 0 },
+  tipBtn: {
+    marginRight: Spacing.lg,
+    marginLeft: Spacing.sm,
+    marginTop: Spacing.md,
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   divider: { height: StyleSheet.hairlineWidth, marginTop: Spacing.lg },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP },
   gridItem: { width: GRID_ITEM_SIZE, height: GRID_ITEM_SIZE, position: "relative" },

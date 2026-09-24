@@ -47,6 +47,7 @@ import { renderRichText } from "../../src/components/ui/RichText";
 import { MentionSuggestions, useMentionQuery, applyMentionSelection } from "../../src/components/ui/MentionSuggestions";
 import { ReportSheet } from "../../src/components/ui/ReportSheet";
 import { StoryBar } from "../../src/components/feed/StoryBar";
+import { TipSheet } from "../../src/components/monetization/TipSheet";
 import type { Post, PostMedia, Comment } from "../../src/types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -331,6 +332,7 @@ function PostCard({
   onReport: (p: Post, reason: string) => void;
 }) {
   const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const [tipVisible, setTipVisible] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [mediaIndex, setMediaIndex] = useState(0);
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -525,6 +527,11 @@ function PostCard({
           <PressableScale style={styles.actionBtn} onPress={() => onShare(post)} scaleTo={0.85}>
             <Icon name="send" set="light" size={19} color={colors.mutedForeground} />
           </PressableScale>
+          {!isOwnPost && post.author?.id ? (
+            <PressableScale style={styles.actionBtn} onPress={() => setTipVisible(true)} scaleTo={0.85}>
+              <Ionicons name="star-outline" size={19} color={colors.mutedForeground} />
+            </PressableScale>
+          ) : null}
           <View style={{ flex: 1 }} />
           <AnimatedTouchable style={saveBtnStyle} onPress={handleSavePress} activeOpacity={0.75}>
             <Icon
@@ -544,6 +551,16 @@ function PostCard({
         colors={colors}
         isDark={isDark}
       />
+
+      {post.author?.id ? (
+        <TipSheet
+          visible={tipVisible}
+          onClose={() => setTipVisible(false)}
+          recipientId={post.author.id}
+          recipientUsername={post.author.username}
+          postId={post.id}
+        />
+      ) : null}
 
       <PostOptionsSheet
         visible={optionsVisible}

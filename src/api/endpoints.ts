@@ -114,6 +114,18 @@ export const API = {
     addItem: (id: string) => `/api/highlights/${id}/items`,
     removeItem: (id: string, itemId: string) => `/api/highlights/${id}/items/${itemId}`,
   },
+  monetization: {
+    wallet: "/api/monetization/wallet",
+    transactions: "/api/monetization/transactions",
+    packs: "/api/monetization/packs",
+    purchase: "/api/monetization/purchase",
+    tip: "/api/monetization/tip",
+    subscriptions: "/api/monetization/subscriptions",
+    subscribers: "/api/monetization/subscribers",
+    cancelSubscription: (id: string) => `/api/monetization/subscriptions/${id}/cancel`,
+    creatorSettings: "/api/monetization/creator-settings",
+    creator: (userId: string) => `/api/monetization/creator/${userId}`,
+  },
   admin: {
     dashboard: "/api/admin/dashboard",
     users: "/api/admin/users",

@@ -15,6 +15,7 @@ import {
   Platform,
 } from "react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { TipSheet } from "../monetization/TipSheet";
 import { CachedImage } from "../ui/CachedImage";
 import Animated, {
   useSharedValue,
@@ -302,6 +303,7 @@ function ReelItem({
   onOpenComments: () => void;
   insets: { top: number; bottom: number; left: number; right: number };
 }) {
+  const [tipVisible, setTipVisible] = useState(false);
   const media = post.media?.find((m) => m.type === "video") || post.media?.[0];
   const isVideo = media?.type === "video";
 
@@ -433,8 +435,27 @@ function ReelItem({
             <TouchableOpacity style={styles.reelActionBtn} onPress={() => onShare(post)}>
               <Icon name="send" set="bold" size={26} color="#FFFFFF" />
             </TouchableOpacity>
+            {post.author?.id ? (
+              <TouchableOpacity
+                style={styles.reelActionBtn}
+                onPress={() => setTipVisible(true)}
+                accessibilityLabel="Send Stars"
+              >
+                <Ionicons name="star-outline" size={28} color="#FFFFFF" />
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
+
+        {post.author?.id ? (
+          <TipSheet
+            visible={tipVisible}
+            onClose={() => setTipVisible(false)}
+            recipientId={post.author.id}
+            recipientUsername={post.author.username}
+            postId={post.id}
+          />
+        ) : null}
       </View>
     </GestureDetector>
   );
