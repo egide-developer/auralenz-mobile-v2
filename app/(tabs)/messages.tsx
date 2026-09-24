@@ -261,7 +261,7 @@ export default function MessagesScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search messages"
+          placeholder="Search conversations"
           placeholderTextColor={colors.mutedForeground + "90"}
           style={[styles.searchInput, { color: colors.foreground }]}
         />
@@ -271,6 +271,20 @@ export default function MessagesScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* The bar above only filters conversation names. Searching what was
+          actually said is a server query, so it gets its own screen. */}
+      {query.trim().length >= 2 && (
+        <TouchableOpacity
+          style={styles.searchAllRow}
+          onPress={() => router.push({ pathname: "/messages/search", params: { q: query.trim() } })}
+        >
+          <Icon name="search" set="bold" size={16} color={colors.primary} />
+          <Text style={[styles.searchAllText, { color: colors.primary }]} numberOfLines={1}>
+            Search all messages for "{query.trim()}"
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <FlatList
         data={filtered}
@@ -508,6 +522,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
   },
+  searchAllRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 10,
+  },
+  searchAllText: { ...Typography.bodySmall, fontFamily: FontFamily.medium, flex: 1 },
   searchInput: {
     flex: 1,
     ...Typography.bodySmall,

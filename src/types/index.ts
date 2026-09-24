@@ -119,6 +119,9 @@ export interface Message {
   readBy: MessageReadEntry[];
   isDeleted: boolean;
   createdAt: string;
+  editedAt?: string | null;
+  /** Previous revisions, newest last. Populated by the backend on each edit. */
+  editHistory?: { text: string; editedAt: string }[];
   replyTo?: MessageReplyPreview | null;
   /** Client-generated id used as a stable list key across the optimistic → confirmed transition. */
   clientId?: string;

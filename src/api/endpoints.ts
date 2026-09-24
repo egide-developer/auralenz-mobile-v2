@@ -50,6 +50,12 @@ export const API = {
     messages: (id: string) => `/api/messages/conversations/${id}/messages`,
     send: (id: string) => `/api/messages/conversations/${id}/messages`,
     read: (id: string) => `/api/messages/conversations/${id}/read`,
+    search: "/api/messages/search",
+    // Bare message routes — these act on a message by id, independent of
+    // which conversation or group it belongs to.
+    update: (messageId: string) => `/api/messages/messages/${messageId}`,
+    remove: (messageId: string) => `/api/messages/messages/${messageId}`,
+    react: (messageId: string) => `/api/messages/messages/${messageId}/reactions`,
   },
   groups: {
     list: "/api/groups",

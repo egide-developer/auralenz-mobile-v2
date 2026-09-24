@@ -66,6 +66,8 @@ import {
 } from "../../src/services/socket";
 import { useUnreadStore } from "../../src/stores/unreadStore";
 import { useCallStore } from "../../src/stores/callStore";
+import { showToast } from "../../src/stores/toastStore";
+import * as Clipboard from "expo-clipboard";
 import type { Conversation, Message } from "../../src/types";
 
 const GROUP_GAP_MS = 5 * 60 * 1000;
@@ -199,6 +201,18 @@ function AudioBubbleContent({
 const SWIPE_THRESHOLD = 56;
 const SWIPE_MAX = 72;
 
+const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🙏", "👍"];
+
+/**
+ * Mirrors DELETE_FOR_EVERYONE_WINDOW_MS in the backend's messageController.
+ * Hiding the option past the window is cosmetic — the server enforces it —
+ * but offering a button that always fails is worse than not offering it.
+ */
+const UNSEND_WINDOW_MS = 60 * 60 * 1000;
+
+const withinUnsendWindow = (message: Message) =>
+  Date.now() - new Date(message.createdAt).getTime() < UNSEND_WINDOW_MS;
+
 function MessageRow({
   item,
   index,
@@ -207,6 +221,7 @@ function MessageRow({
   isSeen,
   lastMineIndex,
   onSwipeReply,
+  onLongPress,
 }: {
   item: Row;
   index: number;
@@ -215,6 +230,7 @@ function MessageRow({
   isSeen: boolean | undefined;
   lastMineIndex: number;
   onSwipeReply: (message: Message) => void;
+  onLongPress: (message: Message, isMine: boolean) => void;
 }) {
   const { message, isMine, showAvatar, showTail, showTime, dayLabel } = item;
   const hasImages = !message.isDeleted && message.images?.length > 0;
@@ -253,6 +269,26 @@ function MessageRow({
     [isMine, message.isDeleted, triggerReply]
   );
 
+  const openActions = useCallback(() => {
+    onLongPress(message, isMine);
+  }, [onLongPress, message, isMine]);
+
+  // Exclusive so a long press and a swipe-to-reply can't both fire from one
+  // touch — whichever the user actually meant wins.
+  const composedGesture = useMemo(
+    () =>
+      Gesture.Exclusive(
+        panGesture,
+        Gesture.LongPress()
+          .minDuration(350)
+          .onStart(() => {
+            if (message.isDeleted) return;
+            runOnJS(openActions)();
+          })
+      ),
+    [panGesture, message.isDeleted, openActions]
+  );
+
   const rowAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
@@ -271,7 +307,7 @@ function MessageRow({
           </Text>
         </Animated.View>
       )}
-      <GestureDetector gesture={panGesture}>
+      <GestureDetector gesture={composedGesture}>
         <Animated.View entering={FadeInUp.duration(220)} style={styles.swipeWrap}>
           <Animated.View
             style={[
@@ -439,6 +475,7 @@ function MessageRow({
           ]}
         >
           {formatTime(message.createdAt)}
+          {message.editedAt && !message.isDeleted ? " · edited" : ""}
         </Text>
       )}
       {isMine && (message.pending || message.failed) && (
@@ -510,6 +547,9 @@ export default function ChatDetailScreen() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [messageActions, setMessageActions] = useState<{ message: Message; isMine: boolean } | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const [otherTyping, setOtherTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -753,6 +793,64 @@ export default function ChatDetailScreen() {
     if (message.isDeleted) return;
     setReplyingTo(message);
   }, []);
+
+  const openMessageActions = useCallback((message: Message, isMine: boolean) => {
+    setMessageActions({ message, isMine });
+  }, []);
+
+  const closeMessageActions = useCallback(() => setMessageActions(null), []);
+
+  const applyReaction = useCallback(
+    async (message: Message, emoji: string) => {
+      closeMessageActions();
+      try {
+        const { data } = await api.post(API.messages.react(message.id), { emoji });
+        const updated = data.message || data;
+        setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, ...updated, id: m.id } : m)));
+      } catch (e: any) {
+        showToast(e?.response?.data?.message || "Couldn't add that reaction", "error");
+      }
+    },
+    [closeMessageActions]
+  );
+
+  const submitEdit = useCallback(async () => {
+    if (!editingMessage) return;
+    const text = editDraft.trim();
+    if (!text) return;
+    const target = editingMessage;
+    setEditingMessage(null);
+    try {
+      const { data } = await api.put(API.messages.update(target.id), { text });
+      const updated = data.message || data;
+      setMessages((prev) => prev.map((m) => (m.id === target.id ? { ...m, ...updated, id: m.id } : m)));
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || "Couldn't edit that message", "error");
+    }
+  }, [editingMessage, editDraft]);
+
+  const removeMessage = useCallback(
+    async (message: Message, forEveryone: boolean) => {
+      closeMessageActions();
+      try {
+        await api.delete(API.messages.remove(message.id), {
+          // The backend deletes for the caller only unless this is set, so
+          // the two menu entries map to the same route with different scope.
+          params: forEveryone ? { deleteForEveryone: true } : undefined,
+        });
+        if (forEveryone) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === message.id ? { ...m, isDeleted: true, text: "" } : m))
+          );
+        } else {
+          setMessages((prev) => prev.filter((m) => m.id !== message.id));
+        }
+      } catch (e: any) {
+        showToast(e?.response?.data?.message || "Couldn't delete that message", "error");
+      }
+    },
+    [closeMessageActions]
+  );
 
   const addAttachments = useCallback((next: PendingAttachment[], skipped: string[]) => {
     if (skipped.length > 0) {
@@ -1132,6 +1230,18 @@ export default function ChatDetailScreen() {
         </View>
 
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            hitSlop={8}
+            onPress={() =>
+              router.push({
+                pathname: "/messages/search",
+                params: { conversationId: id, title: other?.username },
+              })
+            }
+          >
+            <Icon name="search" set="light" size={20} color={colors.foreground} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} hitSlop={8} onPress={() => handleStartCall("audio")}>
             <Icon name="call" set="light" size={20} color={colors.foreground} />
           </TouchableOpacity>
@@ -1231,6 +1341,7 @@ export default function ChatDetailScreen() {
             isSeen={isSeen}
             lastMineIndex={lastMineIndex}
             onSwipeReply={handleSwipeReply}
+            onLongPress={openMessageActions}
           />
         )}
       />
@@ -1373,6 +1484,125 @@ export default function ChatDetailScreen() {
               <Text style={[styles.attachMenuText, { color: colors.foreground }]}>File</Text>
             </TouchableOpacity>
           </View>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={!!messageActions} transparent animationType="fade" onRequestClose={closeMessageActions}>
+        <Pressable style={styles.sheetBackdrop} onPress={closeMessageActions}>
+          <Pressable
+            style={[styles.sheet, { backgroundColor: colors.card, paddingBottom: insets.bottom + Spacing.md }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.reactionRow}>
+              {QUICK_REACTIONS.map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  onPress={() => messageActions && applyReaction(messageActions.message, emoji)}
+                  style={styles.reactionBtn}
+                >
+                  <Text style={styles.reactionGlyph}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.sheetItem}
+              onPress={() => {
+                if (messageActions) setReplyingTo(messageActions.message);
+                closeMessageActions();
+              }}
+            >
+              <Icon name="arrow-left" set="light" size={20} color={colors.foreground} />
+              <Text style={[styles.sheetItemText, { color: colors.foreground }]}>Reply</Text>
+            </TouchableOpacity>
+
+            {messageActions?.message.text ? (
+              <TouchableOpacity
+                style={styles.sheetItem}
+                onPress={async () => {
+                  const value = messageActions.message.text;
+                  closeMessageActions();
+                  await Clipboard.setStringAsync(value);
+                  showToast("Copied", "success");
+                }}
+              >
+                <Icon name="document" set="light" size={20} color={colors.foreground} />
+                <Text style={[styles.sheetItemText, { color: colors.foreground }]}>Copy</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {messageActions?.isMine && messageActions.message.text ? (
+              <TouchableOpacity
+                style={styles.sheetItem}
+                onPress={() => {
+                  setEditDraft(messageActions.message.text);
+                  setEditingMessage(messageActions.message);
+                  closeMessageActions();
+                }}
+              >
+                <Icon name="edit-square" set="light" size={20} color={colors.foreground} />
+                <Text style={[styles.sheetItemText, { color: colors.foreground }]}>Edit</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            <TouchableOpacity
+              style={styles.sheetItem}
+              onPress={() => messageActions && removeMessage(messageActions.message, false)}
+            >
+              <Icon name="delete" set="light" size={20} color={colors.foreground} />
+              <Text style={[styles.sheetItemText, { color: colors.foreground }]}>Delete for me</Text>
+            </TouchableOpacity>
+
+            {/* Offered only to the sender, and only inside the backend's
+                one-hour window — past that the server refuses it. */}
+            {messageActions?.isMine && withinUnsendWindow(messageActions.message) ? (
+              <TouchableOpacity
+                style={styles.sheetItem}
+                onPress={() =>
+                  Alert.alert("Delete for everyone", "This removes the message for everyone in this chat.", [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: () => messageActions && removeMessage(messageActions.message, true),
+                    },
+                  ])
+                }
+              >
+                <Icon name="delete" set="bold" size={20} color={colors.destructive} />
+                <Text style={[styles.sheetItemText, { color: colors.destructive }]}>Delete for everyone</Text>
+              </TouchableOpacity>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={!!editingMessage} transparent animationType="fade" onRequestClose={() => setEditingMessage(null)}>
+        <Pressable style={styles.sheetBackdrop} onPress={() => setEditingMessage(null)}>
+          <Pressable
+            style={[styles.editCard, { backgroundColor: colors.card }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={[styles.editTitle, { color: colors.foreground }]}>Edit message</Text>
+            <TextInput
+              value={editDraft}
+              onChangeText={setEditDraft}
+              multiline
+              maxLength={2000}
+              autoFocus
+              style={[styles.editInput, { color: colors.foreground, backgroundColor: colors.background }]}
+            />
+            <View style={styles.editActions}>
+              <TouchableOpacity onPress={() => setEditingMessage(null)} style={styles.editActionBtn}>
+                <Text style={[styles.sheetItemText, { color: colors.mutedForeground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={submitEdit} disabled={!editDraft.trim()} style={styles.editActionBtn}>
+                <Text style={[styles.sheetItemText, { color: colors.primary, opacity: editDraft.trim() ? 1 : 0.5 }]}>
+                  Save
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </KeyboardAvoidingView>
@@ -1594,4 +1824,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
+  sheetBackdrop: { flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" },
+  sheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+  },
+  reactionRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingBottom: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  reactionBtn: { padding: 6 },
+  reactionGlyph: { fontSize: 28 },
+  sheetItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
+  },
+  sheetItemText: { ...Typography.body, fontFamily: FontFamily.medium },
+
+  editCard: {
+    margin: Spacing.lg,
+    borderRadius: 16,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    marginBottom: "auto",
+    marginTop: "auto",
+  },
+  editTitle: { ...Typography.body, fontFamily: FontFamily.semibold },
+  editInput: {
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 80,
+    textAlignVertical: "top",
+    ...Typography.body,
+  },
+  editActions: { flexDirection: "row", justifyContent: "flex-end", gap: Spacing.md },
+  editActionBtn: { paddingVertical: 8, paddingHorizontal: 12 },
 });

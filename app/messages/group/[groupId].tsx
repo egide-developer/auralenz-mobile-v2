@@ -270,6 +270,15 @@ export default function GroupChatScreen() {
           </View>
         </TouchableOpacity>
         <TouchableOpacity
+          onPress={() =>
+            router.push({ pathname: "/messages/search", params: { groupId, title: group.name } })
+          }
+          style={styles.iconBtn}
+          hitSlop={8}
+        >
+          <Icon name="search" set="light" size={20} color={colors.foreground} />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => router.push({ pathname: "/(modals)/group-info", params: { groupId } })}
           style={styles.iconBtn}
           hitSlop={8}
