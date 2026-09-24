@@ -103,6 +103,14 @@ export interface MessageFile {
   size?: number;
 }
 
+export interface LinkPreview {
+  url: string;
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  siteName?: string;
+}
+
 export interface Message {
   id: string;
   conversationId?: string;
@@ -123,6 +131,13 @@ export interface Message {
   /** Previous revisions, newest last. Populated by the backend on each edit. */
   editHistory?: { text: string; editedAt: string }[];
   replyTo?: MessageReplyPreview | null;
+  /** Unfurled server-side after the send, so it arrives via message_updated rather than in the send response. */
+  linkPreview?: LinkPreview | null;
+  /** Burn-after-reading. The body is blanked for recipients until they open it. */
+  viewOnce?: boolean;
+  /** Whether this viewer has already spent their single view. */
+  viewOnceOpened?: boolean;
+  viewOnceConsumedAt?: string | null;
   /** Client-generated id used as a stable list key across the optimistic → confirmed transition. */
   clientId?: string;
   /** True while an optimistically-added message is still in flight to the server. */
@@ -149,14 +164,6 @@ export interface ChatGroup {
   unreadCount: number;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface LinkPreview {
-  url: string;
-  title?: string;
-  description?: string;
-  imageUrl?: string;
-  favicon?: string;
 }
 
 export interface StoryGroup {

@@ -56,6 +56,8 @@ export const API = {
     update: (messageId: string) => `/api/messages/messages/${messageId}`,
     remove: (messageId: string) => `/api/messages/messages/${messageId}`,
     react: (messageId: string) => `/api/messages/messages/${messageId}/reactions`,
+    /** Spends the single view of a view-once message. Returns the body once, then scrubs it server-side. */
+    openViewOnce: (messageId: string) => `/api/messages/messages/${messageId}/open`,
   },
   groups: {
     list: "/api/groups",

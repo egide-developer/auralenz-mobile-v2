@@ -13,6 +13,7 @@ import {
   ScrollView,
   Alert,
   Keyboard,
+  Linking,
 } from "react-native";
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -63,12 +64,13 @@ import {
   stopTyping,
   onTypingStart,
   onTypingStop,
+  onMessageUpdated,
 } from "../../src/services/socket";
 import { useUnreadStore } from "../../src/stores/unreadStore";
 import { useCallStore } from "../../src/stores/callStore";
 import { showToast } from "../../src/stores/toastStore";
 import * as Clipboard from "expo-clipboard";
-import type { Conversation, Message } from "../../src/types";
+import type { Conversation, LinkPreview, Message } from "../../src/types";
 
 const GROUP_GAP_MS = 5 * 60 * 1000;
 const PAGE_SIZE = 20;
@@ -213,6 +215,69 @@ const UNSEND_WINDOW_MS = 60 * 60 * 1000;
 const withinUnsendWindow = (message: Message) =>
   Date.now() - new Date(message.createdAt).getTime() < UNSEND_WINDOW_MS;
 
+/**
+ * Unfurled link card. Shown below the text, not in place of it — the raw URL
+ * stays visible so what was actually sent is never hidden behind a title the
+ * server fetched from a third party.
+ */
+function LinkPreviewCard({
+  preview,
+  isMine,
+  colors,
+}: {
+  preview: LinkPreview;
+  isMine: boolean;
+  colors: typeof Colors.light | typeof Colors.dark;
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.linkPreview,
+        { backgroundColor: isMine ? "#FFFFFF22" : colors.background + "90" },
+      ]}
+      onPress={() => Linking.openURL(preview.url).catch(() => showToast("Could not open link", "error"))}
+      activeOpacity={0.8}
+    >
+      {!!preview.imageUrl && (
+        <CachedImage source={{ uri: preview.imageUrl }} style={styles.linkPreviewImage} contentFit="cover" />
+      )}
+      <View style={styles.linkPreviewBody}>
+        {!!preview.siteName && (
+          <Text
+            style={[
+              styles.linkPreviewSite,
+              { color: isMine ? colors.primaryForeground + "AA" : colors.mutedForeground },
+            ]}
+            numberOfLines={1}
+          >
+            {preview.siteName}
+          </Text>
+        )}
+        <Text
+          style={[
+            styles.linkPreviewTitle,
+            { color: isMine ? colors.primaryForeground : colors.foreground },
+          ]}
+          numberOfLines={2}
+        >
+          {preview.title || preview.url}
+        </Text>
+        {!!preview.description && (
+          <Text
+            style={[
+              styles.linkPreviewDesc,
+              { color: isMine ? colors.primaryForeground + "CC" : colors.mutedForeground },
+            ]}
+            numberOfLines={2}
+          >
+            {preview.description}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 function MessageRow({
   item,
   index,
@@ -222,6 +287,7 @@ function MessageRow({
   lastMineIndex,
   onSwipeReply,
   onLongPress,
+  onOpenViewOnce,
 }: {
   item: Row;
   index: number;
@@ -231,11 +297,15 @@ function MessageRow({
   lastMineIndex: number;
   onSwipeReply: (message: Message) => void;
   onLongPress: (message: Message, isMine: boolean) => void;
+  onOpenViewOnce: (message: Message) => void;
 }) {
   const { message, isMine, showAvatar, showTail, showTime, dayLabel } = item;
-  const hasImages = !message.isDeleted && message.images?.length > 0;
-  const hasAudio = !message.isDeleted && !!message.audioUrl;
-  const hasFiles = !message.isDeleted && (message.files?.length || 0) > 0;
+  // A view-once message arrives with its body stripped, so the bubble renders
+  // a placeholder rather than the usual content blocks.
+  const isViewOnceShell = !message.isDeleted && !!message.viewOnce;
+  const hasImages = !isViewOnceShell && !message.isDeleted && message.images?.length > 0;
+  const hasAudio = !isViewOnceShell && !message.isDeleted && !!message.audioUrl;
+  const hasFiles = !isViewOnceShell && !message.isDeleted && (message.files?.length || 0) > 0;
   const replyTo = message.replyTo;
 
   const translateX = useSharedValue(0);
@@ -438,7 +508,7 @@ function MessageRow({
                   ))}
                 </View>
               )}
-              {!message.isDeleted && !!message.text && (
+              {!message.isDeleted && !isViewOnceShell && !!message.text && (
                 <Text
                   style={{
                     color: isMine ? colors.primaryForeground : colors.foreground,
@@ -450,6 +520,36 @@ function MessageRow({
                 >
                   {message.text}
                 </Text>
+              )}
+              {!message.isDeleted && !!message.linkPreview?.url && (
+                <LinkPreviewCard preview={message.linkPreview} isMine={isMine} colors={colors} />
+              )}
+              {isViewOnceShell && (
+                <TouchableOpacity
+                  style={styles.viewOnceRow}
+                  onPress={() => onOpenViewOnce(message)}
+                  disabled={message.viewOnceOpened || isMine}
+                  activeOpacity={0.7}
+                >
+                  <Icon
+                    name={message.viewOnceOpened ? "hide" : "show"}
+                    set="bold"
+                    size={16}
+                    color={isMine ? colors.primaryForeground : colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.viewOnceText,
+                      { color: isMine ? colors.primaryForeground : colors.foreground },
+                    ]}
+                  >
+                    {isMine
+                      ? "View once · sent"
+                      : message.viewOnceOpened
+                        ? "Opened"
+                        : "Tap to view once"}
+                  </Text>
+                </TouchableOpacity>
               )}
               {message.isDeleted && (
                 <Text
@@ -557,6 +657,10 @@ export default function ChatDetailScreen() {
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  /** Arms the next send as view-once; cleared once that message goes out. */
+  const [viewOnceArmed, setViewOnceArmed] = useState(false);
+  /** The revealed body of a view-once message, held only in memory. */
+  const [revealed, setRevealed] = useState<{ text: string; images: string[] } | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const recentlySentIds = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef(true);
@@ -698,6 +802,17 @@ export default function ChatDetailScreen() {
         })
       );
     });
+    // Carries edits, link previews unfurled after the send, and the blanking
+    // of a view-once message someone else opened. Patched in rather than
+    // replaced: the payload is a partial, not a whole message.
+    const unsubUpdated = onMessageUpdated((data: any) => {
+      const incoming = data?.message;
+      const incomingId = incoming?.id || incoming?._id;
+      if (!incomingId || (data.conversationId && data.conversationId !== id)) return;
+      setMessages((prev) =>
+        prev.map((m) => (m.id === incomingId ? { ...m, ...incoming, id: m.id } : m))
+      );
+    });
     const unsubTypingStart = onTypingStart((data) => {
       if (data.conversationId !== id) return;
       setOtherTyping(true);
@@ -711,6 +826,7 @@ export default function ChatDetailScreen() {
       leaveConversation(id);
       unsubNewMessage?.();
       unsubRead?.();
+      unsubUpdated?.();
       unsubTypingStart?.();
       unsubTypingStop?.();
       // Never leave the peer's "typing…" indicator stuck on if this screen
@@ -799,6 +915,31 @@ export default function ChatDetailScreen() {
   }, []);
 
   const closeMessageActions = useCallback(() => setMessageActions(null), []);
+
+  /**
+   * Spends the single view. The server returns the body once and scrubs it, so
+   * the response is held in state only — never written back into the message
+   * list, which would leave it on screen after the modal closes.
+   */
+  const openViewOnce = useCallback(async (message: Message) => {
+    try {
+      const { data } = await api.post(API.messages.openViewOnce(message.id));
+      const body = data.message || {};
+      setRevealed({ text: body.text || "", images: body.images || [] });
+      setMessages((prev) =>
+        prev.map((m) => (m.id === message.id ? { ...m, viewOnceOpened: true } : m))
+      );
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || "This message is no longer available", "error");
+      // A 410 means someone already spent it: reflect that rather than
+      // leaving a tappable prompt that can only fail again.
+      if (e?.response?.status === 410) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === message.id ? { ...m, viewOnceOpened: true } : m))
+        );
+      }
+    }
+  }, []);
 
   const applyReaction = useCallback(
     async (message: Message, emoji: string) => {
@@ -997,9 +1138,11 @@ export default function ChatDetailScreen() {
     const attachmentsSnapshot = attachments;
     const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const replySnapshot = replyingTo;
+    const sendViewOnce = viewOnceArmed;
     setText("");
     setReplyingTo(null);
     setAttachments([]);
+    setViewOnceArmed(false);
     setSending(true);
     // You just sent this — always land at the bottom regardless of scroll position.
     forceScrollRef.current = true;
@@ -1023,6 +1166,7 @@ export default function ChatDetailScreen() {
       text: msg,
       images: optimisticImages,
       files: optimisticFiles,
+      viewOnce: sendViewOnce,
       messageType: optimisticImages.length > 0 ? "image" : optimisticFiles.length > 0 ? "file" : "text",
       reactions: [],
       readBy: [],
@@ -1046,6 +1190,7 @@ export default function ChatDetailScreen() {
         const formData = new FormData();
         if (msg) formData.append("text", msg);
         if (replySnapshot?.id) formData.append("replyTo", replySnapshot.id);
+        if (sendViewOnce) formData.append("viewOnce", "true");
         attachmentsSnapshot.forEach((a) => {
           const field = a.kind === "image" ? "images" : "files";
           formData.append(field, { uri: a.uri, name: a.name, type: a.mimeType } as any);
@@ -1058,6 +1203,7 @@ export default function ChatDetailScreen() {
         ({ data } = await api.post(API.messages.send(id), {
           text: msg,
           replyTo: replySnapshot?.id || undefined,
+          viewOnce: sendViewOnce || undefined,
         }));
       }
       const sent: Message = data.message || data.data || data;
@@ -1342,6 +1488,7 @@ export default function ChatDetailScreen() {
             lastMineIndex={lastMineIndex}
             onSwipeReply={handleSwipeReply}
             onLongPress={openMessageActions}
+            onOpenViewOnce={openViewOnce}
           />
         )}
       />
@@ -1395,6 +1542,19 @@ export default function ChatDetailScreen() {
         </Animated.View>
       )}
 
+      {/* An armed mode that isn't visible is a trap — say so above the input. */}
+      {viewOnceArmed && (
+        <View style={[styles.viewOnceArmedBar, { backgroundColor: colors.primary + "1A" }]}>
+          <Icon name="show" set="bold" size={14} color={colors.primary} />
+          <Text style={[styles.viewOnceArmedText, { color: colors.primary }]}>
+            Next message sends as view once
+          </Text>
+          <TouchableOpacity onPress={() => setViewOnceArmed(false)} hitSlop={8}>
+            <Icon name="close-square" set="bold" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View
         style={[
           styles.inputBar,
@@ -1428,6 +1588,26 @@ export default function ChatDetailScreen() {
           <>
             <TouchableOpacity onPress={() => setShowAttachMenu(true)} style={styles.attachBtn} hitSlop={6}>
               <Icon name="camera" set="light" size={22} color={colors.mutedForeground} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                const next = !viewOnceArmed;
+                setViewOnceArmed(next);
+                // Arming this is easy to do by accident and hard to notice, so
+                // it says out loud what it will do to the next message.
+                if (next) showToast("Next message can be opened once", "info");
+              }}
+              style={styles.attachBtn}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={viewOnceArmed ? "View once armed" : "Send as view once"}
+              accessibilityState={{ selected: viewOnceArmed }}
+            >
+              <Ionicons
+                name={viewOnceArmed ? "flame" : "flame-outline"}
+                size={20}
+                color={viewOnceArmed ? colors.primary : colors.mutedForeground}
+              />
             </TouchableOpacity>
             <TextInput
               value={text}
@@ -1482,6 +1662,34 @@ export default function ChatDetailScreen() {
             <TouchableOpacity style={styles.attachMenuItem} onPress={pickFiles}>
               <Icon name="document" set="light" size={20} color={colors.foreground} />
               <Text style={[styles.attachMenuText, { color: colors.foreground }]}>File</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Held in state only — closing the sheet is the end of the content. */}
+      <Modal transparent visible={!!revealed} animationType="fade" onRequestClose={() => setRevealed(null)}>
+        <Pressable style={styles.viewOnceBackdrop} onPress={() => setRevealed(null)}>
+          <View style={[styles.viewOnceCard, { backgroundColor: colors.card }]}>
+            <View style={styles.viewOnceHeader}>
+              <Icon name="show" set="bold" size={16} color={colors.primary} />
+              <Text style={[styles.viewOnceHeaderText, { color: colors.mutedForeground }]}>
+                Viewing once — this closes for good
+              </Text>
+            </View>
+            <ScrollView contentContainerStyle={styles.viewOnceContent}>
+              {(revealed?.images || []).map((uri, i) => (
+                <CachedImage key={i} source={{ uri }} style={styles.viewOnceImage} contentFit="contain" />
+              ))}
+              {!!revealed?.text && (
+                <Text style={[styles.viewOnceBody, { color: colors.foreground }]}>{revealed.text}</Text>
+              )}
+            </ScrollView>
+            <TouchableOpacity
+              style={[styles.viewOnceClose, { backgroundColor: colors.primary }]}
+              onPress={() => setRevealed(null)}
+            >
+              <Text style={[styles.viewOnceCloseText, { color: colors.primaryForeground }]}>Done</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -1799,6 +2007,47 @@ const styles = StyleSheet.create({
   attachMenuItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 16 },
   attachMenuDivider: { height: StyleSheet.hairlineWidth },
   attachMenuText: { fontFamily: FontFamily.medium, fontSize: FontSize.base, lineHeight: 21 },
+  linkPreview: {
+    marginTop: 6,
+    borderRadius: Radius.md,
+    overflow: "hidden",
+  },
+  linkPreviewImage: { width: "100%", height: 130 },
+  linkPreviewBody: { paddingHorizontal: 10, paddingVertical: 8, gap: 2 },
+  linkPreviewSite: { fontSize: 11, fontFamily: FontFamily.medium, textTransform: "uppercase" },
+  linkPreviewTitle: { ...Typography.bodySmall, fontFamily: FontFamily.semibold, lineHeight: 18 },
+  linkPreviewDesc: { fontSize: 12, lineHeight: 16 },
+  viewOnceRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
+  viewOnceText: { ...Typography.body, fontFamily: FontFamily.medium, lineHeight: 20 },
+  viewOnceBackdrop: {
+    flex: 1,
+    backgroundColor: "#000000CC",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.lg,
+  },
+  viewOnceCard: {
+    width: "100%",
+    maxHeight: "80%",
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  viewOnceHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  viewOnceHeaderText: { fontSize: 12, fontFamily: FontFamily.medium },
+  viewOnceContent: { gap: Spacing.md },
+  viewOnceImage: { width: "100%", height: 320, borderRadius: Radius.md },
+  viewOnceBody: { ...Typography.body, lineHeight: 22 },
+  viewOnceClose: { borderRadius: Radius.md, paddingVertical: 12, alignItems: "center" },
+  viewOnceCloseText: { fontFamily: FontFamily.semibold, fontSize: FontSize.base },
+  viewOnceArmedBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 6,
+  },
+  viewOnceArmedText: { fontSize: 12, fontFamily: FontFamily.medium, flex: 1 },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
