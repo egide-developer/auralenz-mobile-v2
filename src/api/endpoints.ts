@@ -127,6 +127,12 @@ export const API = {
     creatorSettings: "/api/monetization/creator-settings",
     creator: (userId: string) => `/api/monetization/creator/${userId}`,
   },
+  notes: {
+    list: "/api/notes",
+    create: "/api/notes",
+    react: (id: string) => `/api/notes/${id}/reactions`,
+    remove: (id: string) => `/api/notes/${id}`,
+  },
   admin: {
     dashboard: "/api/admin/dashboard",
     users: "/api/admin/users",

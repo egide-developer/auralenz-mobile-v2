@@ -173,6 +173,21 @@ export interface StoryGroup {
   hasUnviewed: boolean;
 }
 
+/** A 24-hour text-only status. One active note per author; `.mine` is the viewer's own note (if any). */
+export interface NoteEntry {
+  _id: string;
+  id: string;
+  author: UserPreview;
+  text: string;
+  visibility: "public" | "followers" | "close_friends";
+  isMine?: boolean;
+  myReaction: string | null;
+  reactionCounts: Record<string, number>;
+  reactionTotal: number;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface Story {
   id: string;
   userId: string;
