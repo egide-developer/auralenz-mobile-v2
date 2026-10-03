@@ -43,7 +43,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { name: "home", icon: "home", path: "/" },
   { name: "search", icon: "search", path: "/search" },
-  { name: "reels", icon: "video", path: "/reels" },
+  { name: "reels", icon: "play", path: "/reels" },
   { name: "messages", icon: "chat", path: "/messages", badge: true },
   { name: "profile", icon: "user", path: "/profile" },
 ];
@@ -131,6 +131,13 @@ export function BottomNav() {
       hide.remove();
     };
   }, []);
+
+  // Immersive reels: the feed is full-bleed black video, so we drop the
+  // floating dock entirely (not just re-theme it). ReelsFeed renders its own
+  // exit for this tab (see (tabs)/reels.tsx), so the user is never trapped.
+  if (isReelsTab) {
+    return null;
+  }
 
   const onPillLayout = (e: LayoutChangeEvent) => {
     setPillWidth(e.nativeEvent.layout.width - 4); // minus paddingHorizontal*2
