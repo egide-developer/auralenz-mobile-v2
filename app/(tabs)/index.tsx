@@ -243,6 +243,12 @@ export default function FeedScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>AuraLenz</Text>
         <View style={styles.headerActions}>
           <PressableScale
+            onPress={() => router.push("/(modals)/live-rooms")}
+            style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
+          >
+            <Icon name="people" set="light" size={20} color={colors.mutedForeground} />
+          </PressableScale>
+          <PressableScale
             onPress={() => router.push("/search")}
             style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
           >

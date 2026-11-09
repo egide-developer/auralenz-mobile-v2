@@ -175,6 +175,14 @@ export const API = {
     removeAdmin: (id: string, uid: string) => `/api/communities/${id}/admins/${uid}`,
     remove: (id: string) => `/api/communities/${id}`,
   },
+  liveRooms: {
+    list: "/api/live-rooms",
+    create: "/api/live-rooms",
+    byId: (id: string) => `/api/live-rooms/${id}`,
+    join: (id: string) => `/api/live-rooms/${id}/join`,
+    leave: (id: string) => `/api/live-rooms/${id}/leave`,
+    end: (id: string) => `/api/live-rooms/${id}/end`,
+  },
   admin: {
     dashboard: "/api/admin/dashboard",
     users: "/api/admin/users",

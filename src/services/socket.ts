@@ -291,3 +291,81 @@ export function onCallError(callback: (data: { message: string; event?: string }
 export function removeListener(event: string) {
   socket?.off(event);
 }
+
+// ─── Live Rooms (WebRTC mesh) ────────────────────────────────
+// Room management is REST (/api/live-rooms). These handlers only cover
+// the mesh signaling relay. The server validates room membership for every
+// signal relay, so clients need only join via REST first.
+export interface LiveRoomPeer {
+  id: string;
+  userId?: string;
+  username?: string;
+  avatarUrl?: string;
+  isVerified?: boolean;
+}
+
+export interface LiveRoomSignalPayload {
+  roomId: string;
+  fromUserId: string;
+  [key: string]: any;
+}
+
+export function joinLiveRoomSocket(roomId: string) {
+  socket?.emit("live_join", { roomId });
+}
+
+export function leaveLiveRoomSocket(roomId: string) {
+  socket?.emit("live_leave", { roomId });
+}
+
+export function sendLiveOffer(data: { roomId: string; toUserId: string; sdp: any }) {
+  socket?.emit("live_offer", data);
+}
+
+export function sendLiveAnswer(data: { roomId: string; toUserId: string; sdp: any }) {
+  socket?.emit("live_answer", data);
+}
+
+export function sendLiveIce(data: { roomId: string; toUserId: string; candidate: any }) {
+  socket?.emit("live_ice", data);
+}
+
+export function onLivePeers(callback: (data: { roomId: string; peers: LiveRoomPeer[] }) => void) {
+  socket?.on("live_peers", callback);
+  return () => socket?.off("live_peers", callback);
+}
+
+export function onLivePeerJoined(callback: (data: { roomId: string; peer: LiveRoomPeer; userId: string }) => void) {
+  socket?.on("live_peer_joined", callback);
+  return () => socket?.off("live_peer_joined", callback);
+}
+
+export function onLivePeerLeft(callback: (data: { roomId: string; userId: string }) => void) {
+  socket?.on("live_peer_left", callback);
+  return () => socket?.off("live_peer_left", callback);
+}
+
+export function onLiveOffer(callback: (data: LiveRoomSignalPayload & { sdp: any }) => void) {
+  socket?.on("live_offer", callback);
+  return () => socket?.off("live_offer", callback);
+}
+
+export function onLiveAnswer(callback: (data: LiveRoomSignalPayload & { sdp: any }) => void) {
+  socket?.on("live_answer", callback);
+  return () => socket?.off("live_answer", callback);
+}
+
+export function onLiveIce(callback: (data: LiveRoomSignalPayload & { candidate: any }) => void) {
+  socket?.on("live_ice", callback);
+  return () => socket?.off("live_ice", callback);
+}
+
+export function onLiveError(callback: (data: { message: string; event?: string }) => void) {
+  socket?.on("live_error", callback);
+  return () => socket?.off("live_error", callback);
+}
+
+export function onLiveEnded(callback: (data: { roomId: string }) => void) {
+  socket?.on("live_ended", callback);
+  return () => socket?.off("live_ended", callback);
+}
