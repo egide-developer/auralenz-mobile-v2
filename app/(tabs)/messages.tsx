@@ -213,15 +213,14 @@ export default function MessagesScreen() {
       setCreatingId(participantId);
       try {
         const { data } = await api.post(API.messages.conversations, { participantId });
-        const conversationId =
-          (data?.conversation as any)?._id || (data?.conversation as any)?.id;
+        const conversationId = (data?.conversation as any)?.id;
         if (conversationId) {
           openConversation(conversationId);
         } else {
-          Alert.alert("Error", "Failed to create conversation");
+          Alert.alert("Error", "Failed to create conversation — no conversation ID in response");
         }
       } catch (e: any) {
-        Alert.alert("Error", e?.response?.data?.message || "Failed to start chat");
+        Alert.alert("Error", e?.message || "Failed to start chat");
       } finally {
         setCreatingId(null);
       }
