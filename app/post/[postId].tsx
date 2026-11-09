@@ -32,6 +32,7 @@ import { renderRichText } from "../../src/components/ui/RichText";
 import { CommentSheet } from "../(tabs)/index";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import { TipSheet } from "../../src/components/monetization/TipSheet";
 import type { Post } from "../../src/types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -58,6 +59,7 @@ export default function PostDetailScreen() {
   const [post, setPost] = useState<Post | null>(parsedInitial);
   const [loading, setLoading] = useState(!parsedInitial);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [tipVisible, setTipVisible] = useState(false);
   const [editing, setEditing] = useState(false);
   const [captionDraft, setCaptionDraft] = useState(parsedInitial?.caption || "");
   const [locationDraft, setLocationDraft] = useState(parsedInitial?.location || "");
@@ -195,6 +197,12 @@ export default function PostDetailScreen() {
           <Icon name="chat" set="light" size={22} color={colors.foreground} />
           <Text style={[styles.actionText, { color: colors.foreground }]}>{post.commentsCount}</Text>
         </TouchableOpacity>
+        {!isOwnPost ? (
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setTipVisible(true)}>
+            <Icon name="star" set="light" size={22} color={colors.foreground} />
+            <Text style={[styles.actionText, { color: colors.foreground }]}>Stars</Text>
+          </TouchableOpacity>
+        ) : null}
         <View style={{ flex: 1 }} />
         <TouchableOpacity onPress={toggleSave}>
           <Icon name="bookmark" set={post.isSaved ? "bold" : "light"} size={22} color={post.isSaved ? colors.primary : colors.foreground} />
@@ -245,6 +253,14 @@ export default function PostDetailScreen() {
         postId={post.id}
         colors={colors}
         isDark={isDark}
+      />
+
+      <TipSheet
+        visible={tipVisible}
+        onClose={() => setTipVisible(false)}
+        recipientId={post.author.id}
+        recipientUsername={post.author.username}
+        postId={post.id}
       />
     </ScrollView>
   );
