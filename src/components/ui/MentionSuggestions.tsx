@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
 import { CachedImage } from "./CachedImage";
+import { Spacing, Radius, Gap } from "../../theme/spacing";
 
 // Matches a trailing "@partialname" at the cursor-less end of the text —
 // composers here don't track cursor position, so this only triggers
@@ -59,7 +60,7 @@ export function MentionSuggestions({
       style={{
         maxHeight: 200,
         backgroundColor: colors.card,
-        borderTopWidth: 0.5,
+        borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: colors.border + "40",
       }}
     >
@@ -69,20 +70,20 @@ export function MentionSuggestions({
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 8, gap: 10 }}
+            style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, gap: Gap.md }}
             onPress={() => onSelect(item.username)}
           >
             <View
               style={{
-                width: 30,
-                height: 30,
-                borderRadius: 15,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
                 backgroundColor: colors.muted,
                 overflow: "hidden",
               }}
             >
               {item.avatarUrl ? (
-                <CachedImage source={{ uri: item.avatarUrl }} style={{ width: 30, height: 30 }} />
+                <CachedImage source={{ uri: item.avatarUrl }} style={{ width: 28, height: 28 }} />
               ) : null}
             </View>
             <Text style={{ color: colors.foreground, fontSize: 14 }}>{item.username}</Text>

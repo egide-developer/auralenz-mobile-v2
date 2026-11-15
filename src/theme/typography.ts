@@ -1,16 +1,17 @@
-// AuraLenz — typography tokens
-// Font: Urbanist (Google Fonts), default 15px/21px, weight 500
+// AuraLenz — unsloped typography tokens
+// Two weights: 400 (regular) and 500 (medium). 600 (semibold) only for rare emphasis.
+// Hierarchy from size and color, not weight. Sentence case everywhere.
 
 export const FontFamily = {
-  regular: "Urbanist-Regular",
-  medium: "Urbanist-Medium",
-  semibold: "Urbanist-SemiBold",
-  bold: "Urbanist-Bold",
+  regular: "Urbanist-Regular",   // 400
+  medium: "Urbanist-Medium",     // 500
+  semibold: "Urbanist-SemiBold", // 600 - rare emphasis only
+  bold: "Urbanist-SemiBold",     // alias for semibold (backward compat)
 };
 
 export const FontSize = {
-  xs: 12,
-  sm: 14,
+  xs: 11,
+  sm: 13,
   base: 15,
   md: 16,
   lg: 18,
@@ -21,17 +22,24 @@ export const FontSize = {
 } as const;
 
 export const Typography = {
-  h1: { fontFamily: FontFamily.bold, fontSize: FontSize["3xl"], lineHeight: 38 },
-  h2: { fontFamily: FontFamily.bold, fontSize: FontSize["2xl"], lineHeight: 30 },
-  h3: { fontFamily: FontFamily.semibold, fontSize: FontSize.xl, lineHeight: 26 },
-  h4: { fontFamily: FontFamily.semibold, fontSize: FontSize.lg, lineHeight: 24 },
+  // Display - semibold only for h1/h2
+  h1: { fontFamily: FontFamily.semibold, fontSize: FontSize["3xl"], lineHeight: 38 },
+  h2: { fontFamily: FontFamily.semibold, fontSize: FontSize["2xl"], lineHeight: 30 },
+  h3: { fontFamily: FontFamily.medium, fontSize: FontSize.xl, lineHeight: 26 },
+  h4: { fontFamily: FontFamily.medium, fontSize: FontSize.lg, lineHeight: 24 },
 
+  // Body - medium (500) for UI, regular (400) for reading text
   body: { fontFamily: FontFamily.medium, fontSize: FontSize.base, lineHeight: 21 },
   bodySmall: { fontFamily: FontFamily.medium, fontSize: FontSize.sm, lineHeight: 20 },
   caption: { fontFamily: FontFamily.regular, fontSize: FontSize.xs, lineHeight: 16 },
 
-  label: { fontFamily: FontFamily.semibold, fontSize: FontSize.xs, lineHeight: 16 },
-  button: { fontFamily: FontFamily.semibold, fontSize: FontSize.xs, lineHeight: 16 },
+  // UI labels - medium, sentence case
+  label: { fontFamily: FontFamily.medium, fontSize: FontSize.xs, lineHeight: 16, textTransform: "none" as const },
+  button: { fontFamily: FontFamily.medium, fontSize: FontSize.xs, lineHeight: 16, textTransform: "none" as const },
 
-  tabLabel: { fontFamily: FontFamily.semibold, fontSize: 10, lineHeight: 13 },
+  tabLabel: { fontFamily: FontFamily.medium, fontSize: 11, lineHeight: 14, textTransform: "none" as const },
+
+  // Numbers - tabular
+  mono: { fontFamily: "SpaceMono-Regular", fontSize: FontSize.sm, lineHeight: 20 },
+  monoSm: { fontFamily: "SpaceMono-Regular", fontSize: FontSize.xs, lineHeight: 16 },
 } as const;

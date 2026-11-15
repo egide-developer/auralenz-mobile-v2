@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Radius["2xl"],
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing["2xl"],
   },
   grabber: { width: 40, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: Spacing.lg },
   titleRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },

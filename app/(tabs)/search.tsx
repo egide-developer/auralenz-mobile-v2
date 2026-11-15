@@ -5,11 +5,12 @@ import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
-import { Radius, Spacing } from "../../src/theme/spacing";
+import { Radius, Spacing, Gap } from "../../src/theme/spacing";
 import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
-import { PressableScale } from "../../src/components/ui/PressableScale";
+import { Button } from "../../src/components/ui";
+import { Screen } from "../../src/components/layout";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { Post } from "../../src/types";
@@ -183,12 +184,14 @@ export default function SearchScreen() {
 
   const hasQuery = query.trim().length > 0;
 
-  return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border + "40" }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Search</Text>
-      </View>
+  const header = (
+    <View style={styles.header}>
+      <Text style={[styles.headerTitle, { color: colors.foreground }]}>Search</Text>
+    </View>
+  );
 
+  return (
+    <Screen header={header} scroll showsVerticalScrollIndicator={false}>
       <View style={styles.searchContainer}>
         <View
           style={[
@@ -345,7 +348,7 @@ export default function SearchScreen() {
           }}
         />
       )}
-    </View>
+    </Screen>
   );
 }
 
@@ -405,40 +408,25 @@ function UserRow({
             ) : null}
           </View>
         </TouchableOpacity>
-        <PressableScale
-          scaleTo={0.9}
+        <Button
+          title={user.isFollowing ? "Following" : "Follow"}
           onPress={onFollow}
-          style={[
-            styles.followBtn,
-            user.isFollowing
-              ? { backgroundColor: colors.muted, borderColor: colors.border + "60", borderWidth: 1 }
-              : { backgroundColor: colors.primary },
-          ]}
-        >
-          <Text
-            style={[
-              styles.followBtnText,
-              { color: user.isFollowing ? colors.foreground : colors.primaryForeground },
-            ]}
-          >
-            {user.isFollowing ? "Following" : "Follow"}
-          </Text>
-        </PressableScale>
+          variant={user.isFollowing ? "outline" : "primary"}
+          size="sm"
+        />
       </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
-    paddingTop: 12,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: { ...Typography.h3 },
   searchContainer: {
@@ -449,10 +437,10 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: Radius.pill,
+    borderRadius: Radius.xl,
     paddingHorizontal: 16,
     height: 44,
-    gap: 8,
+    gap: Gap.sm,
   },
   searchInput: {
     flex: 1,
@@ -460,18 +448,17 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: 40,
   },
   emptyState: {
-    paddingVertical: 50,
+    paddingVertical: Spacing["3xl"],
     alignItems: "center",
-    gap: 10,
+    gap: Gap.md,
   },
   emptyText: {
     ...Typography.body,
   },
   section: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -481,7 +468,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   sectionTitle: {
-    fontFamily: FontFamily.bold,
+    fontFamily: FontFamily.medium,
     fontSize: FontSize.sm,
     lineHeight: 20,
   },
@@ -492,20 +479,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: Spacing.xs,
   },
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    gap: 10,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: Gap.md,
   },
   userRowMain: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: Gap.md,
   },
   avatar: {
     alignItems: "center",
@@ -513,19 +500,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   resultMeta: { flex: 1 },
-  usernameRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  username: { fontFamily: FontFamily.semibold, fontSize: FontSize.base, lineHeight: 21 },
+  usernameRow: { flexDirection: "row", alignItems: "center", gap: Gap.xs },
+  username: { fontFamily: FontFamily.medium, fontSize: FontSize.base, lineHeight: 21 },
   displayName: { ...Typography.caption, marginTop: 2 },
-  followBtn: {
-    paddingHorizontal: 16,
-    height: 32,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  followBtnText: {
-    ...Typography.button,
-  },
   discoverColumnWrapper: { gap: GRID_GAP },
   discoverGridItem: {
     width: GRID_ITEM_SIZE,

@@ -1,5 +1,5 @@
 import { TouchableOpacity } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -8,7 +8,7 @@ export function PressableScale({
   onPress,
   onLongPress,
   style,
-  scaleTo = 0.9,
+  scaleTo = 0.96,
   disabled,
   hitSlop,
 }: {
@@ -30,10 +30,10 @@ export function PressableScale({
       onPress={onPress}
       onLongPress={onLongPress}
       onPressIn={() => {
-        scale.value = withTiming(scaleTo, { duration: 100 });
+        scale.value = withTiming(scaleTo, { duration: 80 });
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+        scale.value = withTiming(1, { duration: 120 });
       }}
       style={[style, animStyle]}
     >

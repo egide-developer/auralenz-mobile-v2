@@ -26,13 +26,14 @@ import Animated, {
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
-import { Radius, Spacing } from "../../src/theme/spacing";
+import { Radius, Spacing, Gap } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
-import { Ionicons } from "@expo/vector-icons";
+// Ionicons removed - using custom Icon component
 import { Icon } from "../../src/components/ui/Icon";
 import { UserLink } from "../../src/components/ui/UserLink";
 import { PressableScale } from "../../src/components/ui/PressableScale";
+import { Screen } from "../../src/components/layout";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { onNewMessage } from "../../src/services/socket";
@@ -228,51 +229,53 @@ export default function MessagesScreen() {
     [conversations, openConversation]
   );
 
-  return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border + "40" }]}>
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Messages</Text>
-          {totalUnread > 0 && (
-            <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-              {totalUnread} unread
-            </Text>
-          )}
-        </View>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <PressableScale
-            style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
-            onPress={() => router.push("/(modals)/notes")}
-          >
-            <Icon name="document" set="light" size={19} color={colors.mutedForeground} />
-          </PressableScale>
-          <PressableScale
-            style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
-            onPress={() => router.push("/(modals)/channels")}
-          >
-            <Ionicons name="megaphone-outline" size={19} color={colors.mutedForeground} />
-          </PressableScale>
-          <PressableScale
-            style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
-            onPress={() => router.push("/(modals)/groups")}
-          >
-            <Ionicons name="people-outline" size={19} color={colors.mutedForeground} />
-          </PressableScale>
-          <PressableScale
-            style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
-            onPress={() => router.push("/(modals)/marketplace")}
-          >
-            <Ionicons name="storefront-outline" size={19} color={colors.mutedForeground} />
-          </PressableScale>
-          <PressableScale
-            style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
-            onPress={openCompose}
-          >
-            <Icon name="edit-square" set="light" size={19} color={colors.mutedForeground} />
-          </PressableScale>
-        </View>
+  const header = (
+    <View style={styles.header}>
+      <View>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Messages</Text>
+        {totalUnread > 0 && (
+          <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
+            {totalUnread} unread
+          </Text>
+        )}
       </View>
+      <View style={{ flexDirection: "row", gap: Gap.sm }}>
+        <PressableScale
+          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          onPress={() => router.push("/(modals)/notes")}
+        >
+          <Icon name="document" set="light" size={19} color={colors.mutedForeground} />
+        </PressableScale>
+        <PressableScale
+          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          onPress={() => router.push("/(modals)/channels")}
+        >
+          <Icon name="activity" set="light" size={19} color={colors.mutedForeground} />
+        </PressableScale>
+        <PressableScale
+          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          onPress={() => router.push("/(modals)/groups")}
+        >
+          <Icon name="add-user" set="light" size={19} color={colors.mutedForeground} />
+        </PressableScale>
+        <PressableScale
+          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          onPress={() => router.push("/(modals)/marketplace")}
+        >
+          <Icon name="wallet" set="light" size={19} color={colors.mutedForeground} />
+        </PressableScale>
+        <PressableScale
+          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          onPress={openCompose}
+        >
+          <Icon name="edit-square" set="light" size={19} color={colors.mutedForeground} />
+        </PressableScale>
+      </View>
+    </View>
+  );
 
+  return (
+    <Screen header={header} scroll showsVerticalScrollIndicator={false}>
       <View style={[styles.searchBar, { backgroundColor: colors.card }]}>
         <Icon name="search" set="light" size={17} color={colors.mutedForeground} />
         <TextInput
@@ -506,28 +509,28 @@ export default function MessagesScreen() {
           </Animated.View>
         </View>
       </Modal>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
-    paddingTop: 12,
-    paddingBottom: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: { ...Typography.h3 },
   headerSubtitle: { ...Typography.caption, marginTop: 2 },
   composeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "transparent",
   },
   searchBar: {
     flexDirection: "row",
@@ -536,13 +539,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     paddingHorizontal: 12,
     height: 40,
-    borderRadius: 12,
-    gap: 8,
+    borderRadius: Radius.md,
+    gap: Gap.sm,
   },
   searchAllRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: Gap.sm,
     paddingHorizontal: Spacing.lg,
     paddingVertical: 10,
   },
@@ -552,36 +555,36 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     paddingVertical: 0,
   },
-  listContent: { paddingHorizontal: Spacing.lg, paddingBottom: 24 },
+  listContent: { paddingHorizontal: Spacing.lg },
   emptyState: {
-    paddingVertical: 80,
+    paddingVertical: Spacing["4xl"],
     alignItems: "center",
-    gap: 12,
+    gap: Gap.md,
   },
   emptyText: { ...Typography.body },
   conversationRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
   },
   avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: Gap.md,
     overflow: "hidden",
   },
-  avatarImg: { width: 54, height: 54, borderRadius: 27 },
+  avatarImg: { width: 48, height: 48, borderRadius: 24 },
   conversationMeta: { flex: 1 },
   conversationHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  name: { fontFamily: FontFamily.semibold, fontSize: Typography.body.fontSize, lineHeight: Typography.body.lineHeight, flex: 1, marginRight: 8 },
-  nameUnread: { fontFamily: FontFamily.bold },
+  name: { fontFamily: FontFamily.medium, fontSize: Typography.body.fontSize, lineHeight: Typography.body.lineHeight, flex: 1, marginRight: Gap.sm },
+  nameUnread: { fontFamily: FontFamily.medium },
   time: { ...Typography.caption },
   previewRow: {
     flexDirection: "row",
@@ -589,17 +592,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 2,
   },
-  preview: { ...Typography.bodySmall, flex: 1, marginRight: 8 },
-  previewUnread: { fontFamily: FontFamily.semibold },
+  preview: { ...Typography.bodySmall, flex: 1, marginRight: Gap.sm },
+  previewUnread: { fontFamily: FontFamily.medium },
   unreadBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
   },
-  unreadText: { fontFamily: FontFamily.bold, fontSize: 12, lineHeight: 16 },
+  unreadText: { fontFamily: FontFamily.medium, fontSize: 11, lineHeight: 16 },
   sheetBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
@@ -631,8 +634,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     paddingHorizontal: 12,
     height: 42,
-    borderRadius: Radius.pill,
-    gap: 8,
+    borderRadius: Radius.xl,
+    gap: Gap.sm,
   },
   discoverInput: {
     flex: 1,
@@ -641,10 +644,10 @@ const styles = StyleSheet.create({
   },
   discoverList: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing["2xl"],
   },
   discoverEmpty: {
-    paddingVertical: 40,
+    paddingVertical: Spacing.xl,
     alignItems: "center",
   },
   discoverEmptyText: { ...Typography.bodySmall },
@@ -652,11 +655,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
-    gap: 12,
+    gap: Gap.md,
   },
   personAvatar: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",

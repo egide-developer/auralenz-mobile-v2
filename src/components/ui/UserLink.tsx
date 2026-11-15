@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import { Icon } from "./Icon";
 import { CachedImage } from "./CachedImage";
 import { usePresenceStore } from "../../stores/presenceStore";
+import { FontFamily } from "../../theme/typography";
 
 export interface UserLinkUser {
   id?: string;
@@ -134,7 +135,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   username: {
+    fontFamily: FontFamily.medium,
     fontSize: 14,
-    fontWeight: "600",
+    lineHeight: 20,
   },
 });

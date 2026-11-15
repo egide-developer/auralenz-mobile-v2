@@ -28,14 +28,14 @@ import Animated, {
   LinearTransition,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Ionicons } from "@expo/vector-icons";
+// Ionicons removed - using custom Icon component
 import { VideoView } from "expo-video";
 import { useCachedVideoPlayer } from "../../src/hooks/useCachedVideoPlayer";
 import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
-import { Spacing, Radius } from "../../src/theme/spacing";
+import { Spacing, Radius, Gap } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import api from "../../src/api/client";
@@ -48,6 +48,7 @@ import { MentionSuggestions, useMentionQuery, applyMentionSelection } from "../.
 import { ReportSheet } from "../../src/components/ui/ReportSheet";
 import { StoryBar } from "../../src/components/feed/StoryBar";
 import { TipSheet } from "../../src/components/monetization/TipSheet";
+import { Screen } from "../../src/components/layout";
 import type { Post, PostMedia, Comment } from "../../src/types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -227,42 +228,34 @@ export default function FeedScreen() {
     );
   }
 
-  return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <BlurView
-        intensity={Platform.OS === "ios" ? 40 : 0}
-        tint={isDark ? "dark" : "light"}
-        style={[
-          styles.header,
-          {
-            borderBottomColor: colors.border + "40",
-            backgroundColor: Platform.OS === "ios" ? "transparent" : colors.background,
-          },
-        ]}
-      >
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>AuraLenz</Text>
-        <View style={styles.headerActions}>
-          <PressableScale
-            onPress={() => router.push("/(modals)/live-rooms")}
-            style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
-          >
-            <Icon name="people" set="light" size={20} color={colors.mutedForeground} />
-          </PressableScale>
-          <PressableScale
-            onPress={() => router.push("/search")}
-            style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
-          >
-            <Icon name="search" set="light" size={20} color={colors.mutedForeground} />
-          </PressableScale>
-          <PressableScale
-            onPress={() => router.push("/notifications")}
-            style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
-          >
-            <Icon name="notification" set="light" size={20} color={colors.mutedForeground} />
-          </PressableScale>
-        </View>
-      </BlurView>
+  const header = (
+    <View style={styles.header}>
+      <Text style={[styles.headerTitle, { color: colors.foreground }]}>AuraLenz</Text>
+      <View style={styles.headerActions}>
+        <PressableScale
+          onPress={() => router.push("/(modals)/live-rooms")}
+          style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
+        >
+          <Icon name="people" set="light" size={20} color={colors.mutedForeground} />
+        </PressableScale>
+        <PressableScale
+          onPress={() => router.push("/search")}
+          style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
+        >
+          <Icon name="search" set="light" size={20} color={colors.mutedForeground} />
+        </PressableScale>
+        <PressableScale
+          onPress={() => router.push("/notifications")}
+          style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
+        >
+          <Icon name="notification" set="light" size={20} color={colors.mutedForeground} />
+        </PressableScale>
+      </View>
+    </View>
+  );
 
+  return (
+    <Screen header={header} scroll showsVerticalScrollIndicator={false}>
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
@@ -304,7 +297,7 @@ export default function FeedScreen() {
           />
         )}
       />
-    </View>
+    </Screen>
   );
 }
 
@@ -491,7 +484,7 @@ function PostCard({
                 </View>
               ) : null}
               <Animated.View pointerEvents="none" style={[styles.heartOverlay, heartOverlayStyle]}>
-                <Ionicons name="heart" size={84} color="#FFFFFF" />
+                <Icon name="heart" set="bold" size={84} color="#FFFFFF" />
               </Animated.View>
             </View>
           </GestureDetector>
@@ -511,8 +504,9 @@ function PostCard({
 
         <View style={styles.postActions}>
           <AnimatedTouchable style={[styles.actionBtn, likeBtnStyle]} onPress={handleLikePress} activeOpacity={0.75}>
-            <Ionicons
-              name={post.isLiked ? "heart" : "heart-outline"}
+            <Icon
+              name="heart"
+              set={post.isLiked ? "bold" : "light"}
               size={20}
               color={post.isLiked ? Colors.light.destructive : colors.mutedForeground}
             />
@@ -535,7 +529,7 @@ function PostCard({
           </PressableScale>
           {!isOwnPost && post.author?.id ? (
             <PressableScale style={styles.actionBtn} onPress={() => setTipVisible(true)} scaleTo={0.85}>
-              <Ionicons name="star-outline" size={19} color={colors.mutedForeground} />
+              <Icon name="star" set="light" size={19} color={colors.mutedForeground} />
             </PressableScale>
           ) : null}
           <View style={{ flex: 1 }} />
@@ -732,7 +726,7 @@ function PostOptionsSheet({
               setReportVisible(true);
             }}
           >
-            <Ionicons name="flag-outline" size={20} color={Colors.light.destructive} />
+            <Icon name="danger" set="light" size={20} color={Colors.light.destructive} />
             <Text style={[styles.optionText, { color: Colors.light.destructive }]}>Report</Text>
           </TouchableOpacity>
         ) : null}
@@ -1117,24 +1111,21 @@ function CommentItem({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
-    paddingTop: 12,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
-    overflow: "hidden",
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: {
     ...Typography.h3,
   },
   headerActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: Gap.sm,
   },
   headerBtn: {
     width: 36,
@@ -1145,12 +1136,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingVertical: Spacing.sm,
-    paddingBottom: 100,
   },
   emptyState: {
-    paddingVertical: 80,
+    paddingVertical: Spacing["4xl"],
     alignItems: "center",
-    gap: 12,
+    gap: Gap.md,
   },
   emptyText: {
     ...Typography.body,
@@ -1160,9 +1150,9 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   card: {
-    borderTopWidth: 0.5,
-    borderBottomWidth: 0,
     padding: Spacing.base,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0,0,0,0.06)",
   },
   postHeader: {
     flexDirection: "row",
@@ -1176,7 +1166,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   moreBtn: {
-    padding: 4,
+    padding: Spacing.xs,
   },
   avatar: {
     width: 36,
@@ -1184,7 +1174,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
+    marginRight: Gap.md,
     overflow: "hidden",
   },
   avatarImg: {
@@ -1196,7 +1186,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   username: {
-    fontFamily: FontFamily.semibold,
+    fontFamily: FontFamily.medium,
     fontSize: Typography.bodySmall.fontSize,
     lineHeight: Typography.bodySmall.lineHeight,
   },
@@ -1207,11 +1197,13 @@ const styles = StyleSheet.create({
   mediaWrap: {
     marginHorizontal: -Spacing.base,
     marginBottom: Spacing.sm,
+    borderRadius: Radius.md,
+    overflow: "hidden",
   },
   postImage: {
     width: "100%",
     height: 320,
-    backgroundColor: "#00000010",
+    backgroundColor: "rgba(0,0,0,0.04)",
   },
   mediaSlide: {
     overflow: "hidden",
@@ -1259,13 +1251,13 @@ const styles = StyleSheet.create({
   postActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: Gap.lg,
     marginTop: Spacing.xs,
   },
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: Gap.xs,
   },
   actionText: {
     ...Typography.caption,

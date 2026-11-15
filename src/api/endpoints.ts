@@ -1,5 +1,7 @@
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000";
+  process.env.EXPO_PUBLIC_API_URL || "https://aura-lens-backend-production.up.railway.app";
+
+export const APP_SLUG = "auralenz-app-slud-prod";
 
 export const API = {
   auth: {

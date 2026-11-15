@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   headerTitle: { fontFamily: FontFamily.bold, fontSize: 20 },
-  content: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.xxxl },
+  content: { paddingHorizontal: Spacing.base, paddingBottom: Spacing["4xl"] },
   notice: {
     flexDirection: "row",
     gap: Spacing.md,

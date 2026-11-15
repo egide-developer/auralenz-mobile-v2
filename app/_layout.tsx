@@ -24,6 +24,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const loadToken = useAuthStore((s) => s.loadToken);
   const isDark = useThemeStore((s) => s.isDark);
+  const bg = isDark ? Colors.dark.background : Colors.light.background;
 
   const [fontsLoaded] = useFonts({
     "Urbanist-Regular": Urbanist_400Regular,
@@ -46,7 +47,7 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: bg }}>
       <SafeAreaProvider>
         <StatusBar style={isDark ? "light" : "dark"} />
         <CallListener />
@@ -54,11 +55,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: {
-              backgroundColor: isDark
-                ? Colors.dark.background
-                : Colors.light.background,
-            },
+            contentStyle: { backgroundColor: bg },
           }}
         />
         {/* Last child so toasts render above every screen in the stack. */}

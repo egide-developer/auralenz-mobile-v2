@@ -29,13 +29,14 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Ionicons } from "@expo/vector-icons";
+// Ionicons removed - using custom Icon component
 import { VideoView } from "expo-video";
 import { useCachedVideoPlayer } from "../../hooks/useCachedVideoPlayer";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAuthStore } from "../../stores/authStore";
 import { Colors } from "../../theme/colors";
 import { Typography, FontFamily } from "../../theme/typography";
+import { Spacing, Radius, Gap } from "../../theme/spacing";
 import { showToast } from "../../stores/toastStore";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
@@ -387,7 +388,7 @@ function ReelItem({
         ) : null}
 
         <Animated.View pointerEvents="none" style={[styles.heartOverlay, heartOverlayStyle]}>
-          <Ionicons name="heart" size={96} color="#FFFFFF" />
+          <Icon name="heart" set="bold" size={96} color="#FFFFFF" />
         </Animated.View>
 
         {isVideo && !muted ? (
@@ -437,8 +438,9 @@ function ReelItem({
 
           <View style={styles.reelActions}>
             <TouchableOpacity style={styles.reelActionBtn} onPress={() => onLike(post)}>
-              <Ionicons
-                name={post.isLiked ? "heart" : "heart-outline"}
+              <Icon
+                name="heart"
+                set={post.isLiked ? "bold" : "light"}
                 size={30}
                 color={post.isLiked ? Colors.light.destructive : "#FFFFFF"}
               />
@@ -456,7 +458,7 @@ function ReelItem({
               onPress={() => setCollabVisible(true)}
               accessibilityLabel="Remix or collaborate"
             >
-              <Ionicons name="git-network-outline" size={27} color="#FFFFFF" />
+              <Icon name="swap" set="bold" size={27} color="#FFFFFF" />
             </TouchableOpacity>
             {post.author?.id ? (
               <TouchableOpacity
@@ -464,7 +466,7 @@ function ReelItem({
                 onPress={() => setTipVisible(true)}
                 accessibilityLabel="Send Stars"
               >
-                <Ionicons name="star-outline" size={28} color="#FFFFFF" />
+                <Icon name="star" set="light" size={28} color="#FFFFFF" />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -588,7 +590,7 @@ function CollabSheet({
             disabled={busy}
           >
             <View style={[styles.sheetIcon, { backgroundColor: colors.primary + "14" }]}>
-              <Ionicons name="git-network-outline" size={20} color={colors.primary} />
+              <Icon name="swap" set="bold" size={20} color={colors.primary} />
             </View>
             <View style={styles.sheetRowMeta}>
               <Text style={[styles.sheetRowTitle, { color: colors.foreground }]}>Remix this reel</Text>
@@ -675,7 +677,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     position: "absolute",
-    left: 16,
+    left: Spacing.md,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -685,10 +687,10 @@ const styles = StyleSheet.create({
   },
   muteBadge: {
     position: "absolute",
-    right: 16,
+    right: Spacing.md,
     backgroundColor: "rgba(0,0,0,0.4)",
-    borderRadius: 12,
-    padding: 6,
+    borderRadius: Radius.md,
+    padding: Spacing.xs,
   },
   bottomOverlay: {
     position: "absolute",
@@ -697,16 +699,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
   },
   bottomInfo: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: Gap.md,
   },
   reelHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: Spacing.xs,
   },
   reelAvatar: {
     width: 28,
@@ -716,18 +719,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    marginRight: 8,
+    marginRight: Gap.sm,
   },
   reelAvatarImg: { width: 28, height: 28 },
   reelUsername: {
     ...Typography.bodySmall,
-    fontFamily: FontFamily.bold,
+    fontFamily: FontFamily.medium,
     color: "#FFFFFF",
   },
   reelTime: {
     ...Typography.bodySmall,
     color: "rgba(255,255,255,0.7)",
-    marginLeft: 4,
+    marginLeft: Gap.xs,
   },
   reelCaption: {
     ...Typography.bodySmall,
@@ -735,27 +738,27 @@ const styles = StyleSheet.create({
   },
   reelActions: {
     alignItems: "center",
-    gap: 18,
+    gap: Gap.xl,
   },
   reelActionBtn: {
     alignItems: "center",
-    gap: 4,
+    gap: Gap.xs,
   },
   reelActionText: {
     ...Typography.bodySmall,
     color: "#FFFFFF",
-    fontFamily: FontFamily.semibold,
+    fontFamily: FontFamily.medium,
   },
   reelCollaborators: {
     ...Typography.bodySmall,
     color: "rgba(255,255,255,0.85)",
     fontFamily: FontFamily.medium,
-    marginBottom: 2,
+    marginBottom: Spacing["2xs"],
   },
   reelRemix: {
     ...Typography.bodySmall,
     color: "rgba(255,255,255,0.65)",
-    marginBottom: 2,
+    marginBottom: Spacing["2xs"],
   },
   sheetBackdrop: {
     flex: 1,
@@ -763,45 +766,45 @@ const styles = StyleSheet.create({
     backgroundColor: "#00000066",
   },
   sheetCard: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 28,
+    borderTopLeftRadius: Radius["2xl"],
+    borderTopRightRadius: Radius["2xl"],
+    padding: Spacing.xl,
+    paddingBottom: Spacing["2xl"],
   },
   sheetTitle: {
     ...Typography.h4,
-    marginBottom: 8,
+    marginBottom: Spacing.md,
   },
   sheetRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
+    gap: Gap.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   sheetIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: Radius.xl,
     alignItems: "center",
     justifyContent: "center",
   },
   sheetRowMeta: { flex: 1 },
-  sheetRowTitle: { ...Typography.body, fontFamily: FontFamily.semibold },
-  sheetRowSub: { ...Typography.bodySmall, marginTop: 2 },
+  sheetRowTitle: { ...Typography.body, fontFamily: FontFamily.medium },
+  sheetRowSub: { ...Typography.bodySmall, marginTop: Spacing["2xs"] },
   sheetInput: {
-    borderRadius: 12,
+    borderRadius: Radius.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginTop: 12,
+    marginTop: Spacing.md,
     ...Typography.bodySmall,
   },
-  sheetHint: { ...Typography.bodySmall, marginTop: 12 },
+  sheetHint: { ...Typography.bodySmall, marginTop: Spacing.md },
   personRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
+    gap: Gap.md,
+    paddingVertical: Spacing.md,
   },
   personAvatar: {
     width: 36,
@@ -813,7 +816,7 @@ const styles = StyleSheet.create({
   },
   personAvatarImg: { width: 36, height: 36, borderRadius: 18 },
   personName: { ...Typography.bodySmall, flex: 1, fontFamily: FontFamily.medium },
-  personAction: { ...Typography.bodySmall, fontFamily: FontFamily.semibold },
+  personAction: { ...Typography.bodySmall, fontFamily: FontFamily.medium },
   sheetCancel: { alignItems: "center", marginTop: 16 },
   sheetCancelText: { ...Typography.bodySmall, fontFamily: FontFamily.medium },
 });

@@ -1,115 +1,89 @@
-// AuraLenz — exact tokens from frontend/src/index.css (HSL → hex)
-// Matches web CSS variables 1:1
+// AuraLenz — unsloped color tokens
+// One warm graphite neutral ramp (camera/darkroom world), three text roles, one accent
 
 export const Colors = {
   light: {
-    background: "#F2F2EF",
-    foreground: "#1F1F1F",
+    background: "#F5F3EF",      // warm off-white (paper)
+    foreground: "#1A1A1A",      // near-black
 
     card: "#FFFFFF",
-    cardForeground: "#1F1F1F",
+    cardForeground: "#1A1A1A",
 
     popover: "#FFFFFF",
-    popoverForeground: "#1F1F1F",
+    popoverForeground: "#1A1A1A",
 
-    primary: "#99CC33",
-    primaryForeground: "#1F1F1F",
+    primary: "#7FA322",         // darker green for contrast on light (4.5:1 on white)
+    primaryForeground: "#FFFFFF",
 
-    secondary: "#EBEBEA",
-    secondaryForeground: "#1F1F1F",
+    secondary: "#EBE8E0",       // warm grey
+    secondaryForeground: "#1A1A1A",
 
-    muted: "#EBEBEA",
-    mutedForeground: "#737373",
+    muted: "#EBE8E0",
+    mutedForeground: "#6B6B6B", // 4.5:1 on background
 
-    accent: "#99CC33",
-    accentForeground: "#1F1F1F",
+    accent: "#7FA322",          // same as primary
+    accentForeground: "#FFFFFF",
 
-    destructive: "#DD2C2C",
+    destructive: "#C0392B",
     destructiveForeground: "#FFFFFF",
 
-    border: "#E6E6E6",
-    input: "#E6E6E6",
-    ring: "#99CC33",
+    border: "#DCD8D0",          // 10% opacity on foreground
+    input: "#DCD8D0",
+    ring: "#7FA322",
 
-    success: "#22C55E",
+    success: "#1E8A49",         // toned down
     successForeground: "#FFFFFF",
 
-    warning: "#F59E0B",
+    warning: "#B87A00",         // toned down
     warningForeground: "#FFFFFF",
 
-    sidebar: {
-      background: "#FAFAFA",
-      foreground: "#1F1F1F",
-      primary: "#99CC33",
-      primaryForeground: "#1F1F1F",
-      accent: "#F5F5F5",
-      accentForeground: "#1F1F1F",
-      border: "#EBEBEB",
-      ring: "#99CC33",
-    },
-
     glass: "rgba(255,255,255,0.92)",
-    glassBorder: "rgba(230,230,230,0.5)",
+    glassBorder: "rgba(220,216,208,0.5)",
 
-    // App-specific tokens
-    storyGradient: ["#DA2276", "#E55536"] as const,
-    verified: "#38BDF8",
-    online: "#22C55E",
+    verified: "#0284C7",
+    online: "#1E8A49",
   },
 
   dark: {
-    background: "#000000",
-    foreground: "#F4F5F6",
+    background: "#0A0A0A",      // warm black (darkroom)
+    foreground: "#F0EFEB",
 
-    card: "#0F0F0F",
-    cardForeground: "#F4F5F6",
+    card: "#121212",
+    cardForeground: "#F0EFEB",
 
-    popover: "#171717",
-    popoverForeground: "#F4F5F6",
+    popover: "#161616",
+    popoverForeground: "#F0EFEB",
 
-    primary: "#99CC33",
-    primaryForeground: "#1F1F1F",
+    primary: "#99CC33",         // brand green
+    primaryForeground: "#0A0A0A",
 
-    secondary: "#0F0F0F",
-    secondaryForeground: "#F4F5F6",
+    secondary: "#1A1A1A",
+    secondaryForeground: "#F0EFEB",
 
-    muted: "#0F0F0F",
-    mutedForeground: "#787878",
+    muted: "#1A1A1A",
+    mutedForeground: "#8A8A8A", // 4.5:1 on background
 
     accent: "#99CC33",
-    accentForeground: "#1F1F1F",
+    accentForeground: "#0A0A0A",
 
-    destructive: "#DD2C2C",
+    destructive: "#E85D5D",
     destructiveForeground: "#FFFFFF",
 
-    border: "#262626",
-    input: "#262626",
+    border: "#2A2A2A",          // 10% opacity on foreground
+    input: "#2A2A2A",
     ring: "#99CC33",
 
-    success: "#22C55E",
-    successForeground: "#FFFFFF",
+    success: "#2DD47A",         // toned down
+    successForeground: "#0A0A0A",
 
-    warning: "#F59E0B",
-    warningForeground: "#FFFFFF",
+    warning: "#F5B800",         // toned down
+    warningForeground: "#0A0A0A",
 
-    sidebar: {
-      background: "#000000",
-      foreground: "#F4F5F6",
-      primary: "#99CC33",
-      primaryForeground: "#1F1F1F",
-      accent: "#0F0F0F",
-      accentForeground: "#F4F5F6",
-      border: "#262626",
-      ring: "#99CC33",
-    },
+    glass: "rgba(18,18,18,0.92)",
+    glassBorder: "rgba(42,42,42,0.5)",
 
-    glass: "rgba(15,15,15,0.92)",
-    glassBorder: "rgba(38,38,38,0.5)",
-
-    // App-specific tokens
-    storyGradient: ["#DA2276", "#E55536"] as const,
     verified: "#38BDF8",
-    online: "#22C55E",
+    online: "#2DD47A",
   },
 } as const;
 

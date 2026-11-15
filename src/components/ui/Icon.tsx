@@ -179,7 +179,7 @@ const iconMap: Record<string, { light: React.ComponentType<any>; bold: React.Com
   "location-2": { light: Location2Light, bold: Location2Bold },
 };
 
-export function Icon({ name, set = "light", size = 24, color, strokeWidth, style }: IconProps) {
+export function Icon({ name, set = "light", size = 20, color, strokeWidth = 2, style }: IconProps) {
   const icon = iconMap[name];
   if (!icon) {
     console.warn(`Icon "${name}" not found`);

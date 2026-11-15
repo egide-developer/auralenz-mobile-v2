@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1, paddingVertical: Spacing.sm, borderRadius: Radius.pill, alignItems: "center" },
   tabLabel: { fontFamily: FontFamily.semibold, fontSize: 14 },
-  content: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.xxxl, gap: Spacing.md },
+  content: { paddingHorizontal: Spacing.base, paddingBottom: Spacing["4xl"], gap: Spacing.md },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   name: { ...Typography.body, fontFamily: FontFamily.semibold },
   meta: { fontSize: 12, marginTop: 2, lineHeight: 17 },
   action: { fontFamily: FontFamily.semibold, fontSize: 14 },
-  emptyBox: { alignItems: "center", paddingVertical: Spacing.xxxl, gap: Spacing.md },
+  emptyBox: { alignItems: "center", paddingVertical: Spacing["4xl"], gap: Spacing.md },
   empty: { ...Typography.bodySmall, textAlign: "center", paddingHorizontal: Spacing.xl },
   settingsCard: { borderRadius: Radius.lg, padding: Spacing.base },
   settingRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md },

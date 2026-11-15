@@ -1,6 +1,4 @@
-// AuraLenz BottomNav — mirrors web MobileNav.tsx
-// Floating glass pill with 4 tabs + separate Create FAB
-// Animated sliding active pill indicator
+// AuraLenz BottomNav — active tab has sliding pill + filled icon only
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -18,19 +16,15 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  withRepeat,
-  withSequence,
-  Easing,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "../ui/Icon";
 import { PlusSolid } from "../ui/icons/plus-solid";
 import { useThemeStore } from "../../stores/themeStore";
 import { useUnreadStore } from "../../stores/unreadStore";
 import { Colors } from "../../theme/colors";
-import { Radius } from "../../theme/spacing";
+import { Radius, Spacing, Gap } from "../../theme/spacing";
 import { FontFamily } from "../../theme/typography";
 
 interface NavItem {
@@ -41,77 +35,51 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { name: "home", icon: "home", path: "/" },
-  { name: "search", icon: "search", path: "/search" },
-  { name: "reels", icon: "play", path: "/reels" },
-  { name: "messages", icon: "chat", path: "/messages", badge: true },
-  { name: "profile", icon: "user", path: "/profile" },
+  { name: "home", icon: "home", path: "/(tabs)" },
+  { name: "search", icon: "search", path: "/(tabs)/search" },
+  { name: "reels", icon: "play", path: "/(tabs)/reels" },
+  { name: "messages", icon: "chat", path: "/(tabs)/messages", badge: true },
+  { name: "profile", icon: "user", path: "/(tabs)/profile" },
 ];
 
 const MAX_DOCK_WIDTH = 416;
-
-const SPRING_CONFIG = { damping: 20, stiffness: 350, mass: 0.8 };
+const INDICATOR_SPRING = { damping: 26, stiffness: 200 };
 
 export function BottomNav() {
   const { width: screenWidth } = useWindowDimensions();
-  const dockMaxWidth = Math.min(screenWidth - 20, MAX_DOCK_WIDTH);  const pathname = usePathname();
+  const dockMaxWidth = Math.min(screenWidth - 20, MAX_DOCK_WIDTH);
+  const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const themeIsDark = useThemeStore((s) => s.isDark);
   const totalUnread = useUnreadStore((s) => s.totalUnread);
   const isCreate = pathname.startsWith("/create");
-  // Reels is a full-bleed black video background regardless of app theme —
-  // force the pill into its dark glass variant there so it doesn't read as
-  // a jarring light chip floating over video, matching Instagram/TikTok.
   const isReelsTab = pathname === "/reels";
   const isDark = isReelsTab || themeIsDark;
 
   const [pillWidth, setPillWidth] = useState(0);
   const tabWidth = pillWidth > 0 ? pillWidth / NAV_ITEMS.length : 0;
 
-  const activeIndex = NAV_ITEMS.findIndex((item) =>
-    item.path === "/" ? pathname === "/" : pathname.startsWith(item.path)
-  );
-  const safeIndex = activeIndex >= 0 ? activeIndex : 0;
+  // Compute active index from pathname
+  const activeIndex = React.useMemo(() => {
+    return NAV_ITEMS.findIndex((item) => {
+      if (item.path === "/(tabs)") {
+        return pathname === "/(tabs)" || pathname === "/(tabs)/";
+      }
+      return pathname.startsWith(item.path);
+    });
+  }, [pathname]);
 
   const indicatorX = useSharedValue(0);
-  const fabRotation = useSharedValue(0);
-  // "Liquid mode" — a soft highlight blob that slowly drifts side to side,
-  // like light moving across the surface of liquid glass.
-  const liquidShift = useSharedValue(0);
 
-  useEffect(() => {
-    liquidShift.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 4200, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 4200, easing: Easing.inOut(Easing.sin) })
-      ),
-      -1,
-      false
-    );
-  }, []);
-
-  const liquidBlobStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: -18 + liquidShift.value * 36 }],
-  }));
-
+  // Animate indicator on mount and when activeIndex/tabWidth changes
   React.useEffect(() => {
-    if (tabWidth > 0) {
-      indicatorX.value = safeIndex * tabWidth;
+    if (tabWidth > 0 && activeIndex >= 0) {
+      indicatorX.value = withSpring(activeIndex * tabWidth, INDICATOR_SPRING);
+    } else if (activeIndex >= 0) {
+      indicatorX.value = activeIndex * (screenWidth / NAV_ITEMS.length);
     }
-  }, [safeIndex, tabWidth]);
-
-  React.useEffect(() => {
-    fabRotation.value = withTiming(isCreate ? 135 : 0, { duration: 300 });
-  }, [isCreate]);
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: withSpring(indicatorX.value, SPRING_CONFIG) }],
-  }));
-
-  const fabStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${fabRotation.value}deg` }],
-  }));
+  }, [activeIndex, tabWidth, screenWidth]);
 
   const keyboardY = useSharedValue(0);
   const keyboardStyle = useAnimatedStyle(() => ({
@@ -132,15 +100,12 @@ export function BottomNav() {
     };
   }, []);
 
-  // Immersive reels: the feed is full-bleed black video, so we drop the
-  // floating dock entirely (not just re-theme it). ReelsFeed renders its own
-  // exit for this tab (see (tabs)/reels.tsx), so the user is never trapped.
   if (isReelsTab) {
     return null;
   }
 
   const onPillLayout = (e: LayoutChangeEvent) => {
-    setPillWidth(e.nativeEvent.layout.width - 4); // minus paddingHorizontal*2
+    setPillWidth(e.nativeEvent.layout.width - 4);
   };
 
   const handleCreate = () => {
@@ -151,185 +116,138 @@ export function BottomNav() {
     router.back();
   };
 
-    return (
-    <Animated.View style={[styles.container, keyboardStyle, { paddingBottom: 8 + insets.bottom }]}>
+  const c = isDark ? Colors.dark : Colors.light;
+  const bg = isDark ? Colors.dark.background : Colors.light.background;
+  const primary = isDark ? Colors.dark.primary : Colors.light.primary;
+
+  return (
+    <Animated.View
+      style={[
+        styles.container,
+        keyboardStyle,
+        { paddingBottom: insets.bottom, backgroundColor: bg },
+      ]}
+    >
       <View style={[styles.dockWrapper, { maxWidth: dockMaxWidth }]}>
         <View style={styles.dockRow}>
-          {/* Main pill with 4 tabs — outer view casts the shadow (needs
-              unclipped bounds), inner view clips the blur/gradient layers
-              to the pill shape (needs overflow:hidden) */}
-          <View
-            style={[
-              styles.pillShadowWrap,
-              { shadowColor: isDark ? "#000000" : "#1A1A1A" },
-            ]}
-          >
-          <View
-            onLayout={onPillLayout}
-            style={[
-              styles.pill,
-              {
-                borderColor: isDark ? "#FFFFFF26" : "#FFFFFF99",
-              },
-            ]}
-          >
-            <BlurView
-              intensity={isDark ? 55 : 65}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
-            {/* Translucent color wash on top of the blur so the pill still
-                reads as the app's surface color, not just raw frosted glass */}
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: isDark ? Colors.dark.card + "8C" : Colors.light.card + "73" },
-              ]}
-            />
-            {/* Top edge highlight — the light-catching rim of a glass surface */}
-            <LinearGradient
-              colors={
-                isDark
-                  ? ["#FFFFFF29", "#FFFFFF00"]
-                  : ["#FFFFFFB3", "#FFFFFF00"]
-              }
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 0.6 }}
-            />
-            {/* Liquid mode — a full-width sheen that slowly drifts across
-                the whole pill, like light moving across liquid glass, not
-                a separate floating shape */}
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.liquidBlob, liquidBlobStyle]}
-            >
-              <LinearGradient
-                colors={
-                  isDark
-                    ? ["#FFFFFF00", "#FFFFFF1F", "#FFFFFF00"]
-                    : ["#FFFFFF00", "#FFFFFF80", "#FFFFFF00"]
-                }
+          {/* Main pill with 5 tabs */}
+          <View style={styles.pillShadowWrap}>
+            <View onLayout={onPillLayout} style={[styles.pill, { backgroundColor: c.card }]}>
+              <BlurView
+                intensity={isDark ? 30 : 40}
+                tint={isDark ? "dark" : "light"}
                 style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
               />
-            </Animated.View>
 
-            {/* Animated sliding indicator */}
-            {tabWidth > 0 && (
-              <Animated.View
-                style={[
-                  styles.activeIndicator,
-                  indicatorStyle,
-                  {
-                    width: tabWidth,
-                    backgroundColor: isDark ? Colors.dark.primary + "12" : Colors.light.primary + "12",
-                    borderColor: isDark ? Colors.dark.primary + "1A" : Colors.light.primary + "1A",
-                  },
-                ]}
-              />
-            )}
+              {/* Visible border on pill */}
+              <View style={[styles.pillBorder, { borderColor: c.border }]} />
 
-            {NAV_ITEMS.map((item) => {
-              const isActive =
-                item.path === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.path);
-              return (
-                <TabButton
-                  key={item.path}
-                  item={item}
-                  isActive={isActive}
-                  isDark={isDark}
-                  unreadCount={item.badge ? totalUnread : 0}
-                  onPress={() => router.push(item.path as any)}
+              {/* Sliding active pill background */}
+              {tabWidth > 0 && activeIndex >= 0 && (
+                <Animated.View
+                  style={[
+                    styles.activePill,
+                    { width: tabWidth },
+                    {
+                      transform: [
+                        {
+                          translateX: indicatorX.value,
+                        },
+                      ],
+                    },
+                  ]}
                 />
-              );
-            })}
-          </View>
+              )}
+
+              {NAV_ITEMS.map((item, index) => {
+                const isActive = activeIndex === index;
+                return (
+                  <TabItem
+                    key={item.path}
+                    item={item}
+                    isActive={isActive}
+                    isDark={isDark}
+                    unreadCount={item.badge ? totalUnread : 0}
+                    onPress={() => router.push(item.path as any)}
+                    index={index}
+                    tabWidth={tabWidth}
+                  />
+                );
+              })}
+            </View>
           </View>
 
           {/* Create FAB */}
-          <Animated.View style={fabStyle}>
-            <TouchableOpacity
-              onPress={handleCreate}
-              activeOpacity={0.8}
-              style={[
-                styles.fab,
-                {
-                  backgroundColor: isDark ? Colors.dark.primary : Colors.light.primary,
-                  shadowColor: isDark ? Colors.dark.primary : Colors.light.primary,
-                  shadowOpacity: isCreate ? 0.9 : 0.6,
-                },
-              ]}
-            >
-              <PlusSolid
-                size={24}
-                color={isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground}
-                strokeWidth={2.5}
-              />
-            </TouchableOpacity>
-          </Animated.View>
+          <TouchableOpacity
+            onPress={handleCreate}
+            activeOpacity={0.85}
+            style={[
+              styles.fab,
+              { backgroundColor: isDark ? Colors.dark.primary : Colors.light.primary },
+            ]}
+          >
+            <PlusSolid
+              size={24}
+              color={isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground}
+              strokeWidth={2.5}
+            />
+          </TouchableOpacity>
         </View>
       </View>
     </Animated.View>
   );
 }
 
-function TabButton({
-  item,
-  isActive,
-  isDark,
-  unreadCount,
-  onPress,
-}: {
+interface TabItemProps {
   item: NavItem;
   isActive: boolean;
   isDark: boolean;
   unreadCount: number;
   onPress: () => void;
-}) {
-  const squish = useSharedValue(1);
-  const squishStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: squish.value }],
-  }));
+  index: number;
+  tabWidth: number;
+}
+
+function TabItem({
+  item,
+  isActive,
+  isDark,
+  unreadCount,
+  onPress,
+  index,
+  tabWidth,
+}: TabItemProps) {
+  const c = isDark ? Colors.dark : Colors.light;
+  const primary = isDark ? Colors.dark.primary : Colors.light.primary;
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      onPressIn={() => {
-        // Liquid squish — dips low with a wobbly overshoot on release,
-        // like a droplet settling back into shape.
-        squish.value = withTiming(0.82, { duration: 90 });
-      }}
-      onPressOut={() => {
-        squish.value = withSpring(1, { damping: 6, stiffness: 220, mass: 0.6 });
-      }}
       activeOpacity={0.7}
-      style={styles.tabButton}
+      style={[
+        styles.tabButton,
+        { width: tabWidth > 0 ? tabWidth : undefined },
+        isActive && { backgroundColor: primary + "20" },
+      ]}
       accessibilityLabel={item.name}
+      accessibilityState={{ selected: isActive }}
     >
-      <Animated.View style={[styles.tabContent, squishStyle]}>
+      <View style={styles.tabContent}>
         <Icon
           name={item.icon}
           set={isActive ? "bold" : "light"}
-          size={21}
-          color={
-            isActive
-              ? (isDark ? Colors.dark.primary : Colors.light.primary)
-              : (isDark ? Colors.dark.mutedForeground : Colors.light.mutedForeground)
-          }
+          size={22}
+          color={isActive ? primary : c.mutedForeground}
         />
 
         {item.badge && unreadCount > 0 && (
-          <View style={[styles.badge, { backgroundColor: isDark ? Colors.dark.primary : Colors.light.primary }]}>
+          <View style={[styles.badge, { backgroundColor: primary }]}>
             <Text style={[styles.badgeText, { color: isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground }]}>
               {unreadCount > 99 ? "99+" : unreadCount}
             </Text>
           </View>
         )}
-      </Animated.View>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -346,59 +264,60 @@ const styles = StyleSheet.create({
   },
   dockWrapper: {
     width: "100%",
-    paddingHorizontal: 10,
+    paddingHorizontal: Spacing.md,
   },
   dockRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 11,
+    gap: Gap.md,
   },
   pillShadowWrap: {
     flex: 1,
-    borderRadius: Radius.pill,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 24,
-    shadowOpacity: 0.18,
-    elevation: 10,
+    borderRadius: Radius.xl,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+    shadowOpacity: 0.12,
+    elevation: 6,
   },
   pill: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    paddingHorizontal: 2,
-    paddingVertical: 2,
+    borderRadius: Radius.xl,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs,
     overflow: "hidden",
     position: "relative",
   },
-  activeIndicator: {
-    position: "absolute",
-    top: 1,
-    bottom: 1,
-    left: 3,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
+  pillBorder: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: Radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  liquidBlob: {
+  // Active pill background - slides with spring
+  activePill: {
     position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: "-40%",
-    width: "180%",
+    top: Spacing.xs,
+    bottom: Spacing.xs,
+    left: Spacing.xs + 1,
+    borderRadius: Radius.lg,
+    backgroundColor: "#99CC3366", // 40% opacity - very visible
+    borderWidth: 2,
+    borderColor: "#99CC33", // bright green border
   },
   tabButton: {
     flex: 1,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: Radius.pill,
+    borderRadius: Radius.lg,
   },
   tabContent: {
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 1,
+    flexDirection: "column",
+    gap: 2,
   },
   fab: {
     width: 48,
@@ -406,8 +325,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 16,
+    shadowOpacity: 0.24,
+    elevation: 4,
   },
   badge: {
     position: "absolute",
@@ -421,7 +342,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   badgeText: {
-    fontFamily: FontFamily.bold,
+    fontFamily: FontFamily.medium,
     fontSize: 10,
     lineHeight: 14,
   },

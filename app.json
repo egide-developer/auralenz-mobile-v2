@@ -6,7 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "aura-lenz",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A0A",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.auralenz.app"
@@ -20,7 +21,12 @@
       },
       "package": "com.auralenz.app",
       "softwareKeyboardLayoutMode": "resize",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "navigationBar": {
+        "visible": "sticky-immersive",
+        "backgroundColor": "#0A0A0A"
+      },
+      "windowBackground": "#0A0A0A"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -65,7 +71,9 @@
           "color": "#000000"
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-status-bar",
+      "expo-asset"
     ]
   }
 }

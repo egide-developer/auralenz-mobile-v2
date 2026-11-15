@@ -1,50 +1,144 @@
-// AuraLenz Input — mirrors frontend/src/components/ui/input.tsx (no glow)
-import React from "react";
-import { TextInput, TextInputProps, StyleSheet, View } from "react-native";
+import { TextInput, Text, View, StyleSheet } from "react-native";
+import Animated, { useSharedValue } from "react-native-reanimated";
 import { Colors } from "../../theme/colors";
-import { Radius } from "../../theme/spacing";
-import { Typography } from "../../theme/typography";
-import { Shadows } from "../../theme/shadows";
+import { Radius, Spacing, Gap } from "../../theme/spacing";
+import { FontFamily, Typography } from "../../theme/typography";
 import { useThemeStore } from "../../stores/themeStore";
+import { Icon } from "./Icon";
 
-interface InputProps extends TextInputProps {
-  /** Overrides the app theme. Only needed for surfaces that are always dark, like the video editor. */
-  isDark?: boolean;
+export type InputSize = "sm" | "md" | "lg";
+
+const sizeStyles: Record<InputSize, { paddingHorizontal: number; paddingVertical: number; height: number; fontSize: number }> = {
+  sm: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, height: 36, fontSize: 13 },
+  md: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, height: 44, fontSize: 15 },
+  lg: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, height: 52, fontSize: 16 },
+};
+
+interface InputProps extends Omit<React.ComponentProps<typeof TextInput>, "style" | "onChangeText" | "value" | "placeholderTextColor" | "disabled"> {
+  label?: string;
+  placeholder?: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  size?: InputSize;
+  disabled?: boolean;
+  error?: string;
+  leftIcon?: string;
+  rightIcon?: string;
+  onRightIconPress?: () => void;
+  secureTextEntry?: boolean;
+  style?: any;
+  placeholderTextColor?: string;
+  autoFocus?: boolean;
+  multiline?: boolean;
+  maxLength?: number;
+  onBlur?: () => void;
 }
 
-export function Input({ isDark: isDarkOverride, style, ...props }: InputProps) {
-  const themeIsDark = useThemeStore((s) => s.isDark);
-  const isDark = isDarkOverride ?? themeIsDark;
-  const colors = isDark ? Colors.dark : Colors.light;
+export function Input({
+  label,
+  placeholder,
+  value,
+  onChangeText,
+  size = "md",
+  disabled = false,
+  error,
+  leftIcon,
+  rightIcon,
+  onRightIconPress,
+  secureTextEntry = false,
+  style,
+  placeholderTextColor,
+  autoFocus = false,
+  multiline = false,
+  maxLength,
+  onBlur,
+  ...rest
+}: InputProps) {
+  const isDark = useThemeStore((s) => s.isDark);
+  const c = isDark ? Colors.dark : Colors.light;
+  const s = sizeStyles[size];
+
+  const hasFocus = useSharedValue(false);
+  const borderColor = error ? c.destructive : hasFocus.value ? c.primary : c.border;
+  const backgroundColor = disabled ? c.muted : c.background;
 
   return (
-    <View style={[styles.wrapper, style]}>
-      <TextInput
-        {...props}
-        placeholderTextColor={colors.mutedForeground + "80"}
+    <View style={[styles.container, style]}>
+      {label && (
+        <Text style={[styles.label, { color: c.foreground }]}>{label}</Text>
+      )}
+      <View
         style={[
-          styles.input,
+          styles.inputWrapper,
           {
-            color: colors.foreground,
-            backgroundColor: colors.card + "80", // 50%
+            backgroundColor: backgroundColor,
+            borderColor,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderRadius: Radius.xl,
+            height: multiline ? undefined : s.height,
+            minHeight: multiline ? 100 : s.height,
           },
-          Shadows[isDark ? "dark" : "light"]["soft"],
         ]}
-      />
+      >
+        {leftIcon && (
+          <View style={styles.iconLeft}>
+            <Icon name={leftIcon} set="light" size={20} color={c.mutedForeground} />
+          </View>
+        )}
+        <TextInput
+          {...rest}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={placeholderTextColor || c.mutedForeground + "80"}
+          secureTextEntry={secureTextEntry}
+          disabled={disabled}
+          autoFocus={autoFocus}
+          multiline={multiline}
+          maxLength={maxLength}
+          onBlur={onBlur}
+          onFocus={() => { hasFocus.value = true; }}
+          style={[
+            styles.textInput,
+            {
+              flex: 1,
+              fontSize: s.fontSize,
+              paddingHorizontal: leftIcon ? 0 : s.paddingHorizontal,
+              paddingVertical: s.paddingVertical,
+              color: c.foreground,
+              fontFamily: FontFamily.medium,
+            },
+          ]}
+        />
+        {rightIcon && (
+          <TouchableOpacity
+            onPress={onRightIconPress}
+            disabled={disabled}
+            style={styles.iconRight}
+            hitSlop={8}
+          >
+            <Icon name={rightIcon} set="light" size={20} color={c.mutedForeground} />
+          </TouchableOpacity>
+        )}
+      </View>
+      {error && <Text style={[styles.error, { color: c.destructive }]}>{error}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    width: "100%",
+  container: { gap: Spacing.xs, width: "100%" },
+  label: { fontFamily: FontFamily.medium, fontSize: 13, lineHeight: 18 },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    gap: Gap.sm,
   },
-  input: {
-    height: 48,
-    borderRadius: Radius.pill,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    fontSize: Typography.body.fontSize,
-    lineHeight: 21,
+  textInput: {
+    textAlignVertical: "center",
   },
+  iconLeft: { paddingLeft: Spacing.xs },
+  iconRight: { paddingRight: Spacing.xs },
+  error: { fontFamily: FontFamily.medium, fontSize: 11, lineHeight: 16 },
 });

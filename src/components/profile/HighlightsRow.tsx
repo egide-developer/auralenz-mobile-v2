@@ -5,6 +5,7 @@ import api from "../../api/client";
 import { API } from "../../api/endpoints";
 import { CachedImage } from "../ui/CachedImage";
 import { FontFamily } from "../../theme/typography";
+import { Spacing, Radius, Gap } from "../../theme/spacing";
 import type { HighlightSummary } from "../../types";
 
 export function HighlightsRow({ userId, colors }: { userId: string; colors: any }) {
@@ -49,15 +50,15 @@ export function HighlightsRow({ userId, colors }: { userId: string; colors: any 
 }
 
 const styles = StyleSheet.create({
-  row: { paddingHorizontal: 16, gap: 16, paddingVertical: 12 },
+  row: { paddingHorizontal: Spacing.lg, gap: Gap.lg, paddingVertical: Spacing.md },
   item: { alignItems: "center", width: 64 },
   circle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 1,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
-  circleImg: { width: 60, height: 60 },
-  label: { fontSize: 11, fontFamily: FontFamily.medium, marginTop: 4, textAlign: "center" },
+  circleImg: { width: 56, height: 56 },
+  label: { fontSize: 11, fontFamily: FontFamily.medium, marginTop: Spacing.xs, textAlign: "center" },
 });

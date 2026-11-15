@@ -2229,7 +2229,7 @@ const styles = StyleSheet.create({
   attachMenuBackdrop: { flex: 1, backgroundColor: "#00000055", justifyContent: "flex-end" },
   attachMenuCard: {
     marginHorizontal: Spacing.md,
-    marginBottom: Spacing.xxl,
+    marginBottom: Spacing["2xl"],
     borderRadius: Radius.lg,
     borderWidth: 1,
     overflow: "hidden",

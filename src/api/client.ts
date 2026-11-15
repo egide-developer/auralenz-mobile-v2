@@ -1,6 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
-import { API_BASE_URL } from "./endpoints";
+import { API_BASE_URL, APP_SLUG } from "./endpoints";
 
 const TOKEN_KEY = "auth_token";
 
@@ -10,6 +10,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
     "X-Client-Platform": "mobile",
+    "X-App-Slug": APP_SLUG,
     "ngrok-skip-browser-warning": "true",
   },
 });

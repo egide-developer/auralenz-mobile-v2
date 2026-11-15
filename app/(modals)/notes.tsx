@@ -195,14 +195,13 @@ export default function NotesScreen() {
             })}
           </View>
           <Button
+            title="Post"
             size="sm"
             onPress={post}
             disabled={!draft.trim()}
             loading={posting}
             style={styles.postBtn}
-          >
-            Post
-          </Button>
+          />
         </View>
       </View>
 

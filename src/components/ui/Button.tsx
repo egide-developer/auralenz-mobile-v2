@@ -1,170 +1,113 @@
-// AuraLenz Button — mirrors frontend/src/components/ui/button.tsx (no glow)
-import React from "react";
-import {
-  TouchableOpacity,
-  Text,
-  ActivityIndicator,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-} from "react-native";
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { PressableScale } from "./PressableScale";
 import { Colors } from "../../theme/colors";
-import { Radius, Spacing } from "../../theme/spacing";
-import { Typography, FontFamily } from "../../theme/typography";
-import { Shadows } from "../../theme/shadows";
+import { Radius, Spacing, Gap } from "../../theme/spacing";
+import { FontFamily, Typography } from "../../theme/typography";
 import { useThemeStore } from "../../stores/themeStore";
 
-type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "action";
-type ButtonSize = "default" | "sm" | "lg" | "xl" | "icon" | "icon-sm" | "icon-lg";
+export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "destructive";
+export type ButtonSize = "sm" | "md" | "lg";
+
+const baseStyle = {
+  borderRadius: Radius.xl,
+  alignItems: "center",
+  justifyContent: "center",
+  flexDirection: "row",
+  gap: Gap.sm,
+};
+
+const sizeStyles: Record<ButtonSize, { paddingHorizontal: number; paddingVertical: number; height: number }> = {
+  sm: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, height: 32 },
+  md: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, height: 44 },
+  lg: { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, height: 52 },
+};
+
+const variantStyles = (isDark: boolean, variant: ButtonVariant) => {
+  const c = isDark ? Colors.dark : Colors.light;
+  switch (variant) {
+    case "primary":
+      return { backgroundColor: c.primary, borderWidth: 0 };
+    case "secondary":
+      return { backgroundColor: c.secondary, borderWidth: 0 };
+    case "outline":
+      return { backgroundColor: "transparent", borderWidth: StyleSheet.hairlineWidth, borderColor: c.border };
+    case "ghost":
+      return { backgroundColor: "transparent", borderWidth: 0 };
+    case "destructive":
+      return { backgroundColor: c.destructive, borderWidth: 0 };
+  }
+};
+
+const textColor = (isDark: boolean, variant: ButtonVariant, disabled: boolean) => {
+  const c = isDark ? Colors.dark : Colors.light;
+  if (disabled) return c.mutedForeground;
+  switch (variant) {
+    case "primary": return c.primaryForeground;
+    case "secondary": return c.secondaryForeground;
+    case "outline": return c.foreground;
+    case "ghost": return c.foreground;
+    case "destructive": return c.destructiveForeground;
+  }
+};
 
 interface ButtonProps {
+  title: string;
+  onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
-  onPress?: () => void;
-  children: React.ReactNode;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  style?: any;
+  hitSlop?: number;
+  fullWidth?: boolean;
 }
-
-const VARIANT_STYLES: Record<ButtonVariant, (isDark: boolean) => ViewStyle> = {
-  default: (isDark) => ({
-    backgroundColor: isDark ? Colors.dark.primary : Colors.light.primary,
-    ...Shadows[isDark ? "dark" : "light"]["soft-md"],
-  }),
-  destructive: (isDark) => ({
-    backgroundColor: isDark ? Colors.dark.destructive : Colors.light.destructive,
-    ...Shadows[isDark ? "dark" : "light"]["soft-md"],
-  }),
-  outline: (isDark) => ({
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: isDark
-      ? Colors.dark.border + "66" // 40%
-      : Colors.light.border + "66",
-  }),
-  secondary: (isDark) => ({
-    backgroundColor: isDark ? Colors.dark.secondary : Colors.light.secondary,
-    ...Shadows[isDark ? "dark" : "light"]["soft"],
-  }),
-  ghost: () => ({
-    backgroundColor: "transparent",
-  }),
-  link: () => ({
-    backgroundColor: "transparent",
-  }),
-  action: (isDark) => ({
-    backgroundColor: isDark ? Colors.dark.card : Colors.light.card,
-    borderWidth: 1,
-    borderColor: isDark
-      ? Colors.dark.border + "66"
-      : Colors.light.border + "66",
-    ...Shadows[isDark ? "dark" : "light"]["soft"],
-  }),
-};
-
-const VARIANT_TEXT_STYLES: Record<ButtonVariant, (isDark: boolean) => TextStyle> = {
-  default: (isDark) => ({
-    color: isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground,
-  }),
-  destructive: () => ({
-    color: "#FFFFFF",
-  }),
-  outline: (isDark) => ({
-    color: isDark ? Colors.dark.foreground : Colors.light.foreground,
-  }),
-  secondary: (isDark) => ({
-    color: isDark ? Colors.dark.secondaryForeground : Colors.light.secondaryForeground,
-  }),
-  ghost: (isDark) => ({
-    color: isDark ? Colors.dark.foreground : Colors.light.foreground,
-  }),
-  link: (isDark) => ({
-    color: isDark ? Colors.dark.primary : Colors.light.primary,
-  }),
-  action: (isDark) => ({
-    color: isDark ? Colors.dark.mutedForeground : Colors.light.mutedForeground,
-  }),
-};
-
-const SIZE_STYLES: Record<ButtonSize, ViewStyle> = {
-  default: { height: 44, paddingHorizontal: 24, paddingVertical: 8 },
-  sm: { height: 36, paddingHorizontal: 16, paddingVertical: 4, borderRadius: Radius.md },
-  lg: { height: 48, paddingHorizontal: 32, paddingVertical: 8, borderRadius: Radius.pill },
-  xl: { height: 56, paddingHorizontal: 40, paddingVertical: 8, borderRadius: Radius.pill },
-  icon: { width: 40, height: 40, borderRadius: Radius.md },
-  "icon-sm": { width: 36, height: 36, borderRadius: Radius.md },
-  "icon-lg": { width: 44, height: 44, borderRadius: Radius.md },
-};
-
-const SIZE_TEXT_STYLES: Record<ButtonSize, TextStyle> = {
-  default: { ...Typography.button },
-  sm: { fontFamily: FontFamily.semibold, fontSize: 11 },
-  lg: { ...Typography.button, fontSize: 14 },
-  xl: { ...Typography.button, fontSize: 16 },
-  icon: { fontSize: 14 },
-  "icon-sm": { fontSize: 12 },
-  "icon-lg": { fontSize: 14 },
-};
 
 export function Button({
-  variant = "default",
-  size = "default",
+  title,
+  onPress,
+  variant = "primary",
+  size = "md",
   disabled = false,
   loading = false,
-  onPress,
-  children,
+  leftIcon,
+  rightIcon,
   style,
-  textStyle,
+  hitSlop,
+  fullWidth = false,
 }: ButtonProps) {
-  // Read from the store like every other themed surface in the app. This was
-  // hardcoded to light, which would have rendered light chrome on dark screens.
   const isDark = useThemeStore((s) => s.isDark);
-  const variantStyle = VARIANT_STYLES[variant](isDark);
-  const variantTextStyle = VARIANT_TEXT_STYLES[variant](isDark);
-  const sizeStyle = SIZE_STYLES[size];
-  const sizeTextStyle = SIZE_TEXT_STYLES[size];
+
+  const textStyle = {
+    ...Typography.button,
+    color: textColor(isDark, variant, disabled),
+  };
+
+  const containerStyle = {
+    ...baseStyle,
+    ...sizeStyles[size],
+    ...variantStyles(isDark, variant),
+    width: fullWidth ? "100%" : undefined,
+    opacity: disabled || loading ? 0.5 : 1,
+  };
 
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.7}
-      style={[
-        styles.base,
-        variantStyle,
-        sizeStyle,
-        (disabled || loading) && styles.disabled,
-        style,
-      ]}
+      hitSlop={hitSlop}
+      style={[containerStyle, style]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={variantTextStyle.color as string} />
+        <ActivityIndicator size="small" color={textColor(isDark, variant, false)} />
       ) : (
-        <Text style={[styles.text, variantTextStyle, sizeTextStyle, textStyle]}>
-          {children}
-        </Text>
+        <>
+          {leftIcon}
+          <Text style={textStyle} numberOfLines={1}>{title}</Text>
+          {rightIcon}
+        </>
       )}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: Radius.pill,
-    opacity: 1,
-    transform: [{ scale: 1 }],
-  },
-  text: {
-    ...Typography.button,
-    textAlign: "center",
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-});

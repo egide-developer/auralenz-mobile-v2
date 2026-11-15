@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg },
   summary: { ...Typography.body, lineHeight: 21 },
   section: { marginTop: Spacing.lg, gap: 8 },
-  sectionLabel: { ...Typography.caption, fontFamily: FontFamily.semibold, textTransform: "uppercase" },
+  sectionLabel: { ...Typography.caption, fontFamily: FontFamily.medium },
   bulletRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   bulletDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
   bulletText: { ...Typography.bodySmall, flex: 1, lineHeight: 18 },

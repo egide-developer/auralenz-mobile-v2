@@ -19,11 +19,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
-import { Radius, Spacing } from "../../src/theme/spacing";
+import { Radius, Spacing, Gap } from "../../src/theme/spacing";
 import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
 import { CachedImage } from "../../src/components/ui/CachedImage";
-import { PressableScale } from "../../src/components/ui/PressableScale";
+import { Button, Input } from "../../src/components/ui";
 import { MentionSuggestions, useMentionQuery, applyMentionSelection } from "../../src/components/ui/MentionSuggestions";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
@@ -248,24 +248,22 @@ export default function CreateScreen() {
           {step === "select" ? "New post" : "Share"}
         </Text>
         {step === "select" ? (
-          <TouchableOpacity onPress={() => setStep("details")} disabled={media.length === 0} style={styles.headerTextBtn}>
-            <Text
-              style={[
-                styles.headerActionText,
-                { color: colors.primary, opacity: media.length === 0 ? 0.35 : 1 },
-              ]}
-            >
-              Next
-            </Text>
-          </TouchableOpacity>
+          <Button
+            title="Next"
+            onPress={() => setStep("details")}
+            disabled={media.length === 0}
+            variant="ghost"
+            size="sm"
+          />
         ) : (
-          <TouchableOpacity onPress={handleShare} disabled={loading} style={styles.headerTextBtn}>
-            {loading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Text style={[styles.headerActionText, { color: colors.primary }]}>Share</Text>
-            )}
-          </TouchableOpacity>
+          <Button
+            title="Share"
+            onPress={handleShare}
+            disabled={loading}
+            loading={loading}
+            variant="primary"
+            size="sm"
+          />
         )}
       </View>
 
@@ -275,12 +273,7 @@ export default function CreateScreen() {
             <View style={styles.emptyState}>
               <Icon name="image" set="light" size={48} color={colors.mutedForeground} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Select photos and videos</Text>
-              <PressableScale
-                onPress={pickMedia}
-                style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-              >
-                <Text style={[styles.emptyBtnText, { color: colors.primaryForeground }]}>Select from gallery</Text>
-              </PressableScale>
+              <Button title="Select from gallery" onPress={pickMedia} variant="primary" size="md" fullWidth />
             </View>
           ) : (
             <>
@@ -381,14 +374,15 @@ export default function CreateScreen() {
                 </View>
               )}
             </View>
-            <TextInput
+            <Input
+              label="Caption"
+              placeholder="Write a caption..."
               value={caption}
               onChangeText={setCaption}
-              placeholder="Write a caption..."
-              placeholderTextColor={colors.mutedForeground + "80"}
               multiline
               maxLength={2200}
-              style={[styles.captionInput, { color: colors.foreground }]}
+              size="md"
+              leftIcon="edit-square"
             />
           </View>
 
@@ -401,26 +395,26 @@ export default function CreateScreen() {
           <View style={[styles.divider, { backgroundColor: colors.border + "40" }]} />
 
           <View style={styles.fieldRow}>
-            <Icon name="location" set="light" size={20} color={colors.mutedForeground} />
-            <TextInput
+            <Input
+              placeholder="Add location"
               value={location}
               onChangeText={setLocation}
-              placeholder="Add location"
-              placeholderTextColor={colors.mutedForeground + "80"}
-              style={[styles.fieldInput, { color: colors.foreground }]}
+              size="md"
+              leftIcon="location"
+              style={{ flex: 1 }}
             />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border + "40" }]} />
 
           <View style={styles.fieldRow}>
-            <Icon name="edit-square" set="light" size={20} color={colors.mutedForeground} />
-            <TextInput
+            <Input
+              placeholder="Add tags (comma separated)"
               value={tagsInput}
               onChangeText={setTagsInput}
-              placeholder="Add tags (comma separated)"
-              placeholderTextColor={colors.mutedForeground + "80"}
-              style={[styles.fieldInput, { color: colors.foreground }]}
+              size="md"
+              leftIcon="edit-square"
+              style={{ flex: 1 }}
             />
           </View>
 
@@ -451,22 +445,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.base,
-    paddingTop: 12,
+    paddingTop: Spacing.xs,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerIconBtn: { width: 40, height: 36, alignItems: "flex-start", justifyContent: "center" },
   headerTitle: { ...Typography.h4 },
-  headerTextBtn: { minWidth: 48, alignItems: "flex-end", justifyContent: "center" },
-  headerActionText: { fontFamily: FontFamily.semibold, fontSize: FontSize.base, lineHeight: 21 },
 
   selectStep: { flex: 1 },
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: Spacing.xl },
-  emptyTitle: { fontFamily: FontFamily.semibold, fontSize: FontSize.md, lineHeight: 22, marginTop: 4 },
-  emptyBtn: { marginTop: 8, paddingHorizontal: 22, paddingVertical: 12, borderRadius: Radius.pill },
-  emptyBtnText: { fontFamily: FontFamily.semibold, fontSize: FontSize.sm, lineHeight: 20 },
+  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: Gap.md, paddingHorizontal: Spacing.xl },
+  emptyTitle: { fontFamily: FontFamily.medium, fontSize: FontSize.md, lineHeight: 22, marginTop: 4 },
 
-  previewWrap: { width: "100%", aspectRatio: 1, position: "relative" },
+  previewWrap: { width: "100%", aspectRatio: 1, position: "relative", borderRadius: Radius.md, overflow: "hidden" },
   editVideoBtn: {
     position: "absolute",
     right: 12,
@@ -476,10 +466,10 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.xl,
     backgroundColor: "#000000AA",
   },
-  editVideoText: { color: "#fff", fontFamily: FontFamily.semibold, fontSize: FontSize.sm },
+  editVideoText: { color: "#fff", fontFamily: FontFamily.medium, fontSize: FontSize.sm },
   previewImage: { width: "100%", height: "100%" },
   previewPlayBadge: {
     position: "absolute",
@@ -499,22 +489,22 @@ const styles = StyleSheet.create({
     top: 12,
     right: 12,
     backgroundColor: "#00000099",
-    borderRadius: Radius.pill,
+    borderRadius: Radius.xl,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  previewCounterText: { color: "#fff", fontFamily: FontFamily.semibold, fontSize: 12 },
+  previewCounterText: { color: "#fff", fontFamily: FontFamily.medium, fontSize: 12 },
 
   strip: { flexGrow: 0 },
-  stripContent: { padding: Spacing.md, gap: 8 },
+  stripContent: { padding: Spacing.md, gap: Gap.sm },
   stripThumbWrap: {
-    width: 72,
-    height: 72,
+    width: 68,
+    height: 68,
     borderRadius: Radius.md,
     borderWidth: 2,
     position: "relative",
   },
-  stripThumb: { width: "100%", height: "100%", borderRadius: Radius.md - 2 },
+  stripThumb: { width: "100%", height: "100%", borderRadius: Radius.sm },
   stripPlayBadge: {
     position: "absolute",
     bottom: 4,
@@ -537,8 +527,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stripAddBtn: {
-    width: 72,
-    height: 72,
+    width: 68,
+    height: 68,
     borderRadius: Radius.md,
     borderWidth: 1,
     borderStyle: "dashed",
@@ -547,7 +537,7 @@ const styles = StyleSheet.create({
   },
 
   detailsStep: { padding: Spacing.base },
-  detailsHeaderRow: { flexDirection: "row", gap: 12 },
+  detailsHeaderRow: { flexDirection: "row", gap: Gap.md },
   detailsThumbWrap: {
     width: 56,
     height: 56,
@@ -565,18 +555,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 1,
   },
-  detailsThumbBadgeText: { color: "#fff", fontSize: 10, fontFamily: FontFamily.semibold },
-  captionInput: {
-    flex: 1,
-    minHeight: 56,
-    maxHeight: 140,
-    ...Typography.body,
-    textAlignVertical: "top",
-  },
+  detailsThumbBadgeText: { color: "#fff", fontSize: 10, fontFamily: FontFamily.medium },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: Spacing.base },
-  fieldRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  fieldInput: { flex: 1, ...Typography.body, paddingVertical: 6 },
-  postingAsRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  fieldRow: { flexDirection: "row", alignItems: "center", gap: Gap.md },
+  postingAsRow: { flexDirection: "row", alignItems: "center", gap: Gap.sm },
   postingAsAvatar: {
     width: 24,
     height: 24,

@@ -8,7 +8,7 @@ import api from "../../api/client";
 import { API } from "../../api/endpoints";
 import { useAuthStore } from "../../stores/authStore";
 import { Colors } from "../../theme/colors";
-import { Radius, Spacing } from "../../theme/spacing";
+import { Radius, Spacing, Gap } from "../../theme/spacing";
 import { Typography } from "../../theme/typography";
 import { Icon } from "../ui/Icon";
 import { normalizeStoryGroups, extractStoryGroupsPayload } from "../../utils/stories";
@@ -131,20 +131,20 @@ function GradientRing({
   isCloseFriends?: boolean;
   children: React.ReactNode;
 }) {
-  const colors = isDark ? Colors.dark : Colors.light;
   if (!hasUnviewed) {
+    const colors = isDark ? Colors.dark : Colors.light;
     return (
       <View style={[styles.plainRing, { borderColor: isCloseFriends ? "#2ECC71" : colors.border }]}>{children}</View>
     );
   }
   return (
     <LinearGradient
-      colors={isCloseFriends ? ["#2ECC71", "#27AE60"] : colors.storyGradient}
+      colors={isCloseFriends ? ["#2ECC71", "#27AE60"] : ["#DA2276", "#E55536"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.gradientRing}
     >
-      <View style={[styles.ringInner, { backgroundColor: colors.background }]}>{children}</View>
+      <View style={[styles.ringInner, { backgroundColor: isDark ? Colors.dark.background : Colors.light.background }]}>{children}</View>
     </LinearGradient>
   );
 }
@@ -163,12 +163,12 @@ function Avatar({ uri, colors }: { uri?: string; colors: any }) {
 
 const styles = StyleSheet.create({
   wrap: {
-    borderBottomWidth: 0.5,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     paddingVertical: Spacing.md,
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
-    gap: 14,
+    gap: Gap.md,
   },
   item: {
     alignItems: "center",
