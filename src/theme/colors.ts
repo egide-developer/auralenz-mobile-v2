@@ -88,3 +88,15 @@ export const Colors = {
 } as const;
 
 export type ColorScheme = keyof typeof Colors;
+
+// Skeleton-specific colors (slightly lighter than background for shimmer base)
+export const SkeletonColors = {
+  light: {
+    base: "#E8E6E0",      // lighter than background #F5F3EF
+    highlight: "#F5F3EF", // background color for shimmer
+  },
+  dark: {
+    base: "#1A1A1A",      // lighter than background #0A0A0A
+    highlight: "#242424", // slightly lighter for shimmer
+  },
+} as const;

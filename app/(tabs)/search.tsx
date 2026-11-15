@@ -11,6 +11,7 @@ import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
 import { Button } from "../../src/components/ui";
 import { Screen } from "../../src/components/layout";
+import { SearchUserSkeleton, PostGridSkeleton } from "../../src/components/skeletons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { Post } from "../../src/types";
@@ -231,7 +232,11 @@ export default function SearchScreen() {
                   {debouncedQuery ? "No results" : "Searching..."}
                 </Text>
               </View>
-            ) : null
+            ) : (
+              <View style={styles.emptyState}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            )
           }
           renderItem={({ item, index }) => (
             <UserRow
@@ -244,9 +249,7 @@ export default function SearchScreen() {
           )}
         />
       ) : discoverLoading ? (
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <PostGridSkeleton rows={3} />
       ) : (
         <FlatList
           key="discover-grid"
@@ -261,8 +264,10 @@ export default function SearchScreen() {
           onEndReached={loadMoreDiscover}
           ListFooterComponent={
             discoverLoadingMore ? (
-              <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
-            ) : null
+              <PostGridSkeleton rows={1} />
+            ) : (
+              <View />
+            )
           }
           ListHeaderComponent={
             <View>

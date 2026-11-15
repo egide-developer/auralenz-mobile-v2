@@ -1,6 +1,6 @@
 // Shared screen wrapper — handles top/bottom safe area, theme background
 import React from "react";
-import { View, StyleSheet, SafeAreaView } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeStore } from "../../stores/themeStore";
 import { Colors } from "../../theme/colors";
@@ -58,7 +58,7 @@ export function Screen({
 
   if (scroll) {
     return (
-      <SafeAreaView
+      <View
         style={[styles.scrollWrapper, { backgroundColor: bg }, style]}
       >
         <View
@@ -70,12 +70,12 @@ export function Screen({
           {header && <View style={[{ backgroundColor: bg }, headerStyle]}>{header}</View>}
           <View style={contentContainerStyle}>{children}</View>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.wrapper, { backgroundColor: bg }, style]}>
+    <View style={[styles.wrapper, { backgroundColor: bg }, style]}>
       {header && (
         <View
           style={[
@@ -96,7 +96,7 @@ export function Screen({
       >
         {children}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

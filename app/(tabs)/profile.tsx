@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
@@ -10,6 +11,7 @@ import { Icon } from "../../src/components/ui/Icon";
 import { CachedImage } from "../../src/components/ui/CachedImage";
 import { HighlightsRow } from "../../src/components/profile/HighlightsRow";
 import { Screen } from "../../src/components/layout";
+import { ProfileHeaderSkeleton, ListItemSkeleton } from "../../src/components/skeletons";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -17,6 +19,12 @@ export default function ProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   const menuItems = [
     { icon: "edit-square", label: "Edit profile", route: "/(modals)/edit-profile" },
@@ -29,6 +37,24 @@ export default function ProfileScreen() {
     { icon: "ticket", label: "Subscriptions", route: "/(modals)/subscriptions" },
     { icon: "shield", label: "Admin", route: "/(modals)/admin", adminOnly: true as const },
   ];
+
+  if (loading) {
+    return (
+      <Screen header={
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile</Text>
+          <TouchableOpacity
+            onPress={() => router.push("/(modals)/settings")}
+            style={[styles.settingsBtn, { backgroundColor: colors.card + "80" }]}
+          >
+            <Icon name="setting" set="light" size={20} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+      }>
+        <ProfileHeaderSkeleton />
+      </Screen>
+    );
+  }
 
   return (
     <Screen

@@ -7,9 +7,9 @@ import {
   StyleSheet,
   TextInput,
   Modal,
-  ActivityIndicator,
   Alert,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
@@ -28,12 +28,13 @@ import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing, Gap } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
+import { ConversationRowSkeleton, ConversationRowSkeletonList } from "../../src/components/skeletons";
+import { Screen } from "../../src/components/layout";
 import { Shadows } from "../../src/theme/shadows";
 // Ionicons removed - using custom Icon component
 import { Icon } from "../../src/components/ui/Icon";
 import { UserLink } from "../../src/components/ui/UserLink";
 import { PressableScale } from "../../src/components/ui/PressableScale";
-import { Screen } from "../../src/components/layout";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { onNewMessage } from "../../src/services/socket";
@@ -328,7 +329,9 @@ export default function MessagesScreen() {
                 {query ? "No matches found" : "No conversations yet"}
               </Text>
             </Animated.View>
-          ) : null
+          ) : (
+            <ConversationRowSkeletonList count={6} />
+          )
         }
         renderItem={({ item, index }) => {
           const displayName = item.user?.username || "Chat";
@@ -463,9 +466,7 @@ export default function MessagesScreen() {
               contentContainerStyle={styles.discoverList}
               ListEmptyComponent={
                 searching ? (
-                  <View style={styles.discoverEmpty}>
-                    <ActivityIndicator size="small" color={colors.mutedForeground} />
-                  </View>
+                  <ConversationRowSkeletonList count={4} />
                 ) : (
                   <View style={styles.discoverEmpty}>
                     <Text style={[styles.discoverEmptyText, { color: colors.mutedForeground }]}>

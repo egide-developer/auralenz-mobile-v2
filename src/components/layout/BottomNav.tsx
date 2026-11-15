@@ -71,6 +71,9 @@ export function BottomNav() {
   }, [pathname]);
 
   const indicatorX = useSharedValue(0);
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+  }));
 
   // Animate indicator on mount and when activeIndex/tabWidth changes
   React.useEffect(() => {
@@ -105,7 +108,7 @@ export function BottomNav() {
   }
 
   const onPillLayout = (e: LayoutChangeEvent) => {
-    setPillWidth(e.nativeEvent.layout.width - 4);
+    setPillWidth(Math.max(0, e.nativeEvent.layout.width - Spacing.xs * 2));
   };
 
   const handleCreate = () => {
@@ -148,13 +151,7 @@ export function BottomNav() {
                   style={[
                     styles.activePill,
                     { width: tabWidth },
-                    {
-                      transform: [
-                        {
-                          translateX: indicatorX.value,
-                        },
-                      ],
-                    },
+                    indicatorStyle,
                   ]}
                 />
               )}
@@ -300,7 +297,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: Spacing.xs,
     bottom: Spacing.xs,
-    left: Spacing.xs + 1,
+    left: Spacing.xs,
     borderRadius: Radius.lg,
     backgroundColor: "#99CC3366", // 40% opacity - very visible
     borderWidth: 2,

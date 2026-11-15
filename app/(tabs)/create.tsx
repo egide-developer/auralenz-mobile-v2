@@ -9,7 +9,6 @@ import {
   ScrollView,
   Alert,
   StyleSheet,
-  ActivityIndicator,
 } from "react-native";
 import { useState, useCallback } from "react";
 import { useRouter, useFocusEffect } from "expo-router";

@@ -9,7 +9,6 @@ import {
   TextInput,
   Modal,
   Dimensions,
-  ActivityIndicator,
   Platform,
   Alert,
 } from "react-native";
@@ -49,6 +48,7 @@ import { ReportSheet } from "../../src/components/ui/ReportSheet";
 import { StoryBar } from "../../src/components/feed/StoryBar";
 import { TipSheet } from "../../src/components/monetization/TipSheet";
 import { Screen } from "../../src/components/layout";
+import { PostCardSkeleton, PostCardSkeletonList, CommentSkeleton, CommentSkeletonList } from "../../src/components/skeletons";
 import type { Post, PostMedia, Comment } from "../../src/types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -220,14 +220,6 @@ export default function FeedScreen() {
     } catch {}
   }, []);
 
-  if (loading) {
-    return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   const header = (
     <View style={styles.header}>
       <Text style={[styles.headerTitle, { color: colors.foreground }]}>AuraLenz</Text>
@@ -253,6 +245,14 @@ export default function FeedScreen() {
       </View>
     </View>
   );
+
+  if (loading) {
+    return (
+      <Screen header={header}>
+        <PostCardSkeletonList count={4} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen header={header} scroll showsVerticalScrollIndicator={false}>
@@ -959,9 +959,7 @@ export function CommentSheet({
             <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
 
             {loading ? (
-              <View style={styles.centered}>
-                <ActivityIndicator size="large" color={colors.primary} />
-              </View>
+              <CommentSkeletonList count={6} />
             ) : (
               <FlatList
                 data={comments}
