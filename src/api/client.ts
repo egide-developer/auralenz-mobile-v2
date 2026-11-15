@@ -7,7 +7,11 @@ const TOKEN_KEY = "auth_token";
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
-  headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+  headers: {
+    "Content-Type": "application/json",
+    "X-Client-Platform": "mobile",
+    "ngrok-skip-browser-warning": "true",
+  },
 });
 
 api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
@@ -61,9 +65,11 @@ api.interceptors.response.use(
         const refreshToken = await SecureStore.getItemAsync("refresh_token");
         if (!refreshToken) throw new Error("No refresh token");
 
-        const { data } = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-          refreshToken,
-        });
+        const { data } = await axios.post(
+          `${API_BASE_URL}/api/auth/refresh`,
+          { refreshToken },
+          { headers: { "X-Client-Platform": "mobile" } },
+        );
 
         const newToken = data.accessToken || data.data?.accessToken;
         if (newToken) {

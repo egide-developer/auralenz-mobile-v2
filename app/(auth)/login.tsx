@@ -17,29 +17,58 @@ import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
+import { CameraView, useCameraPermissions } from "expo-camera";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [securityCode, setSecurityCode] = useState("");
+  const [mfaChallenge, setMfaChallenge] = useState<{ challengeId: string; methods: Array<"email" | "totp">; email?: string } | null>(null);
+  const [mfaMethod, setMfaMethod] = useState<"email" | "totp" | "recovery">("email");
+  const [scanning, setScanning] = useState(false);
+  const [deviceToken, setDeviceToken] = useState("");
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const login = useAuthStore((s) => s.login);
+  const completeMfaLogin = useAuthStore((s) => s.completeMfaLogin);
+  const claimLinkedDevice = useAuthStore((s) => s.claimLinkedDevice);
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      setError("Please fill in all fields");
+    if (deviceToken) {
+      if (!securityCode) return setError("Enter the pairing code shown on the device that started this link");
+    } else if (mfaChallenge) {
+      if (!securityCode) return setError("Enter your security code");
+    } else if (!email || !password) {
+      setError("Enter your username, email, or phone number and password");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      await login(email, password);
+      if (deviceToken) {
+        await claimLinkedDevice(deviceToken, securityCode);
+      } else if (mfaChallenge) {
+        await completeMfaLogin(mfaChallenge.challengeId, securityCode, mfaMethod);
+      } else {
+        const result = await login(email, password);
+        if (result.requiresTwoFactor && result.challengeId && result.methods) {
+          setMfaChallenge({
+            challengeId: result.challengeId,
+            methods: result.methods,
+            email: result.email,
+          });
+          setMfaMethod(result.methods.includes("email") ? "email" : "totp");
+          setSecurityCode("");
+          return;
+        }
+      }
       router.replace("/(tabs)");
     } catch (e: any) {
-      setError(e?.response?.data?.error || "Login failed. Please try again.");
+      setError(e?.response?.data?.message || e?.response?.data?.error || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -72,23 +101,44 @@ export default function LoginScreen() {
           ) : null}
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              {deviceToken ? "Device pairing code" : mfaChallenge ? "Two-factor code" : "Username, email, or phone number"}
+            </Text>
             <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
-              <Icon name="message" set="light" size={18} color={colors.mutedForeground} />
+              <Icon name={deviceToken || mfaChallenge ? "lock" : "message"} set="light" size={18} color={colors.mutedForeground} />
               <TextInput
                 style={[styles.inputField, { color: colors.foreground }]}
-                placeholder="you@example.com"
+                placeholder={deviceToken ? "6-digit pairing code" : mfaChallenge ? "6-digit code or recovery code" : "Username, email, or +14155552671"}
                 placeholderTextColor={colors.mutedForeground + "80"}
-                value={email}
-                onChangeText={setEmail}
+                value={deviceToken || mfaChallenge ? securityCode : email}
+                onChangeText={deviceToken || mfaChallenge ? setSecurityCode : setEmail}
                 autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
+                keyboardType={mfaChallenge && mfaMethod === "recovery" ? "default" : deviceToken || mfaChallenge ? "number-pad" : "default"}
+                autoComplete={deviceToken || mfaChallenge ? "one-time-code" : "username"}
               />
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
+          {mfaChallenge && !deviceToken && (
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {([
+                ...(mfaChallenge.methods.includes("email") ? ["email" as const] : []),
+                ...(mfaChallenge.methods.includes("totp") ? ["totp" as const, "recovery" as const] : []),
+              ]).map((method) => (
+                <TouchableOpacity
+                  key={method}
+                  onPress={() => setMfaMethod(method)}
+                  style={{ borderRadius: Radius.md, borderWidth: 1, borderColor: mfaMethod === method ? colors.primary : colors.border, paddingVertical: 8, paddingHorizontal: 10 }}
+                >
+                  <Text style={{ color: mfaMethod === method ? colors.primary : colors.foreground, fontSize: 12 }}>
+                    {method === "totp" ? "Authenticator" : method === "recovery" ? "Recovery" : "Email"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {!deviceToken && !mfaChallenge && <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Password</Text>
             <View style={[styles.inputWrapper, { backgroundColor: colors.card + "80" }, Shadows[isDark ? "dark" : "light"]["soft"]]}>
               <Icon name="lock" set="light" size={18} color={colors.mutedForeground} />
@@ -113,9 +163,9 @@ export default function LoginScreen() {
                 />
               </TouchableOpacity>
             </View>
-          </View>
+          </View>}
 
-          <TouchableOpacity
+          {!deviceToken && !mfaChallenge && <TouchableOpacity
             onPress={() => router.push("/(auth)/forgot-password")}
             style={styles.forgotButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -123,7 +173,7 @@ export default function LoginScreen() {
             <Text style={[styles.forgotText, { color: colors.primary }]}>
               Forgot password?
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity>}
 
           <TouchableOpacity
             onPress={handleLogin}
@@ -137,9 +187,55 @@ export default function LoginScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Please wait..." : deviceToken ? "Link device" : mfaChallenge ? "Verify and sign in" : "Sign In"}
             </Text>
           </TouchableOpacity>
+
+          {!mfaChallenge && !deviceToken && (
+            <>
+              {scanning ? (
+                <View style={{ height: 240, overflow: "hidden", borderRadius: Radius.lg }}>
+                  {cameraPermission?.granted ? (
+                    <CameraView
+                      style={{ flex: 1 }}
+                      barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+                      onBarcodeScanned={({ data }) => {
+                        try {
+                          const scanned = new URL(data);
+                          const token = new URLSearchParams(scanned.hash.slice(1)).get("deviceLink")
+                            || scanned.searchParams.get("deviceLink");
+                          if (!token) throw new Error("Invalid device QR code");
+                          setDeviceToken(token);
+                          setScanning(false);
+                          setError("");
+                        } catch {
+                          setError("This QR code is not a valid AuraLenz device link.");
+                        }
+                      }}
+                    />
+                  ) : (
+                    <TouchableOpacity onPress={() => void requestCameraPermission()}>
+                      <Text style={{ color: colors.primary, padding: 18 }}>Allow camera access to scan a pairing QR.</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => setScanning(true)} style={{ alignItems: "center", paddingVertical: 8 }}>
+                  <Text style={{ color: colors.primary, fontFamily: FontFamily.semibold }}>Link this device with a QR code</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+          {(mfaChallenge || deviceToken) && (
+            <TouchableOpacity onPress={() => {
+              setMfaChallenge(null);
+              setDeviceToken("");
+              setSecurityCode("");
+              setError("");
+            }} style={{ alignItems: "center", paddingVertical: 8 }}>
+              <Text style={{ color: colors.primary }}>Back to sign in</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.footer}>

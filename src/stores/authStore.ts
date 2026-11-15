@@ -28,7 +28,9 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<{ requiresTwoFactor?: boolean; challengeId?: string; methods?: Array<"email" | "totp">; email?: string }>;
+  completeMfaLogin: (challengeId: string, code: string, method: "email" | "totp" | "recovery") => Promise<void>;
+  claimLinkedDevice: (token: string, code: string) => Promise<void>;
   register: (
     username: string,
     email: string,
@@ -41,7 +43,20 @@ interface AuthState {
   mergeUser: (data: Partial<User>) => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set, get) => {
+  const storeSession = async (response: any) => {
+    const token = response.accessToken || response.token;
+    const user = normalizeUser(response.user);
+    if (!token || !user) throw new Error("The server returned an incomplete session");
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    if (response.refreshToken) {
+      await SecureStore.setItemAsync("refresh_token", response.refreshToken);
+    }
+    set({ user, token, isAuthenticated: true });
+    connectSocketAndCallListeners();
+  };
+
+  return ({
   user: null,
   token: null,
   isAuthenticated: false,
@@ -64,17 +79,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  login: async (email, password) => {
-    const { data } = await api.post(API.auth.login, { email, password });
+  login: async (identifier, password) => {
+    const trimmedIdentifier = identifier.trim();
+    const credentials = trimmedIdentifier.startsWith("+")
+      ? { phoneNumber: trimmedIdentifier.replace(/[()\s.-]/g, ""), password }
+      : trimmedIdentifier.includes("@")
+        ? { email: trimmedIdentifier, password }
+        : { username: trimmedIdentifier, password };
+    const { data } = await api.post(API.auth.login, credentials);
     const res = data.data || data;
-    const token = res.accessToken || res.token;
-    const user = normalizeUser(res.user);
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
-    if (res.refreshToken) {
-      await SecureStore.setItemAsync("refresh_token", res.refreshToken);
-    }
-    set({ user, token, isAuthenticated: true });
-    connectSocketAndCallListeners();
+    if (res.requiresTwoFactor) return res;
+    await storeSession(res);
+    return {};
+  },
+
+  completeMfaLogin: async (challengeId, code, method) => {
+    const { data } = await api.post(API.auth.verifyMfa, { challengeId, code, method });
+    await storeSession(data.data || data);
+  },
+
+  claimLinkedDevice: async (token, code) => {
+    const { data } = await api.post(API.auth.claimDevice, { token, code });
+    await storeSession(data.data || data);
   },
 
   register: async (username, email, password) => {
@@ -97,7 +123,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     await unregisterPushToken();
     try {
-      await api.post(API.auth.logout);
+      const refreshToken = await SecureStore.getItemAsync("refresh_token");
+      await api.post(API.auth.logout, { refreshToken });
     } catch {}
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync("refresh_token");
@@ -113,4 +140,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   mergeUser: (data) => set((s) => (s.user ? { user: { ...s.user, ...data } } : {})),
-}));
+  });
+});

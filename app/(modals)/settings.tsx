@@ -22,6 +22,7 @@ export default function SettingsScreen() {
       items: [
         { icon: "edit-square", label: "Edit Profile", route: "/(modals)/edit-profile" },
         { icon: "lock", label: "Change Password", route: "/(modals)/change-password" },
+        { icon: "shield", label: "Security & Devices", route: "/(modals)/security" },
         { icon: "notification", label: "Email Settings", route: "" },
       ],
     },
