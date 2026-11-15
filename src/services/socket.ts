@@ -2,16 +2,35 @@ import { io, Socket } from "socket.io-client";
 import { API_BASE_URL } from "../api/endpoints";
 import { TOKEN_KEY } from "../api/client";
 import * as SecureStore from "expo-secure-store";
+import Constants from 'expo-constants';
 
 let socket: Socket | null = null;
 
 export async function connectSocket(): Promise<Socket> {
   if (socket?.connected) return socket;
 
-  const token = await SecureStore.getItemAsync(TOKEN_KEY);
+  let serverUrl = API_BASE_URL;
+  
+  // Enforce WSS in production
+  if (Constants.expoConfig?.extra?.ENV === 'production' || process.env.NODE_ENV === 'production') {
+    if (!serverUrl.startsWith('wss://') && !serverUrl.startsWith('https://')) {
+      console.error('[Socket] Production environment requires WSS/HTTPS. Current URL:', serverUrl);
+      throw new Error('WebSocket Secure (WSS) is required in production');
+    }
+  }
+  
+  // Convert HTTP to WS, HTTPS to WSS for WebSocket connections
+  if (serverUrl.startsWith('http://')) {
+    serverUrl = serverUrl.replace('http://', 'ws://');
+  } else if (serverUrl.startsWith('https://')) {
+    serverUrl = serverUrl.replace('https://', 'wss://');
+  }
 
-  socket = io(API_BASE_URL, {
-    auth: { token },
+  socket = io(serverUrl, {
+    // Use a function to get fresh token on each connection/reconnection attempt
+    auth: async () => ({
+      token: await SecureStore.getItemAsync(TOKEN_KEY),
+    }),
     transports: ["websocket"],
     reconnection: true,
     reconnectionAttempts: 10,
