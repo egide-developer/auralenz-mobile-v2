@@ -10,6 +10,7 @@ import { Colors } from "../../src/theme/colors";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { Highlight, HighlightItem } from "../../src/types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 const ITEM_DURATION = 5000;
@@ -17,6 +18,7 @@ const ITEM_DURATION = 5000;
 export default function HighlightViewerScreen() {
   const { highlightId } = useLocalSearchParams<{ highlightId: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [highlight, setHighlight] = useState<Highlight | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -34,6 +36,8 @@ export default function HighlightViewerScreen() {
   }, [highlightId]);
 
   const item: HighlightItem | undefined = highlight?.items[currentIndex];
+  const touchTop = Math.max(80, insets.top + 80);
+  const touchBottom = Math.max(80, insets.bottom + 80);
 
   const goNext = useCallback(() => {
     if (!highlight) return;
@@ -82,7 +86,7 @@ export default function HighlightViewerScreen() {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <HighlightMedia item={item} />
 
-      <View style={{ position: "absolute", top: 48, left: 12, right: 12, flexDirection: "row", gap: 3 }}>
+      <View style={{ position: "absolute", top: Math.max(48, insets.top + 8), left: 12, right: 12, flexDirection: "row", gap: 3 }}>
         {highlight.items.map((_, i) => (
           <View
             key={i}
@@ -100,7 +104,7 @@ export default function HighlightViewerScreen() {
         ))}
       </View>
 
-      <View style={{ position: "absolute", top: 58, left: 12, right: 12, flexDirection: "row", alignItems: "center" }}>
+      <View style={{ position: "absolute", top: Math.max(58, insets.top + 18), left: 12, right: 12, flexDirection: "row", alignItems: "center" }}>
         <View
           style={{ width: 32, height: 32, borderRadius: 16, overflow: "hidden", backgroundColor: Colors.dark.primary, marginRight: 8 }}
         >
@@ -117,12 +121,12 @@ export default function HighlightViewerScreen() {
       </View>
 
       <TouchableOpacity
-        style={{ position: "absolute", top: 80, left: 0, width: SCREEN_W * 0.35, height: SCREEN_H - 160 }}
+        style={{ position: "absolute", top: touchTop, left: 0, width: SCREEN_W * 0.35, height: SCREEN_H - touchTop - touchBottom }}
         onPress={goPrev}
         activeOpacity={1}
       />
       <TouchableOpacity
-        style={{ position: "absolute", top: 80, right: 0, width: SCREEN_W * 0.65, height: SCREEN_H - 160 }}
+        style={{ position: "absolute", top: touchTop, right: 0, width: SCREEN_W * 0.65, height: SCREEN_H - touchTop - touchBottom }}
         onPress={() => {
           if (timerRef.current) clearInterval(timerRef.current);
           goNext();
@@ -131,7 +135,7 @@ export default function HighlightViewerScreen() {
       />
 
       {item.text ? (
-        <View style={{ position: "absolute", bottom: 60, left: 20, right: 20 }}>
+        <View style={{ position: "absolute", bottom: Math.max(60, insets.bottom + 24), left: 20, right: 20 }}>
           <Text style={{ color: "#fff", fontSize: 15 }}>{item.text}</Text>
         </View>
       ) : null}

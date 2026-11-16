@@ -1,40 +1,66 @@
-// AuraLenz — Chat/Message Row Skeletons
-// Matches conversation list and message list
-
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Skeleton, SkeletonCircle, SkeletonText } from "./Skeleton";
-import { Spacing, Radius, Gap } from "../../theme/spacing";
+import { StyleSheet, View } from "react-native";
+import { AvatarSize, Gap, IconSize, Radius, Spacing } from "../../theme/spacing";
+import {
+  Skeleton,
+  SkeletonCircle,
+  SkeletonText,
+  useSkeletonColors,
+} from "./Skeleton";
 
-export function ConversationRowSkeleton() {
+type ConversationRowVariant = "conversation" | "person";
+
+export function ConversationRowSkeleton({
+  variant = "conversation",
+}: {
+  variant?: ConversationRowVariant;
+}) {
+  const isConversation = variant === "conversation";
+
   return (
-    <View style={styles.row}>
-      <SkeletonCircle size={48} style={styles.avatar} />
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <SkeletonText lines={1} width="60%" lineHeight={21} />
-          <SkeletonText lines={1} width="30%" lineHeight={14} style={styles.time} />
+    <View style={styles.conversationRow} accessible={false}>
+      <SkeletonCircle size={AvatarSize.lg} />
+      <View style={styles.conversationContent}>
+        <View style={styles.conversationHeader}>
+          <Skeleton width={isConversation ? "44%" : "58%"} height={Spacing.md + Gap.xs} />
+          {isConversation ? (
+            <Skeleton width="20%" height={Spacing.sm + Gap.xs} />
+          ) : null}
         </View>
-        <View style={styles.previewRow}>
-          <SkeletonText lines={1} width="80%" lineHeight={18} />
-          <Skeleton
-            width={22}
-            height={22}
-            borderRadius={11}
-            style={styles.unreadBadge}
-          />
-        </View>
+        {isConversation ? (
+          <SkeletonText width="72%" lineHeight={Spacing.lg} />
+        ) : null}
       </View>
+      {isConversation ? (
+        <SkeletonCircle size={Spacing.xl} />
+      ) : (
+        <Skeleton width={IconSize.sm} height={IconSize.sm} borderRadius={Radius.xs} />
+      )}
     </View>
   );
 }
 
-export function ConversationRowSkeletonList({ count = 6 }: { count?: number }) {
+export function ConversationRowSkeletonList({
+  count = 6,
+  variant = "conversation",
+}: {
+  count?: number;
+  variant?: ConversationRowVariant;
+}) {
+  const colors = useSkeletonColors();
+
   return (
-    <View style={styles.list}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={[styles.item, i > 0 && { borderTopWidth: 0.5 }]}>
-          <ConversationRowSkeleton />
+    <View style={styles.conversationList} accessible={false}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.dividedRow,
+            { borderTopColor: colors.divider },
+            index === 0 && styles.firstRow,
+          ]}
+        >
+          <ConversationRowSkeleton variant={variant} />
         </View>
       ))}
     </View>
@@ -42,84 +68,93 @@ export function ConversationRowSkeletonList({ count = 6 }: { count?: number }) {
 }
 
 export function MessageRowSkeleton({ isOwn = false }: { isOwn?: boolean }) {
+  const colors = useSkeletonColors();
+
   return (
-    <View style={[styles.messageRow, isOwn && { flexDirection: "row-reverse" }]}>
-      {!isOwn && <SkeletonCircle size={28} style={styles.messageAvatar} />}
-      <View style={styles.messageBubble}>
-        <SkeletonText lines={1} width="70%" lineHeight={20} />
-        <SkeletonText lines={1} width="40%" lineHeight={18} />
+    <View
+      style={[
+        styles.messageRow,
+        isOwn ? styles.ownMessageRow : styles.otherMessageRow,
+      ]}
+      accessible={false}
+    >
+      {!isOwn ? <SkeletonCircle size={AvatarSize.xs + Gap.xs} /> : null}
+      <View
+        style={[
+          styles.messageBubble,
+          isOwn ? styles.ownBubble : styles.otherBubble,
+          { backgroundColor: colors.surface },
+        ]}
+      >
+        <SkeletonText lines={2} width={["78%", "54%"]} lineHeight={Spacing.lg} tone="overlay" />
       </View>
-      {isOwn && <SkeletonCircle size={28} style={styles.messageAvatar} />}
+      {isOwn ? <SkeletonCircle size={AvatarSize.xs + Gap.xs} /> : null}
     </View>
   );
 }
 
 export function MessageRowSkeletonList({ count = 6 }: { count?: number }) {
   return (
-    <View style={styles.messageList}>
-      {Array.from({ length: count }).map((_, i) => (
-        <MessageRowSkeleton key={i} isOwn={i % 3 === 0} />
+    <View style={styles.messageList} accessible={false}>
+      {Array.from({ length: count }).map((_, index) => (
+        <MessageRowSkeleton key={index} isOwn={index % 3 === 0} />
       ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  conversationList: {
+    paddingHorizontal: Spacing.lg,
+  },
+  dividedRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  firstRow: {
+    borderTopWidth: 0,
+  },
+  conversationRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: Gap.md,
     paddingVertical: Spacing.md,
   },
-  avatar: {
-    marginRight: 12,
-  },
-  content: {
+  conversationContent: {
     flex: 1,
+    gap: Gap.xs,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  time: {
-    marginLeft: 8,
-  },
-  previewRow: {
+  conversationHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 2,
-  },
-  unreadBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#99CC33",
-  },
-  list: {
-    paddingHorizontal: Spacing.lg,
-  },
-  item: {
-    borderTopWidth: 0.5,
-    borderTopColor: "rgba(0,0,0,0.06)",
+    gap: Gap.sm,
   },
   messageList: {
+    gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    gap: 8,
   },
   messageRow: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
+    gap: Gap.sm,
   },
-  messageAvatar: {
-    marginBottom: 4,
+  otherMessageRow: {
+    justifyContent: "flex-start",
+  },
+  ownMessageRow: {
+    justifyContent: "flex-end",
   },
   messageBubble: {
-    maxWidth: "75%",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: "rgba(0,0,0,0.06)",
+    maxWidth: "76%",
+    minWidth: "32%",
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+  },
+  ownBubble: {
+    borderBottomRightRadius: Radius.xs,
+  },
+  otherBubble: {
+    borderBottomLeftRadius: Radius.xs,
   },
 });

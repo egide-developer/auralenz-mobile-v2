@@ -7,6 +7,7 @@ import { Colors } from "../../src/theme/colors";
 import { FontFamily } from "../../src/theme/typography";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 export default function BlockedUsersScreen() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function BlockedUsersScreen() {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaScreen style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, flexDirection: "row", alignItems: "center" }}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}><Ionicons name="chevron-back" size={24} color={colors.foreground} /></TouchableOpacity>
         <Text style={{ fontFamily: FontFamily.bold, fontSize: 20, color: colors.foreground }}>Blocked Users</Text>
@@ -37,6 +38,6 @@ export default function BlockedUsersScreen() {
             <Text style={{ flex: 1, fontSize: 15, color: colors.foreground }}>{item.username}</Text>
           </View>
         )} />
-    </View>
+    </SafeAreaScreen>
   );
 }

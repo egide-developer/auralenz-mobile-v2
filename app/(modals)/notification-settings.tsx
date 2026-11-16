@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { FontFamily } from "../../src/theme/typography";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 export default function NotificationSettingsScreen() {
   const router = useRouter();
@@ -16,7 +17,8 @@ export default function NotificationSettingsScreen() {
   const toggle = (key: keyof typeof prefs) => setPrefs((p) => ({ ...p, [key]: !p[key] }));
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 40 }}>
+    <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, flexDirection: "row", alignItems: "center" }}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}><Ionicons name="chevron-back" size={24} color={colors.foreground} /></TouchableOpacity>
         <Text style={{ fontFamily: FontFamily.bold, fontSize: 20, color: colors.foreground }}>Notification Settings</Text>
@@ -31,6 +33,7 @@ export default function NotificationSettingsScreen() {
           ))}
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaScreen>
   );
 }

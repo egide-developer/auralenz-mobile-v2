@@ -221,7 +221,7 @@ export default function GroupInfoScreen() {
       style={[styles.screen, { backgroundColor: colors.background }]}
       contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
     >
-      <View style={[styles.header, { paddingTop: insets.top + 8, borderBottomColor: colors.border + "40" }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
@@ -371,7 +371,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: { fontFamily: FontFamily.semibold, fontSize: 16 },
 

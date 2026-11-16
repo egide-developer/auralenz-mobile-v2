@@ -16,6 +16,7 @@ import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 type SecurityStatus = {
   mfaEnabled: boolean;
@@ -148,8 +149,9 @@ export default function SecurityScreen() {
   const cardStyle = [styles.card, { backgroundColor: colors.card, borderColor: colors.border + "55" }];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+    <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -261,7 +263,8 @@ export default function SecurityScreen() {
           </View>
         ))}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaScreen>
   );
 }
 
@@ -275,7 +278,7 @@ function ActionButton({ label, onPress, color }: { label: string; onPress: () =>
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 40, gap: 16 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: Spacing.lg, paddingTop: 12, paddingBottom: Spacing.md, borderBottomWidth: 0.5 },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: Spacing.lg, paddingTop: 12, paddingBottom: Spacing.md },
   back: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   title: { ...Typography.h4 },
   notice: { marginHorizontal: Spacing.lg, ...Typography.bodySmall },

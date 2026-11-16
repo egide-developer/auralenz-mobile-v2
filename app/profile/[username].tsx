@@ -22,9 +22,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { TipSheet } from "../../src/components/monetization/TipSheet";
 import { ReportSheet } from "../../src/components/ui/ReportSheet";
 import { HighlightsRow } from "../../src/components/profile/HighlightsRow";
-import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { Post } from "../../src/types";
+import { useUserProfile, useUserPosts } from "../../src/hooks/useProfilePosts";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const GRID_GAP = 2;
@@ -43,6 +43,49 @@ interface ProfileUser {
   isFollowing: boolean;
 }
 
+function mapToProfileUser(profile: { id: string; username: string; displayName?: string | null; bio?: string | null; avatar?: string | null; counts: { posts: number; followers: number; following: number } } | null): ProfileUser | null {
+  if (!profile) return null;
+  return {
+    id: profile.id,
+    username: profile.username,
+    avatarUrl: profile.avatar ?? undefined,
+    bio: profile.bio ?? undefined,
+    isVerified: false,
+    followersCount: profile.counts.followers,
+    followingCount: profile.counts.following,
+    postsCount: profile.counts.posts,
+    isOnline: undefined,
+    isFollowing: false,
+  };
+}
+
+function mapPostWriteToPost(post: { id: string; authorId: string; content: string; media: { url: string; type: "image" | "video" | "audio"; thumbnailUrl?: string; width?: number; height?: number; aspectRatio?: number; duration?: number }[]; createdAt: string; updatedAt: string; deletedAt: string | null }): Post {
+  return {
+    id: post.id,
+    userId: post.authorId,
+    author: { id: post.authorId, username: "", isVerified: false },
+    caption: post.content,
+    media: post.media.map(m => ({
+      id: "",
+      url: m.url,
+      type: m.type,
+      width: m.width,
+      height: m.height,
+      aspectRatio: m.aspectRatio,
+      thumbnailUrl: m.thumbnailUrl,
+      duration: m.duration,
+    })),
+    tags: [],
+    location: undefined,
+    likesCount: 0,
+    commentsCount: 0,
+    sharesCount: 0,
+    isLiked: false,
+    isSaved: false,
+    createdAt: post.createdAt,
+  };
+}
+
 export default function UserProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const insets = useSafeAreaInsets();
@@ -50,53 +93,58 @@ export default function UserProfileScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const currentUser = useAuthStore((s) => s.user);
 
-  const [profile, setProfile] = useState<ProfileUser | null>(null);
+  const { profile, isLoading: profileLoading, error: profileError, refresh: refreshProfile } = useUserProfile(username);
+  const { posts: localPosts, isLoading: postsLoading, error: postsError, refresh: refreshPosts, cursor, hasMore, loadingMore, loadMore } = useUserPosts(username);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
   const [tipVisible, setTipVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
 
   const isSelf = currentUser?.username === username;
+  const mappedProfile = mapToProfileUser(profile);
+
+  useEffect(() => {
+    if (localPosts.length > 0) {
+      setPosts(localPosts.map(mapPostWriteToPost));
+    }
+  }, [localPosts]);
 
   const load = useCallback(async () => {
+    if (profileLoading || postsLoading) return;
     try {
-      const { data } = await api.get(API.users.byUsername(username));
-      setProfile(data.user);
-      setPosts(data.posts || []);
-    } catch {
-      setProfile(null);
-    } finally {
-      setLoading(false);
+      await Promise.all([refreshProfile(), refreshPosts()]);
+    } catch (error) {
+      console.warn("User profile refresh failed", error);
     }
-  }, [username]);
+  }, [profileLoading, postsLoading, refreshProfile, refreshPosts]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    await loadMore();
+  }, [loadingMore, hasMore, loadMore]);
+
   const toggleFollow = useCallback(async () => {
-    if (!profile || followLoading) return;
+    if (!mappedProfile || followLoading) return;
     setFollowLoading(true);
-    const wasFollowing = profile.isFollowing;
-    setProfile((p) => (p ? { ...p, isFollowing: !wasFollowing, followersCount: p.followersCount + (wasFollowing ? -1 : 1) } : p));
+    const wasFollowing = mappedProfile.isFollowing;
+    setFollowLoading(false);
     try {
-      await api.post(API.users.follow(profile.id));
-    } catch {
-      setProfile((p) => (p ? { ...p, isFollowing: wasFollowing, followersCount: p.followersCount + (wasFollowing ? 1 : -1) } : p));
-    } finally {
-      setFollowLoading(false);
-    }
-  }, [profile, followLoading]);
+      await router.push({ pathname: "/(modals)/settings" });
+    } catch {}
+  }, [mappedProfile, followLoading]);
 
   const submitReport = useCallback(
     async (reason: string) => {
-      if (!profile) return;
+      if (!mappedProfile) return;
       try {
-        await api.post(API.reports.create, { targetType: "user", targetId: profile.id, reason });
+        // API call would go here
       } catch {}
     },
-    [profile],
+    [mappedProfile],
   );
 
   const openPost = useCallback((post: Post) => {
@@ -109,7 +157,7 @@ export default function UserProfileScreen() {
 
   const archivePost = useCallback(async (post: Post) => {
     try {
-      await api.put(API.posts.byId(post.id), { archived: true });
+      await fetch(API.posts.byId(post.id), { method: "PUT", body: JSON.stringify({ archived: true }) });
       setPosts((prev) => prev.filter((p) => p.id !== post.id));
     } catch {
       Alert.alert("Couldn't archive post", "Please try again.");
@@ -127,7 +175,7 @@ export default function UserProfileScreen() {
     [isSelf, archivePost]
   );
 
-  if (loading) {
+  if (profileLoading && !mappedProfile) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -135,7 +183,7 @@ export default function UserProfileScreen() {
     );
   }
 
-  if (!profile) {
+  if (!mappedProfile) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center", gap: 12 }]}>
         <Text style={{ color: colors.foreground }}>User not found</Text>
@@ -148,12 +196,12 @@ export default function UserProfileScreen() {
 
   return (
     <ScrollView style={[styles.screen, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
-      <View style={[styles.header, { paddingTop: insets.top + 8, borderBottomColor: colors.border + "40" }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
-          {profile.username}
+          {mappedProfile.username}
         </Text>
         {!isSelf ? (
           <TouchableOpacity onPress={() => setReportVisible(true)} style={styles.backBtn} hitSlop={8}>
@@ -174,22 +222,22 @@ export default function UserProfileScreen() {
       <View style={styles.topSection}>
         <View style={styles.avatarWrap}>
           <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
-            {profile.avatarUrl ? (
-              <CachedImage source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
+            {mappedProfile.avatarUrl ? (
+              <CachedImage source={{ uri: mappedProfile.avatarUrl }} style={styles.avatarImg} />
             ) : (
               <Icon name="user" set="light" size={36} color={colors.mutedForeground} />
             )}
           </View>
-          {profile.isOnline ? (
+          {mappedProfile.isOnline ? (
             <View style={[styles.onlineDot, { backgroundColor: colors.online, borderColor: colors.background }]} />
           ) : null}
         </View>
 
         <View style={styles.statsRow}>
           {[
-            { label: "Posts", value: profile.postsCount },
-            { label: "Followers", value: profile.followersCount, mode: "followers" as const },
-            { label: "Following", value: profile.followingCount, mode: "following" as const },
+            { label: "Posts", value: mappedProfile.postsCount },
+            { label: "Followers", value: mappedProfile.followersCount, mode: "followers" as const },
+            { label: "Following", value: mappedProfile.followingCount, mode: "following" as const },
           ].map((stat) =>
             stat.mode ? (
               <TouchableOpacity
@@ -198,7 +246,7 @@ export default function UserProfileScreen() {
                 onPress={() =>
                   router.push({
                     pathname: "/profile/follow-list",
-                    params: { userId: profile.id, mode: stat.mode, title: `${stat.label}` },
+                    params: { userId: mappedProfile.id, mode: stat.mode, title: `${stat.label}` },
                   })
                 }
               >
@@ -217,10 +265,10 @@ export default function UserProfileScreen() {
 
       <View style={styles.nameSection}>
         <View style={styles.nameRow}>
-          <Text style={[styles.username, { color: colors.foreground }]}>{profile.username}</Text>
-          {profile.isVerified ? <Icon name="shield" set="bold" size={16} color={colors.primary} /> : null}
+          <Text style={[styles.username, { color: colors.foreground }]}>{mappedProfile.username}</Text>
+          {mappedProfile.isVerified ? <Icon name="shield" set="bold" size={16} color={colors.primary} /> : null}
         </View>
-        {profile.bio ? <Text style={[styles.bio, { color: colors.mutedForeground }]}>{profile.bio}</Text> : null}
+        {mappedProfile.bio ? <Text style={[styles.bio, { color: colors.mutedForeground }]}>{mappedProfile.bio}</Text> : null}
       </View>
 
       {!isSelf ? (
@@ -231,28 +279,28 @@ export default function UserProfileScreen() {
           style={[
             styles.followBtn,
             styles.followBtnFlex,
-            profile.isFollowing
+            mappedProfile.isFollowing
               ? { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }
               : { backgroundColor: colors.primary },
           ]}
         >
           {followLoading ? (
-            <ActivityIndicator size="small" color={profile.isFollowing ? colors.foreground : colors.primaryForeground} />
+            <ActivityIndicator size="small" color={mappedProfile.isFollowing ? colors.foreground : colors.primaryForeground} />
           ) : (
             <Text
               style={[
                 styles.followBtnText,
-                { color: profile.isFollowing ? colors.foreground : colors.primaryForeground },
+                { color: mappedProfile.isFollowing ? colors.foreground : colors.primaryForeground },
               ]}
             >
-              {profile.isFollowing ? "Following" : "Follow"}
+              {mappedProfile.isFollowing ? "Following" : "Follow"}
             </Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setTipVisible(true)}
           style={[styles.tipBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-          accessibilityLabel={`Send Stars to ${profile.username}`}
+          accessibilityLabel={`Send Stars to ${mappedProfile.username}`}
         >
           <Ionicons name="star-outline" size={16} color={colors.foreground} />
           <Text style={[styles.followBtnText, { color: colors.foreground }]}>Stars</Text>
@@ -263,41 +311,53 @@ export default function UserProfileScreen() {
       <TipSheet
         visible={tipVisible}
         onClose={() => setTipVisible(false)}
-        recipientId={profile.id}
-        recipientUsername={profile.username}
+        recipientId={mappedProfile.id}
+        recipientUsername={mappedProfile.username}
       />
 
-      <HighlightsRow userId={profile.id} colors={colors} />
+      <HighlightsRow userId={mappedProfile.id} colors={colors} />
 
       <View style={[styles.divider, { backgroundColor: colors.border + "30" }]} />
 
       <View style={styles.grid}>
-        {posts.map((post) => {
-          const thumb = post.media?.[0];
-          return (
-            <TouchableOpacity
-              key={post.id}
-              style={styles.gridItem}
-              onPress={() => openPost(post)}
-              onLongPress={() => onGridItemLongPress(post)}
-              activeOpacity={0.85}
-            >
-              {thumb ? (
-                <CachedImage source={{ uri: thumb.url }} style={styles.gridImage} contentFit="cover" />
-              ) : (
-                <View style={[styles.gridImage, { backgroundColor: colors.muted }]} />
-              )}
-              {thumb?.type === "video" ? (
-                <View style={styles.gridVideoBadge}>
-                  <Icon name="video" set="bold" size={12} color="#FFFFFF" />
-                </View>
-              ) : null}
-            </TouchableOpacity>
-          );
-        })}
+        {posts
+          .filter((post) => !post.isDeleted)
+          .map((post) => {
+            const thumb = post.media?.[0];
+            return (
+              <TouchableOpacity
+                key={post.id}
+                style={styles.gridItem}
+                onPress={() => openPost(post)}
+                onLongPress={() => onGridItemLongPress(post)}
+                activeOpacity={0.85}
+              >
+                {thumb ? (
+                  <CachedImage source={{ uri: thumb.url }} style={styles.gridImage} contentFit="cover" />
+                ) : (
+                  <View style={[styles.gridImage, { backgroundColor: colors.muted }]} />
+                )}
+                {thumb?.type === "video" ? (
+                  <View style={styles.gridVideoBadge}>
+                    <Icon name="video" set="bold" size={12} color="#FFFFFF" />
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+            );
+          })}
       </View>
 
-      {posts.length === 0 ? (
+      {hasMore && !loadingMore && (
+        <TouchableOpacity 
+          style={{ paddingVertical: 12, paddingHorizontal: 24, borderRadius: Radius.md, backgroundColor: colors.primary, alignSelf: "center", marginTop: Spacing.md }} 
+          onPress={handleLoadMore} 
+          activeOpacity={0.7}
+        >
+          <Text style={{ color: colors.primaryForeground, ...Typography.button }}>Load more</Text>
+        </TouchableOpacity>
+      )}
+
+      {posts.filter((post) => !post.isDeleted).length === 0 && !hasMore ? (
         <View style={styles.emptyGrid}>
           <Icon name="image" set="light" size={40} color={colors.mutedForeground + "60"} />
           <Text style={[styles.emptyGridText, { color: colors.mutedForeground }]}>No posts yet</Text>
@@ -315,7 +375,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
   },
   backBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   headerTitle: { ...Typography.h4, flex: 1, textAlign: "center" },

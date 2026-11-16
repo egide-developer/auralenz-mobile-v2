@@ -1,34 +1,56 @@
-// AuraLenz — Post Grid Skeleton
-// Matches SearchScreen discover grid
-
-import React from "react";
-import { View, StyleSheet, Dimensions } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { Gap, Radius, Spacing } from "../../theme/spacing";
 import { Skeleton } from "./Skeleton";
-import { Spacing, Radius, Gap } from "../../theme/spacing";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
 const GRID_GAP = 2;
-const GRID_ITEM_SIZE = (SCREEN_WIDTH - Spacing.lg * 2 - GRID_GAP) / 2;
 
-export function PostGridSkeleton({ columns = 2, rows = 3 }: { columns?: number; rows?: number }) {
-  const items = Array.from({ length: columns * rows });
+export function PostGridSkeleton({
+  columns = 2,
+  rows = 3,
+  horizontalPadding = Spacing.lg,
+}: {
+  columns?: number;
+  rows?: number;
+  horizontalPadding?: number;
+}) {
+  const { width: windowWidth } = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState(windowWidth);
+  const columnCount = Math.max(1, Math.floor(columns));
+  const rowCount = Math.max(0, Math.floor(rows));
+  const itemWidth = Math.max(
+    0,
+    (containerWidth -
+      horizontalPadding * 2 -
+      GRID_GAP * (columnCount - 1)) /
+      columnCount,
+  );
+  const items = Array.from({ length: columnCount * rowCount });
 
   return (
-    <View style={styles.container}>
+    <View
+      onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
+      style={[styles.container, { paddingHorizontal: horizontalPadding }]}
+    >
       <View style={styles.grid}>
-        {items.map((_, i) => (
-          <View key={i} style={styles.item}>
-            <Skeleton
-              width={GRID_ITEM_SIZE}
-              height={GRID_ITEM_SIZE}
-              borderRadius={Radius.md}
-              style={styles.image}
-            />
-            {i % 3 === 0 && (
-              <View style={styles.videoBadge}>
-                <Skeleton width={16} height={16} borderRadius={8} />
-              </View>
-            )}
+        {items.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.item,
+              { width: itemWidth, height: itemWidth },
+            ]}
+          >
+            <Skeleton width="100%" height={itemWidth} borderRadius={Radius.sm} />
+            {index % 4 === 0 ? (
+              <Skeleton
+                width={Spacing.md}
+                height={Spacing.md}
+                borderRadius={Radius.xs}
+                tone="overlay"
+                style={styles.videoMark}
+              />
+            ) : null}
           </View>
         ))}
       </View>
@@ -38,7 +60,7 @@ export function PostGridSkeleton({ columns = 2, rows = 3 }: { columns?: number; 
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: Spacing.lg,
+    width: "100%",
   },
   grid: {
     flexDirection: "row",
@@ -46,19 +68,12 @@ const styles = StyleSheet.create({
     gap: GRID_GAP,
   },
   item: {
-    width: GRID_ITEM_SIZE,
-    height: GRID_ITEM_SIZE,
-    borderRadius: Radius.md,
     overflow: "hidden",
     position: "relative",
   },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  videoBadge: {
+  videoMark: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: Gap.sm,
+    right: Gap.sm,
   },
 });

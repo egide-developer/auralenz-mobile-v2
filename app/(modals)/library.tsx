@@ -9,6 +9,7 @@ import { Icon } from "../../src/components/ui/Icon";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { LibraryAsset } from "../../src/types";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -27,8 +28,8 @@ export default function LibraryScreen() {
   useEffect(() => { fetchAssets(); }, []);
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+    <SafeAreaScreen style={[styles.screen, { backgroundColor: colors.background }]}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -55,7 +56,7 @@ export default function LibraryScreen() {
           <View style={[styles.gridItem, { backgroundColor: colors.muted }]} />
         )}
       />
-    </View>
+    </SafeAreaScreen>
   );
 }
 
@@ -68,7 +69,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: 12,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
   },
   headerTitle: { ...Typography.h4 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },

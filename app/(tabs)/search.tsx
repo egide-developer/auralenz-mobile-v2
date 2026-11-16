@@ -1,4 +1,4 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, RefreshControl } from "react-native";
 import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useCallback, useEffect, useState } from "react";
 import { router } from "expo-router";
@@ -12,9 +12,11 @@ import { Icon } from "../../src/components/ui/Icon";
 import { Button } from "../../src/components/ui";
 import { Screen } from "../../src/components/layout";
 import { SearchUserSkeleton, PostGridSkeleton } from "../../src/components/skeletons";
+import type { Post } from "../../src/types";
+import { useSearchUsers, useSuggestedUsers, useRecommendedPosts } from "../../src/hooks/useSearch";
+import { useAuthStore } from "../../src/stores/authStore";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
-import type { Post } from "../../src/types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const GRID_GAP = 2;
@@ -32,22 +34,63 @@ interface SearchUser {
 
 const RECENT_LIMIT = 8;
 
+function toSearchUser(user: { id: string; username: string; avatarUrl?: string; displayName?: string; isVerified?: boolean; isOnline?: boolean; hasStory?: boolean; hasUnviewedStory?: boolean }): SearchUser {
+  return {
+    id: user.id,
+    username: user.username,
+    avatarUrl: user.avatarUrl,
+    displayName: user.displayName,
+    bio: undefined,
+    isVerified: user.isVerified,
+    isFollowing: false,
+  };
+}
+
+function mapPostWriteToPost(post: { id: string; authorId: string; content: string; media: { url: string; type: "image" | "video" | "audio"; thumbnailUrl?: string; width?: number; height?: number; aspectRatio?: number; duration?: number }[]; createdAt: string; updatedAt: string; deletedAt: string | null }): Post {
+  return {
+    id: post.id,
+    userId: post.authorId,
+    author: { id: post.authorId, username: "", isVerified: false },
+    caption: post.content,
+    media: post.media.map(m => ({
+      id: "",
+      url: m.url,
+      type: m.type,
+      width: m.width,
+      height: m.height,
+      aspectRatio: m.aspectRatio,
+      thumbnailUrl: m.thumbnailUrl,
+      duration: m.duration,
+    })),
+    tags: [],
+    location: undefined,
+    likesCount: 0,
+    commentsCount: 0,
+    sharesCount: 0,
+    isLiked: false,
+    isSaved: false,
+    createdAt: post.createdAt,
+  };
+}
+
 export default function SearchScreen() {
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [results, setResults] = useState<SearchUser[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [suggested, setSuggested] = useState<SearchUser[]>([]);
-  const [suggestedLoading, setSuggestedLoading] = useState(true);
   const [recent, setRecent] = useState<SearchUser[]>([]);
-
-  const [discoverPosts, setDiscoverPosts] = useState<Post[]>([]);
+  const [suggestedState, setSuggestedState] = useState<SearchUser[]>([]);
   const [discoverPage, setDiscoverPage] = useState(1);
   const [discoverHasMore, setDiscoverHasMore] = useState(true);
-  const [discoverLoading, setDiscoverLoading] = useState(true);
   const [discoverLoadingMore, setDiscoverLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [discoverPostsState, setDiscoverPostsState] = useState<Post[]>([]);
+
+  const { user } = useAuthStore();
+
+  const { data: searchResults, isLoading: searching, error: searchError, refresh: refreshSearch } = useSearchUsers(debouncedQuery);
+  const { data: suggestedUsers, isLoading: suggestedLoading, refresh: refreshSuggested } = useSuggestedUsers();
+  const { data: discoverPosts, isLoading: discoverLoading, error: discoverError, refresh: refreshDiscover } = useRecommendedPosts(discoverPage, 24, debouncedQuery.trim().length > 0);
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedQuery(query.trim()), 300);
@@ -55,93 +98,43 @@ export default function SearchScreen() {
   }, [query]);
 
   useEffect(() => {
-    if (!debouncedQuery) {
-      setResults([]);
-      setSearching(false);
-      return;
+    if (discoverPosts) {
+      setDiscoverPostsState(discoverPosts.map(mapPostWriteToPost));
     }
-    let active = true;
-    setSearching(true);
-    api
-      .get(`${API.users.search}?q=${encodeURIComponent(debouncedQuery)}`)
-      .then(({ data }) => {
-        if (!active) return;
-        setResults(data.data || data.users || data || []);
-      })
-      .catch(() => {
-        if (active) setResults([]);
-      })
-      .finally(() => {
-        if (active) setSearching(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [debouncedQuery]);
+  }, [discoverPosts]);
 
   useEffect(() => {
-    let active = true;
-    api
-      .get(`${API.users.suggested}?limit=10`)
-      .then(({ data }) => {
-        if (!active) return;
-        setSuggested(data.data || data.users || data || []);
-      })
-      .catch(() => {
-        if (active) setSuggested([]);
-      })
-      .finally(() => {
-        if (active) setSuggestedLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const fetchDiscoverPage = useCallback(async (page: number) => {
-    // Recommended is personalized (follows + recent tags) but can be empty
-    // for a brand-new account — trending is the reliable fallback, same as
-    // Instagram's explore grid falling back to globally popular content.
-    try {
-      const { data } = await api.get(`${API.posts.recommended}?page=${page}&limit=24`);
-      const posts: Post[] = data.posts || [];
-      if (posts.length > 0 || page > 1) {
-        return { posts, hasMore: !!data.pagination?.hasMore };
-      }
-    } catch {}
-    try {
-      const { data } = await api.get(`${API.posts.trending}?page=${page}&limit=24`);
-      return { posts: data.posts || [], hasMore: !!data.pagination?.hasMore };
-    } catch {
-      return { posts: [], hasMore: false };
+    if (suggestedUsers) {
+      setSuggestedState(suggestedUsers.map(toSearchUser));
     }
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    setDiscoverLoading(true);
-    fetchDiscoverPage(1).then(({ posts, hasMore }) => {
-      if (!active) return;
-      setDiscoverPosts(posts);
-      setDiscoverHasMore(hasMore);
-      setDiscoverPage(1);
-      setDiscoverLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [fetchDiscoverPage]);
+  }, [suggestedUsers]);
 
   const loadMoreDiscover = useCallback(async () => {
-    if (discoverLoadingMore || !discoverHasMore || query.trim().length > 0) return;
+    if (discoverLoadingMore || !discoverHasMore || debouncedQuery.trim().length > 0) return;
     setDiscoverLoadingMore(true);
     const nextPage = discoverPage + 1;
-    const { posts, hasMore } = await fetchDiscoverPage(nextPage);
-    setDiscoverPosts((prev) => [...prev, ...posts]);
-    setDiscoverHasMore(hasMore);
-    setDiscoverPage(nextPage);
+    try {
+      const { data: response } = await api.get(`${API.posts.recommended}?page=${nextPage}&limit=24`);
+      const { mapRecommendedPostsPayload } = await import("../../src/repositories/profileMappers");
+      const nextPosts = mapRecommendedPostsPayload(response);
+      if (!nextPosts || nextPosts.length === 0) {
+        setDiscoverHasMore(false);
+        setDiscoverLoadingMore(false);
+        return;
+      }
+      if (nextPosts && nextPosts.length > 0) {
+        setDiscoverPostsState((prev) => [...prev, ...nextPosts.map(mapPostWriteToPost)]);
+        setDiscoverHasMore(nextPosts.length === 24);
+        setDiscoverPage(nextPage);
+      } else {
+        setDiscoverHasMore(false);
+      }
+    } catch (error) {
+      console.warn("Load more discover failed", error);
+      setDiscoverHasMore(false);
+    }
     setDiscoverLoadingMore(false);
-  }, [discoverLoadingMore, discoverHasMore, discoverPage, fetchDiscoverPage, query]);
+  }, [discoverLoadingMore, discoverHasMore, discoverPage, debouncedQuery]);
 
   const openPost = useCallback((post: Post) => {
     const hasVideo = post.media?.some((m) => m.type === "video");
@@ -171,23 +164,37 @@ export default function SearchScreen() {
     const wasFollowing = !!user.isFollowing;
     const apply = (list: SearchUser[]) =>
       list.map((u) => (u.id === user.id ? { ...u, isFollowing: !wasFollowing } : u));
-    setSuggested(apply);
-    setResults(apply);
+    setSuggestedState(apply);
+    setRecent(apply);
     try {
       await api.post(API.users.follow(user.id));
     } catch {
       const revert = (list: SearchUser[]) =>
         list.map((u) => (u.id === user.id ? { ...u, isFollowing: wasFollowing } : u));
-      setSuggested(revert);
-      setResults(revert);
+      setSuggestedState(revert);
+      setRecent(revert);
     }
   }, []);
 
-  const hasQuery = query.trim().length > 0;
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refreshSearch(), refreshSuggested(), refreshDiscover()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshSearch, refreshSuggested, refreshDiscover]);
+
+  const hasQuery = debouncedQuery.trim().length > 0;
+  const results = searchResults?.map(toSearchUser) ?? [];
+  const suggested = suggestedState;
 
   const header = (
     <View style={styles.header}>
       <Text style={[styles.headerTitle, { color: colors.foreground }]}>Search</Text>
+      <TouchableOpacity onPress={handleRefresh} hitSlop={8}>
+        <Icon name="refresh" set="light" size={20} color={colors.mutedForeground} />
+      </TouchableOpacity>
     </View>
   );
 
@@ -248,12 +255,12 @@ export default function SearchScreen() {
             />
           )}
         />
-      ) : discoverLoading ? (
+      ) : discoverLoading && discoverPostsState.length === 0 ? (
         <PostGridSkeleton rows={3} />
       ) : (
         <FlatList
           key="discover-grid"
-          data={discoverPosts}
+          data={discoverPostsState}
           numColumns={2}
           keyExtractor={(item) => item.id}
           columnWrapperStyle={styles.discoverColumnWrapper}
@@ -264,7 +271,7 @@ export default function SearchScreen() {
           onEndReached={loadMoreDiscover}
           ListFooterComponent={
             discoverLoadingMore ? (
-              <PostGridSkeleton rows={1} />
+              <PostGridSkeleton rows={1} horizontalPadding={0} />
             ) : (
               <View />
             )
@@ -431,7 +438,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: { ...Typography.h3 },
   searchContainer: {

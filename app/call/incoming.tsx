@@ -6,9 +6,11 @@ import { useCallStore } from "../../src/stores/callStore";
 import { Colors } from "../../src/theme/colors";
 import { FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function IncomingCallScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
   const status = useCallStore((s) => s.status);
@@ -43,7 +45,16 @@ export default function IncomingCallScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.background,
+          paddingTop: Math.max(80, insets.top + 24),
+          paddingBottom: Math.max(80, insets.bottom + 24),
+        },
+      ]}
+    >
       <View style={styles.info}>
         <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
           {remoteUser?.avatarUrl ? (
@@ -71,7 +82,7 @@ export default function IncomingCallScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "space-between", alignItems: "center", paddingVertical: 80, paddingHorizontal: 24 },
+  container: { flex: 1, justifyContent: "space-between", alignItems: "center", paddingHorizontal: 24 },
   info: { alignItems: "center" },
   avatar: {
     width: 100,

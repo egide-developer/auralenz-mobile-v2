@@ -52,9 +52,8 @@ const MAX_LOOPS = 30;
 const MAX_REEL_ITEMS = 40;
 const KEEP_BEHIND = 10;
 
-// Reels renders over a full-black background regardless of app theme, so
-// UserLink (which normally follows light/dark theme colors) needs an
-// override palette guaranteeing white text/icons stay legible here.
+// Reel controls and metadata overlay the media, so keep them white regardless
+// of the app theme.
 const REEL_OVERLAY_COLORS = {
   foreground: "#FFFFFF",
   mutedForeground: "#FFFFFF",
@@ -228,14 +227,14 @@ export function ReelsFeed({
 
   if (loading) {
     return (
-      <View style={[styles.screen, { backgroundColor: "#000", justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
+      <View style={[styles.screen, { backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: "#000" }]}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <FlatList
         data={reelItems}
         keyExtractor={(item) => item.key}
@@ -249,6 +248,7 @@ export function ReelsFeed({
             onShare={handleShare}
             onOpenComments={() => setCommentPostId(item.post.id)}
             insets={insets}
+            backgroundColor={colors.background}
           />
         )}
         pagingEnabled
@@ -299,6 +299,7 @@ function ReelItem({
   onShare,
   onOpenComments,
   insets,
+  backgroundColor,
 }: {
   post: Post;
   isActive: boolean;
@@ -308,6 +309,7 @@ function ReelItem({
   onShare: (p: Post) => void;
   onOpenComments: () => void;
   insets: { top: number; bottom: number; left: number; right: number };
+  backgroundColor: string;
 }) {
   const [tipVisible, setTipVisible] = useState(false);
   const [collabVisible, setCollabVisible] = useState(false);
@@ -367,12 +369,12 @@ function ReelItem({
   const heartOverlayStyle = useAnimatedStyle(() => ({ opacity: heartOpacity.value }));
 
   if (!media) {
-    return <View style={[styles.reelItem, { backgroundColor: "#000" }]} />;
+    return <View style={[styles.reelItem, { backgroundColor }]} />;
   }
 
   return (
     <GestureDetector gesture={Gesture.Exclusive(doubleTapGesture, singleTapGesture)}>
-      <View style={styles.reelItem}>
+      <View style={[styles.reelItem, { backgroundColor }]}>
         <CachedImage
           source={{ uri: isVideo ? videoThumbUrl : media.url }}
           style={StyleSheet.absoluteFill}
@@ -668,7 +670,6 @@ const styles = StyleSheet.create({
   reelItem: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
-    backgroundColor: "#000",
   },
   heartOverlay: {
     ...StyleSheet.absoluteFill,

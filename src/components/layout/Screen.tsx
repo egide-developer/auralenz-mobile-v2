@@ -1,10 +1,23 @@
 // Shared screen wrapper — handles top/bottom safe area, theme background
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { View, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeStore } from "../../stores/themeStore";
 import { Colors } from "../../theme/colors";
 import { Spacing } from "../../theme/spacing";
+
+interface SafeAreaScreenProps {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}
+
+export function SafeAreaScreen({ children, style }: SafeAreaScreenProps) {
+  return (
+    <SafeAreaView style={[styles.wrapper, style]}>
+      {children}
+    </SafeAreaView>
+  );
+}
 
 interface ScreenProps {
   children: React.ReactNode;

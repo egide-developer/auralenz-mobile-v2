@@ -5,9 +5,14 @@ import * as SecureStore from "expo-secure-store";
 import Constants from 'expo-constants';
 
 let socket: Socket | null = null;
+const joinedConversationIds = new Set<string>();
 
 export async function connectSocket(): Promise<Socket> {
   if (socket?.connected) return socket;
+  if (socket) {
+    socket.connect();
+    return socket;
+  }
 
   let serverUrl = API_BASE_URL;
   
@@ -40,6 +45,9 @@ export async function connectSocket(): Promise<Socket> {
 
   socket.on("connect", () => {
     console.log("[Socket] Connected:", socket?.id);
+    joinedConversationIds.forEach((conversationId) => {
+      socket?.emit("join_conversation", conversationId);
+    });
   });
 
   socket.on("connect_error", (err) => {
@@ -60,6 +68,7 @@ export function disconnectSocket() {
     socket.disconnect();
     socket = null;
   }
+  joinedConversationIds.clear();
 }
 
 export function getSocket(): Socket | null {
@@ -70,11 +79,17 @@ export function getSocket(): Socket | null {
 // Payload/event names below are dictated by backend/services/socketService.js —
 // keep them in sync with that file, not with convention.
 export function joinConversation(conversationId: string) {
+  joinedConversationIds.add(conversationId);
   socket?.emit("join_conversation", conversationId);
 }
 
 export function leaveConversation(conversationId: string) {
+  joinedConversationIds.delete(conversationId);
   socket?.emit("leave_conversation", conversationId);
+}
+
+export function isConversationJoined(conversationId: string): boolean {
+  return joinedConversationIds.has(conversationId);
 }
 
 export function startTyping(conversationId: string) {
@@ -166,6 +181,13 @@ export function onMessageUpdated(callback: (data: { message: any; conversationId
   socket?.on("message_updated", callback);
   return () => {
     socket?.off("message_updated", callback);
+  };
+}
+
+export function onMessageDeleted(callback: (data: { messageId: string; conversationId?: string; deletedAt: string }) => void) {
+  socket?.on("message_deleted", callback);
+  return () => {
+    socket?.off("message_deleted", callback);
   };
 }
 

@@ -15,6 +15,7 @@ import { useAuthStore } from "../src/stores/authStore";
 import { useThemeStore } from "../src/stores/themeStore";
 import { Colors } from "../src/theme/colors";
 import { CallListener } from "../src/components/layout/CallListener";
+import { LocalDatabaseBootstrap } from "../src/components/layout/LocalDatabaseBootstrap";
 import { SocketListener } from "../src/components/layout/SocketListener";
 import { ToastHost } from "../src/components/ui/Toast";
 import { initPushNotificationListeners } from "../src/services/pushNotifications";
@@ -52,12 +53,25 @@ export default function RootLayout() {
         <StatusBar style={isDark ? "light" : "dark"} />
         <CallListener />
         <SocketListener />
+        <LocalDatabaseBootstrap />
         <Stack
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: bg },
           }}
-        />
+        >
+          <Stack.Screen
+            name="(modals)"
+            options={{
+              presentation: "card",
+              animation: "slide_from_right",
+            }}
+          />
+          <Stack.Screen
+            name="profile/follow-list"
+            options={{ animation: "slide_from_right" }}
+          />
+        </Stack>
         {/* Last child so toasts render above every screen in the stack. */}
         <ToastHost />
       </SafeAreaProvider>

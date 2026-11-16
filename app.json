@@ -73,7 +73,8 @@
       ],
       "expo-image",
       "expo-status-bar",
-      "expo-asset"
+      "expo-asset",
+      "expo-sqlite"
     ]
   }
 }

@@ -19,6 +19,7 @@ import { Spacing, Radius } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 /** Matches the entries produced by backend/services/logBufferService.js#append. */
 interface LogRecord {
@@ -122,7 +123,7 @@ export default function AdminLogsScreen() {
   const filterChips = ["", ...levels];
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <SafeAreaScreen style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
@@ -211,7 +212,7 @@ export default function AdminLogsScreen() {
           }
         />
       )}
-    </View>
+    </SafeAreaScreen>
   );
 }
 

@@ -229,8 +229,17 @@ export default function CreateScreen() {
   );
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+    <View
+      style={[
+        styles.screen,
+        {
+          backgroundColor: colors.background,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom + 64,
+        },
+      ]}
+    >
+      <View style={styles.header}>
         <TouchableOpacity
           onPress={step === "details" ? () => setStep("select") : handleClose}
           style={styles.headerIconBtn}
@@ -357,7 +366,13 @@ export default function CreateScreen() {
           )}
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.detailsStep} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[
+            styles.detailsStep,
+            { paddingBottom: insets.bottom + Spacing["4xl"] },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.detailsHeaderRow}>
             <View style={[styles.detailsThumbWrap, { backgroundColor: colors.muted }]}>
               {media[0] && (
@@ -446,7 +461,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.xs,
     paddingBottom: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerIconBtn: { width: 40, height: 36, alignItems: "flex-start", justifyContent: "center" },
   headerTitle: { ...Typography.h4 },

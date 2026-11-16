@@ -19,6 +19,7 @@ import { Colors } from "../../src/theme/colors";
 import { Radius } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 /**
  * Two steps on one screen: request a reset code, then redeem it.
@@ -87,11 +88,12 @@ export default function ForgotPasswordScreen() {
   const submit = stage === "request" ? requestReset : redeemReset;
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+    <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton} hitSlop={10}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -197,8 +199,9 @@ export default function ForgotPasswordScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

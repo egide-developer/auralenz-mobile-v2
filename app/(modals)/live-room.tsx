@@ -112,7 +112,7 @@ export default function LiveRoomScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={styles.header}>
         <View style={styles.headerLeft}>
           <PressableScale onPress={handleLeave}>
             <Icon name="chevron-left" set="light" size={26} color={colors.foreground} />

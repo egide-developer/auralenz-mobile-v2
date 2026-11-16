@@ -130,7 +130,7 @@ export default function LiveRoomsModal() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border + "40" }]}>
+      <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: FontFamily.bold }]}>
           Live Rooms
         </Text>

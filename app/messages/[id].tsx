@@ -14,6 +14,7 @@ import {
   Alert,
   Keyboard,
   Linking,
+  AppState,
 } from "react-native";
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -66,12 +67,46 @@ import {
   onTypingStart,
   onTypingStop,
   onMessageUpdated,
+  onMessageDeleted,
 } from "../../src/services/socket";
 import { useUnreadStore } from "../../src/stores/unreadStore";
 import { useCallStore } from "../../src/stores/callStore";
 import { showToast } from "../../src/stores/toastStore";
 import * as Clipboard from "expo-clipboard";
 import type { Conversation, LinkPreview, Message } from "../../src/types";
+import {
+  extractConversationPayloads,
+  mapConversationPayload,
+  mapLocalConversationToUi,
+  mapLocalMessageToUi,
+  mapMessagePagePayload,
+  mapMessagePayload,
+  mergeUiMessages,
+} from "../../src/repositories/chatMappers";
+import {
+  getConversation,
+  markConversationReadLocally,
+  upsertConversations,
+} from "../../src/repositories/conversations";
+import {
+  getStoredMessagePage,
+  listRecentMessages,
+  storeMessagePage,
+  upsertMessages,
+} from "../../src/repositories/messages";
+import { repositoryTopic } from "../../src/repositories/changes";
+import { useRepositoryQuery } from "../../src/hooks/useRepositoryQuery";
+import { MessageRowSkeletonList } from "../../src/components/skeletons/ChatRowSkeleton";
+import {
+  enqueueChatMessage,
+  enqueueMarkRead,
+  queuedAttachmentsFromMessage,
+  type QueuedAttachment,
+} from "../../src/sync/messageQueue";
+import {
+  requestOutboxDrain,
+} from "../../src/sync/chatSync";
+import { useSyncStatusStore } from "../../src/sync/statusStore";
 
 const GROUP_GAP_MS = 5 * 60 * 1000;
 const PAGE_SIZE = 20;
@@ -289,6 +324,7 @@ function MessageRow({
   onSwipeReply,
   onLongPress,
   onOpenViewOnce,
+  onRetrySend,
 }: {
   item: Row;
   index: number;
@@ -299,6 +335,7 @@ function MessageRow({
   onSwipeReply: (message: Message) => void;
   onLongPress: (message: Message, isMine: boolean) => void;
   onOpenViewOnce: (message: Message) => void;
+  onRetrySend: (message: Message) => void;
 }) {
   const { message, isMine, showAvatar, showTail, showTime, dayLabel } = item;
   // A view-once message arrives with its body stripped, so the bubble renders
@@ -579,20 +616,52 @@ function MessageRow({
           {message.editedAt && !message.isDeleted ? " · edited" : ""}
         </Text>
       )}
-      {isMine && (message.pending || message.failed) && (
-        <Text
-          style={[
-            styles.seenLabel,
-            { color: message.failed ? Colors.light.destructive : colors.mutedForeground },
-          ]}
-        >
-          {message.failed ? "Failed to send" : "Sending…"}
-        </Text>
-      )}
-      {isMine && !message.pending && !message.failed && index === lastMineIndex && (
-        <Text style={[styles.seenLabel, { color: colors.mutedForeground }]}>
-          {isSeen ? "Seen" : "Sent"}
-        </Text>
+      {isMine && (
+        <View style={styles.deliveryStatusRow}>
+          <Ionicons
+            name={
+              message.failed
+                ? "alert-circle-outline"
+                : message.pending
+                  ? "time-outline"
+                  : message.status === "read" ||
+                      message.status === "delivered" ||
+                      message.readBy?.some((entry) => entry.user !== message.senderId)
+                    ? "checkmark-done-outline"
+                    : "checkmark"
+            }
+            size={12}
+            color={
+              message.failed
+                ? Colors.light.destructive
+                : message.status === "read" ||
+                    message.readBy?.some((entry) => entry.user !== message.senderId)
+                  ? colors.primary
+                  : colors.mutedForeground
+            }
+          />
+          {message.failed ? (
+            <TouchableOpacity
+              onPress={() => onRetrySend(message)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Retry sending message"
+              style={styles.retryMessageButton}
+            >
+              <Text style={[styles.seenLabel, { color: Colors.light.destructive }]}>
+                Failed · Tap to retry
+              </Text>
+            </TouchableOpacity>
+          ) : message.pending ? (
+            <Text style={[styles.seenLabel, { color: colors.mutedForeground }]}>
+              Queued
+            </Text>
+          ) : index === lastMineIndex ? (
+            <Text style={[styles.seenLabel, { color: colors.mutedForeground }]}>
+              {isSeen ? "Seen" : "Sent"}
+            </Text>
+          ) : null}
+        </View>
       )}
     </View>
   );
@@ -637,6 +706,8 @@ export default function ChatDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const userId = user?.id;
+  const syncStatus = useSyncStatusStore((state) => state.status);
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
@@ -644,7 +715,7 @@ export default function ChatDetailScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [page, setPage] = useState(1);
+  const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -652,7 +723,7 @@ export default function ChatDetailScreen() {
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [otherTyping, setOtherTyping] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialRefreshPending, setInitialRefreshPending] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [initialScrollDone, setInitialScrollDone] = useState(false);
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
@@ -667,12 +738,43 @@ export default function ChatDetailScreen() {
   const [smartReplyLoading, setSmartReplyLoading] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const hasLocalMessagesRef = useRef(false);
+  const messagesTopic = useMemo(
+    () => repositoryTopic(userId ?? "signed-out", "messages"),
+    [userId],
+  );
+  const conversationsTopic = useMemo(
+    () => repositoryTopic(userId ?? "signed-out", "conversations"),
+    [userId],
+  );
+  const loadLocalMessages = useCallback(
+    () => (userId ? listRecentMessages(userId, id, PAGE_SIZE) : Promise.resolve([])),
+    [id, userId],
+  );
+  const localMessageQuery = useRepositoryQuery(
+    messagesTopic,
+    loadLocalMessages,
+    id,
+  );
+  const loadLocalConversation = useCallback(
+    () => (userId ? getConversation(userId, id) : Promise.resolve(null)),
+    [id, userId],
+  );
+  const localConversationQuery = useRepositoryQuery(
+    conversationsTopic,
+    loadLocalConversation,
+    id,
+  );
+  const hasLocalMessages = (localMessageQuery.data?.length ?? 0) > 0;
+  hasLocalMessagesRef.current = hasLocalMessages;
+  const isLoading =
+    !hasLocalMessages &&
+    (localMessageQuery.isLoading || initialRefreshPending);
   /** Arms the next send as view-once; cleared once that message goes out. */
   const [viewOnceArmed, setViewOnceArmed] = useState(false);
   /** The revealed body of a view-once message, held only in memory. */
   const [revealed, setRevealed] = useState<{ text: string; images: string[] } | null>(null);
   const flatListRef = useRef<FlatList>(null);
-  const recentlySentIds = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef(true);
   const isPrependingRef = useRef(false);
   const loadingMoreRef = useRef(false);
@@ -688,6 +790,46 @@ export default function ChatDetailScreen() {
   const other = conversation?.user;
   const displayName = other?.username || "Chat";
   const avatarUrl = other?.avatarUrl;
+
+  useEffect(() => {
+    setConversation(null);
+    setMessages([]);
+    setCursor(null);
+    setHasMore(false);
+    setLoadError(null);
+    setInitialRefreshPending(true);
+    setInitialScrollDone(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (localMessageQuery.data === undefined) return;
+    const localMessages = localMessageQuery.data.map(mapLocalMessageToUi);
+    if (localMessages.length > 0) {
+      setMessages((current) => mergeUiMessages(current, localMessages));
+      setLoadError(null);
+    }
+  }, [localMessageQuery.data]);
+
+  useEffect(() => {
+    if (!localConversationQuery.data) return;
+    setConversation(mapLocalConversationToUi(localConversationQuery.data, null));
+  }, [localConversationQuery.data]);
+
+  useEffect(() => {
+    if (!userId || !id) return;
+    let active = true;
+    getStoredMessagePage(userId, id, 1)
+      .then((storedPage) => {
+        if (!active || !storedPage) return;
+        setHasMore(storedPage.hasMore);
+      })
+      .catch((error: unknown) => {
+        console.error("[Messages] Failed to read cached page state", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, userId]);
 
   // Only pad the input bar for the bottom safe area (home indicator / gesture
   // bar) while the keyboard is hidden — once it's up, the keyboard itself is
@@ -708,11 +850,13 @@ export default function ChatDetailScreen() {
   }, []);
 
   const loadInitial = useCallback(async () => {
-    if (!id) return;
-    setIsLoading(true);
+    if (!id || !userId) {
+      setInitialRefreshPending(false);
+      return;
+    }
+    setInitialRefreshPending(true);
     setLoadError(null);
-    setInitialScrollDone(false);
-    setPage(1);
+    setCursor(null);
     setHasMore(false);
     isInitialLoadRef.current = true;
     isPrependingRef.current = false;
@@ -721,58 +865,124 @@ export default function ChatDetailScreen() {
     if (initialSettleTimeoutRef.current) clearTimeout(initialSettleTimeoutRef.current);
 
     try {
-      // Fetch the message page and the conversation/peer details in parallel —
-      // sequential awaits here just delayed the header (avatar/name) for no reason.
-      const [messagesRes, conversationsRes] = await Promise.all([
-        api.get(API.messages.messages(id), { params: { page: 1, limit: PAGE_SIZE } }),
+      const cachedConversation = await getConversation(userId, id);
+      await markConversationReadLocally(userId, id);
+      useUnreadStore.getState().clearConversationUnread(id);
+      await enqueueMarkRead(userId, id);
+      void requestOutboxDrain(userId);
+
+      // Use sync endpoint for catch-up (returns messages since last sync)
+      const [syncResult, conversationResult] = await Promise.allSettled([
+        api.get(API.messages.messages(id), {
+          params: { cursor: undefined, limit: PAGE_SIZE },
+        }),
         api.get(API.messages.conversations),
       ]);
+      if (syncResult.status === "rejected") throw syncResult.reason;
 
-      const msgs: Message[] =
-        messagesRes.data.data || messagesRes.data.messages || messagesRes.data || [];
-      setMessages(msgs);
-      setHasMore(Boolean(messagesRes.data.pagination?.hasMore));
+      const syncData = syncResult.value.data;
+      const pagePayload = mapMessagePagePayload(syncData, id);
+      await storeMessagePage(
+        userId,
+        id,
+        1,
+        pagePayload.messages,
+        pagePayload.hasMore,
+      );
+      setCursor(pagePayload.cursor ?? null);
+      setHasMore(pagePayload.hasMore);
 
-      const list: Conversation[] =
-        conversationsRes.data.data || conversationsRes.data.conversations || conversationsRes.data || [];
-      const found = list.find((c) => c.id === id) || null;
-      if (found?.user) {
-        const rawUser = found.user as any;
-        found.user = { ...found.user, id: rawUser.id || rawUser._id };
+      let remoteUnreadCount: number | null = null;
+      if (conversationResult.status === "fulfilled") {
+        const mappedConversations = extractConversationPayloads(
+          conversationResult.value.data,
+        ).flatMap((payload) => {
+          const mapped = mapConversationPayload(payload, userId);
+          return mapped ? [mapped] : [];
+        });
+        const found = mappedConversations.find(
+          (item) => item.conversation.id === id,
+        );
+        remoteUnreadCount = found?.conversation.unreadCount ?? null;
+        await upsertMessages(
+          userId,
+          mappedConversations.flatMap(({ preview }) =>
+            preview ? [preview] : [],
+          ),
+        );
+        await upsertConversations(
+          userId,
+          mappedConversations.map(({ conversation }) => ({
+            ...conversation,
+            unreadCount:
+              conversation.id === id ? 0 : conversation.unreadCount,
+          })),
+        );
+      } else {
+        console.warn(
+          "[Messages] Conversation summary refresh failed",
+          conversationResult.reason,
+        );
       }
-      setConversation(found);
 
-      // Land the viewport on the first unread message, not just the bottom —
-      // messages are oldest→newest, so the last `unreadCount` rows are unread.
-      const unread = found?.unreadCount || 0;
-      scrollTargetIndexRef.current = unread > 0 ? Math.max(0, msgs.length - unread) : null;
-      // If we're about to land somewhere other than the very bottom (an
-      // unread message mid-thread), a new incoming message shouldn't yank
-      // the viewport down until the user scrolls there themselves.
+      const unreadCount =
+        cachedConversation?.unreadCount ?? remoteUnreadCount ?? 0;
+      scrollTargetIndexRef.current =
+        unreadCount > 0
+          ? Math.max(0, pagePayload.messages.length - unreadCount)
+          : null;
       isNearBottomRef.current = scrollTargetIndexRef.current === null;
 
-      if (msgs.length === 0) {
-        // No content ever gets laid out for an empty thread, so
-        // onContentSizeChange will never fire — don't leave the "initial
-        // load" flag stuck on, or the next real message (the first one the
-        // user sends) will wrongly skip its scroll animation.
+      if (
+        pagePayload.messages.length === 0 &&
+        !hasLocalMessagesRef.current
+      ) {
         isInitialLoadRef.current = false;
         setInitialScrollDone(true);
       }
-
-      // Only mark-read / clear the unread badge once we know messages actually loaded —
-      // a failed fetch must not silently mark unseen messages as seen.
-      api.post(API.messages.read(id)).catch(() => {});
-      useUnreadStore.getState().clearConversationUnread(id);
-    } catch {
+    } catch (error) {
+      console.error("[Messages] Failed to load the first message page", error);
       setLoadError("Couldn't load this conversation.");
-      setMessages([]);
-      isInitialLoadRef.current = false;
-      setInitialScrollDone(true);
+      if (!hasLocalMessagesRef.current) {
+        isInitialLoadRef.current = false;
+        setInitialScrollDone(true);
+      }
     } finally {
-      setIsLoading(false);
+      setInitialRefreshPending(false);
     }
-  }, [id]);
+  }, [id, userId]);
+
+  // Sync function for reconnect catch-up
+  const syncMessages = useCallback(async () => {
+    if (!id || !userId) return;
+    try {
+      const { data } = await api.get(`${API.messages.messages(id)}/sync`, {
+        params: { since: cursor ?? undefined },
+      });
+      if (data.messages?.length) {
+        await storeMessagePage(
+          userId,
+          id,
+          1,
+          data.messages,
+          data.deleted?.length ? false : true,
+        );
+        setCursor(data.syncedAt ?? cursor);
+        const incomingMessages = data.messages.map(mapLocalMessageToUi);
+        setMessages((prev) => mergeUiMessages(prev, incomingMessages));
+      }
+      if (data.deleted?.length) {
+        setMessages((prev) =>
+          prev.map((m) => {
+            const match = data.deleted.find((del: { messageId: string; deletedAt: string }) => del.messageId === m.id);
+            return match ? { ...m, isDeleted: true, deletedAt: match.deletedAt, text: "" } : m;
+          })
+        );
+      }
+    } catch (error) {
+      console.error("[Messages] Sync failed", error);
+    }
+  }, [id, userId, cursor]);
 
   useEffect(() => {
     if (!id) return;
@@ -782,12 +992,12 @@ export default function ChatDetailScreen() {
     const unsubNewMessage = onNewMessage((data) => {
       if (data.conversationId !== id) return;
       const incoming: Message = data.message;
+      if (!mapMessagePayload(data.message, id)) {
+        console.error("[Messages] Ignored an invalid live message payload");
+        return;
+      }
 
       if (incoming.senderId === user?.id) {
-        // Own message echoed back over the socket. If it's already been
-        // reconciled (or is about to be) by the REST response in send(),
-        // never append a second copy — just let that path own it.
-        if (recentlySentIds.current.has(incoming.id)) return;
         setMessages((prev) => {
           if (prev.some((m) => m.id === incoming.id)) return prev;
           if (prev.some((m) => m.pending)) return prev; // an optimistic send is still in flight
@@ -796,9 +1006,7 @@ export default function ChatDetailScreen() {
         return;
       }
 
-      setMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
-      api.post(API.messages.read(id)).catch(() => {});
-      useUnreadStore.getState().clearConversationUnread(id);
+      setMessages((prev) => mergeUiMessages(prev, [incoming]));
     });
     const unsubRead = onMessagesRead((data) => {
       if (data.conversationId !== id) return;
@@ -831,12 +1039,23 @@ export default function ChatDetailScreen() {
       if (data.conversationId !== id) return;
       setOtherTyping(false);
     });
+    // Handle delete-for-everyone (message_deleted) event
+    const unsubDeleted = onMessageDeleted((data) => {
+      if (data.conversationId !== id) return;
+      const { messageId, deletedAt } = data;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, isDeleted: true, deletedAt, text: "" } : m
+        )
+      );
+    });
 
     return () => {
       leaveConversation(id);
       unsubNewMessage?.();
       unsubRead?.();
       unsubUpdated?.();
+      unsubDeleted?.();
       unsubTypingStart?.();
       unsubTypingStop?.();
       // Never leave the peer's "typing…" indicator stuck on if this screen
@@ -848,30 +1067,64 @@ export default function ChatDetailScreen() {
         stopTyping(id);
       }
     };
-  }, [id, loadInitial]);
+  }, [id, loadInitial, userId, syncMessages]);
+
+  // Sync on app foreground (reconnect catch-up)
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        void syncMessages();
+      }
+    });
+    return () => subscription.remove();
+  }, [syncMessages]);
 
   const loadMore = useCallback(async () => {
-    if (!id || loadingMoreRef.current || !hasMore) return;
+    if (!id || !userId || loadingMoreRef.current || !hasMore) return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
-    const nextPage = page + 1;
+    const nextCursor = cursor;
     try {
-      const { data } = await api.get(API.messages.messages(id), {
-        params: { page: nextPage, limit: PAGE_SIZE },
-      });
-      const older: Message[] = data.data || data.messages || data || [];
-      if (older.length > 0) {
+      // Try cached page first (only for first page load, not cursor-based)
+      const cachedPage = nextCursor ? null : await getStoredMessagePage(userId, id, 1);
+      if (cachedPage && cachedPage.messages.length > 0) {
         isPrependingRef.current = true;
-        setMessages((prev) => [...older, ...prev]);
+        const olderMessages = cachedPage.messages.map(mapLocalMessageToUi);
+        setMessages((current) =>
+          mergeUiMessages(olderMessages, current),
+        );
+        setHasMore(cachedPage.hasMore);
+        return;
       }
-      setPage(nextPage);
-      setHasMore(Boolean(data.pagination?.hasMore));
-    } catch {
+
+      const { data } = await api.get(API.messages.messages(id), {
+        params: { cursor: nextCursor ?? undefined, limit: PAGE_SIZE },
+      });
+      const pagePayload = mapMessagePagePayload(data, id);
+      await storeMessagePage(
+        userId,
+        id,
+        1,
+        pagePayload.messages,
+        pagePayload.hasMore,
+      );
+      if (pagePayload.messages.length > 0) {
+        isPrependingRef.current = true;
+        const olderMessages = pagePayload.messages.map(mapLocalMessageToUi);
+        setMessages((current) =>
+          mergeUiMessages(olderMessages, current),
+        );
+      }
+      setCursor(pagePayload.cursor ?? null);
+      setHasMore(pagePayload.hasMore);
+    } catch (error) {
+      console.error("[Messages] Failed to load an older message page", error);
+      showToast("Couldn't load older messages. Try again.", "error");
     } finally {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [id, page, hasMore]);
+  }, [id, cursor, hasMore, userId]);
 
   const handleScroll = (e: any) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
@@ -963,54 +1216,33 @@ export default function ChatDetailScreen() {
   /** One-tap smart reply: a plain text send, mirroring the text-only path of `send`. */
   const sendSmartReply = useCallback(
     async (reply: string) => {
-      if (!id || !user || sending) return;
-      setSmartReplies([]);
+      if (!id || !user || !userId || sending) return;
       setSending(true);
-      const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       forceScrollRef.current = true;
-      const optimistic: Message = {
-        id: "",
-        clientId,
-        conversationId: id,
-        senderId: user.id,
-        sender: {
+      try {
+        await enqueueChatMessage(userId, {
+          conversationId: id,
+          sender: {
           id: user.id,
           username: user.username,
+          displayName: user.displayName,
           avatarUrl: user.avatarUrl,
           isVerified: user.isVerified,
-        },
-        text: reply,
-        images: [],
-        files: [],
-        viewOnce: false,
-        messageType: "text",
-        reactions: [],
-        readBy: [],
-        isDeleted: false,
-        createdAt: new Date().toISOString(),
-        pending: true,
-        replyTo: null,
-      };
-      setMessages((prev) => [...prev, optimistic]);
-      try {
-        const { data } = await api.post(API.messages.send(id), { text: reply });
-        const sent: Message = data.message || data.data || data;
-        if (sent.id) {
-          recentlySentIds.current.add(sent.id);
-          setTimeout(() => recentlySentIds.current.delete(sent.id), 10000);
-        }
-        setMessages((prev) =>
-          prev.map((m) => (m.clientId === clientId ? { ...sent, clientId } : m))
-        );
-      } catch {
-        setMessages((prev) =>
-          prev.map((m) => (m.clientId === clientId ? { ...m, pending: false, failed: true } : m))
-        );
+          },
+          text: reply,
+          attachments: [],
+          messageType: "text",
+        });
+        setSmartReplies([]);
+        void requestOutboxDrain(userId);
+      } catch (error) {
+        console.error("[Messages] Could not queue the smart reply", error);
+        showToast("Couldn't save the message for sending", "error");
       } finally {
         setSending(false);
       }
     },
-    [id, user, sending]
+    [id, user, userId, sending]
   );
 
   const loadConversationSummary = useCallback(async () => {
@@ -1252,101 +1484,59 @@ export default function ChatDetailScreen() {
   );
 
   const send = async () => {
-    if ((!text.trim() && attachments.length === 0) || !id || sending || !user) return;
+    if ((!text.trim() && attachments.length === 0) || !id || sending || !user || !userId) return;
     stopTypingNow();
     const msg = text.trim();
     const attachmentsSnapshot = attachments;
-    const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const replySnapshot = replyingTo;
     const sendViewOnce = viewOnceArmed;
-    setText("");
-    setReplyingTo(null);
-    setAttachments([]);
-    setViewOnceArmed(false);
     setSending(true);
-    // You just sent this — always land at the bottom regardless of scroll position.
-    forceScrollRef.current = true;
-
-    const optimisticImages = attachmentsSnapshot.filter((a) => a.kind === "image").map((a) => a.uri);
-    const optimisticFiles = attachmentsSnapshot
-      .filter((a) => a.kind === "file")
-      .map((a) => ({ url: a.uri, mimeType: a.mimeType, originalName: a.name, size: a.size }));
-
-    const optimistic: Message = {
-      id: "",
-      clientId,
-      conversationId: id,
-      senderId: user.id,
-      sender: {
-        id: user.id,
-        username: user.username,
-        avatarUrl: user.avatarUrl,
-        isVerified: user.isVerified,
-      },
-      text: msg,
-      images: optimisticImages,
-      files: optimisticFiles,
-      viewOnce: sendViewOnce,
-      messageType: optimisticImages.length > 0 ? "image" : optimisticFiles.length > 0 ? "file" : "text",
-      reactions: [],
-      readBy: [],
-      isDeleted: false,
-      createdAt: new Date().toISOString(),
-      pending: true,
-      replyTo: replySnapshot
-        ? {
-            id: replySnapshot.id,
-            text: replySnapshot.text,
-            isDeleted: replySnapshot.isDeleted,
-            sender: { username: replySnapshot.sender?.username },
-          }
-        : null,
-    };
-    setMessages((prev) => [...prev, optimistic]);
 
     try {
-      let data;
-      if (attachmentsSnapshot.length > 0) {
-        const formData = new FormData();
-        if (msg) formData.append("text", msg);
-        if (replySnapshot?.id) formData.append("replyTo", replySnapshot.id);
-        if (sendViewOnce) formData.append("viewOnce", "true");
-        attachmentsSnapshot.forEach((a) => {
-          const field = a.kind === "image" ? "images" : "files";
-          formData.append(field, { uri: a.uri, name: a.name, type: a.mimeType } as any);
-        });
-        ({ data } = await api.post(API.messages.send(id), formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-          timeout: 60000,
-        }));
-      } else {
-        ({ data } = await api.post(API.messages.send(id), {
-          text: msg,
-          replyTo: replySnapshot?.id || undefined,
-          viewOnce: sendViewOnce || undefined,
-        }));
-      }
-      const sent: Message = data.message || data.data || data;
-      if (sent.id) {
-        recentlySentIds.current.add(sent.id);
-        setTimeout(() => recentlySentIds.current.delete(sent.id), 10000);
-      }
-      // Merge the confirmed message into the SAME row (same clientId key) —
-      // never a second push. This is what makes it "no rerender, just a status update."
-      setMessages((prev) =>
-        prev.map((m) => (m.clientId === clientId ? { ...sent, clientId } : m))
-      );
-    } catch {
-      setMessages((prev) =>
-        prev.map((m) => (m.clientId === clientId ? { ...m, pending: false, failed: true } : m))
-      );
+      const queuedAttachments: QueuedAttachment[] = attachmentsSnapshot.map((attachment) => ({
+        type: attachment.kind,
+        uri: attachment.uri,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        size: attachment.size,
+      }));
+      await enqueueChatMessage(userId, {
+        conversationId: id,
+        sender: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          isVerified: user.isVerified,
+        },
+        text: msg,
+        attachments: queuedAttachments,
+        replyTo: replySnapshot
+          ? {
+              id: replySnapshot.id,
+              text: replySnapshot.text,
+              isDeleted: replySnapshot.isDeleted,
+              sender: { username: replySnapshot.sender?.username },
+            }
+          : null,
+        viewOnce: sendViewOnce,
+      });
+      setText("");
+      setReplyingTo(null);
+      setAttachments([]);
+      setViewOnceArmed(false);
+      forceScrollRef.current = true;
+      void requestOutboxDrain(userId);
+    } catch (error) {
+      console.error("[Messages] Could not queue the message", error);
+      showToast("Couldn't save the message for sending", "error");
     } finally {
       setSending(false);
     }
   };
 
   const stopAndSendRecording = useCallback(async () => {
-    if (!id || !user) return;
+    if (!id || !user || !userId) return;
     const durationSec = Math.round((recorderState.durationMillis || 0) / 1000);
     let uri: string | null = null;
     try {
@@ -1355,67 +1545,88 @@ export default function ChatDetailScreen() {
     } catch {}
     if (!uri || durationSec < 1) return;
 
-    const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const replySnapshot = replyingTo;
-    setReplyingTo(null);
     setSending(true);
-    forceScrollRef.current = true;
-
-    const optimistic: Message = {
-      id: "",
-      clientId,
-      conversationId: id,
-      senderId: user.id,
-      sender: {
-        id: user.id,
-        username: user.username,
-        avatarUrl: user.avatarUrl,
-        isVerified: user.isVerified,
-      },
-      text: "",
-      images: [],
-      audioUrl: uri,
-      audioDuration: durationSec,
-      messageType: "audio",
-      reactions: [],
-      readBy: [],
-      isDeleted: false,
-      createdAt: new Date().toISOString(),
-      pending: true,
-      replyTo: replySnapshot
-        ? {
-            id: replySnapshot.id,
-            text: replySnapshot.text,
-            isDeleted: replySnapshot.isDeleted,
-            sender: { username: replySnapshot.sender?.username },
-          }
-        : null,
-    };
-    setMessages((prev) => [...prev, optimistic]);
 
     try {
-      const formData = new FormData();
-      formData.append("audioDuration", String(durationSec));
-      if (replySnapshot?.id) formData.append("replyTo", replySnapshot.id);
-      formData.append("audio", { uri, name: `voice_${Date.now()}.m4a`, type: "audio/m4a" } as any);
-      const { data } = await api.post(API.messages.send(id), formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        timeout: 60000,
+      await enqueueChatMessage(userId, {
+        conversationId: id,
+        sender: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          isVerified: user.isVerified,
+        },
+        text: "",
+        attachments: [
+          {
+            type: "audio",
+            uri,
+            name: `voice_${Date.now()}.m4a`,
+            mimeType: "audio/m4a",
+            duration: durationSec,
+          },
+        ],
+        messageType: "audio",
+        audioDuration: durationSec,
+        replyTo: replySnapshot
+          ? {
+              id: replySnapshot.id,
+              text: replySnapshot.text,
+              isDeleted: replySnapshot.isDeleted,
+              sender: { username: replySnapshot.sender?.username },
+            }
+          : null,
       });
-      const sent: Message = data.message || data.data || data;
-      if (sent.id) {
-        recentlySentIds.current.add(sent.id);
-        setTimeout(() => recentlySentIds.current.delete(sent.id), 10000);
-      }
-      setMessages((prev) => prev.map((m) => (m.clientId === clientId ? { ...sent, clientId } : m)));
-    } catch {
-      setMessages((prev) =>
-        prev.map((m) => (m.clientId === clientId ? { ...m, pending: false, failed: true } : m))
-      );
+      setReplyingTo(null);
+      forceScrollRef.current = true;
+      void requestOutboxDrain(userId);
+    } catch (error) {
+      console.error("[Messages] Could not queue the voice message", error);
+      showToast("Couldn't save the message for sending", "error");
     } finally {
       setSending(false);
     }
-  }, [id, user, replyingTo, audioRecorder, recorderState.durationMillis]);
+  }, [id, user, userId, replyingTo, audioRecorder, recorderState.durationMillis]);
+
+  const retryMessage = useCallback(
+    async (message: Message) => {
+      if (!id || !user || !userId || !message.clientId) return;
+      try {
+        await enqueueChatMessage(userId, {
+          clientId: message.clientId,
+          conversationId: id,
+          sender: {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl,
+            isVerified: user.isVerified,
+          },
+          text: message.text,
+          attachments: queuedAttachmentsFromMessage(message),
+          messageType: message.messageType,
+          replyTo: message.replyTo
+            ? {
+                id: message.replyTo.id ?? message.replyTo._id,
+                text: message.replyTo.text,
+                isDeleted: message.replyTo.isDeleted,
+                sender: message.replyTo.sender,
+              }
+            : null,
+          viewOnce: message.viewOnce,
+          audioDuration: message.audioDuration,
+          createdAt: message.createdAt,
+        });
+        void requestOutboxDrain(userId);
+      } catch (error) {
+        console.error("[Messages] Could not retry the message", error);
+        showToast("Couldn't queue the message for retry", "error");
+      }
+    },
+    [id, user, userId],
+  );
 
   const rows: Row[] = useMemo(() => {
     return messages.map((m, i) => {
@@ -1460,7 +1671,6 @@ export default function ChatDetailScreen() {
         style={[
           styles.header,
           {
-            borderBottomColor: colors.border + "40",
             paddingTop: 12 + insets.top,
             paddingBottom: Spacing.md + (keyboardVisible ? 8 : 0),
           },
@@ -1520,11 +1730,37 @@ export default function ChatDetailScreen() {
         </View>
       </View>
 
+      <View
+        style={styles.connectionStatusRow}
+        accessibilityLabel={`Sync status: ${syncStatus}`}
+      >
+        <View
+          style={[
+            styles.connectionStatusDot,
+            {
+              backgroundColor:
+                syncStatus === "online"
+                  ? colors.primary
+                  : syncStatus === "offline"
+                    ? colors.destructive
+                    : colors.mutedForeground,
+            },
+          ]}
+        />
+        <Text style={[styles.connectionStatusText, { color: colors.mutedForeground }]}>
+          {syncStatus === "online"
+            ? "Online"
+            : syncStatus === "offline"
+              ? "Offline"
+              : "Connecting"}
+        </Text>
+      </View>
+
       {isLoading ? (
-        <View style={styles.centerFill}>
-          <ActivityIndicator size="small" color={colors.mutedForeground} />
+        <View style={{ flex: 1, paddingTop: Spacing.lg }}>
+          <MessageRowSkeletonList count={6} />
         </View>
-      ) : loadError ? (
+      ) : loadError && !hasLocalMessages ? (
         <View style={styles.centerFill}>
           <Icon name="danger-circle" set="light" size={40} color={colors.mutedForeground} />
           <Text style={[styles.stateTitle, { color: colors.foreground }]}>{loadError}</Text>
@@ -1612,6 +1848,7 @@ export default function ChatDetailScreen() {
             onSwipeReply={handleSwipeReply}
             onLongPress={openMessageActions}
             onOpenViewOnce={openViewOnce}
+            onRetrySend={retryMessage}
           />
         )}
       />
@@ -2056,7 +2293,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: 12,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
+  },
+  connectionStatusRow: {
+    height: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  connectionStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  connectionStatusText: {
+    ...Typography.caption,
+    fontSize: 10,
   },
   iconBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerCenter: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
@@ -2176,6 +2428,16 @@ const styles = StyleSheet.create({
     marginRight: 4,
     marginTop: -6,
     marginBottom: 8,
+  },
+  deliveryStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 3,
+    minHeight: 16,
+  },
+  retryMessageButton: {
+    paddingVertical: 2,
   },
   replyBar: {
     flexDirection: "row",

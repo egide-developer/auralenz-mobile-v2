@@ -1,218 +1,265 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
-import { useState, useEffect } from "react";
+import { useCallback, useState } from "react";
+import {
+  RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
+import * as Linking from "expo-linking";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { HighlightsRow } from "../../src/components/profile/HighlightsRow";
+import {
+  LogoutButton,
+  ProfileHeader,
+  ProfileIdentity,
+  QuickActions,
+  SettingsSection,
+  StatsCard,
+  type ProfileSettingsRow,
+} from "../../src/components/profile/ProfileScreenParts";
+import { showToast } from "../../src/stores/toastStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
-import { Colors } from "../../src/theme/colors";
-import { Radius, Spacing, Gap } from "../../src/theme/spacing";
-import { Typography } from "../../src/theme/typography";
-import { Shadows } from "../../src/theme/shadows";
-import { Icon } from "../../src/components/ui/Icon";
-import { CachedImage } from "../../src/components/ui/CachedImage";
-import { HighlightsRow } from "../../src/components/profile/HighlightsRow";
-import { Screen } from "../../src/components/layout";
-import { ProfileHeaderSkeleton, ListItemSkeleton } from "../../src/components/skeletons";
+import { Colors, ProfileColors } from "../../src/theme/colors";
+import { ProfileLayout, Spacing } from "../../src/theme/spacing";
+import { useOwnProfile } from "../../src/hooks/useProfilePosts";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
-  const isDark = useThemeStore((s) => s.isDark);
-  const colors = isDark ? Colors.dark : Colors.light;
-  const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
+  const authLoading = useAuthStore((state) => state.isLoading);
+  const logout = useAuthStore((state) => state.logout);
+  const isDark = useThemeStore((state) => state.isDark);
+  const palette = isDark ? ProfileColors.dark : ProfileColors.light;
+  const appColors = isDark ? Colors.dark : Colors.light;
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(timer);
-  }, []);
+  const { profile, isLoading, error, refresh } = useOwnProfile();
+  const user = useAuthStore((state) => state.user);
 
-  const menuItems = [
-    { icon: "edit-square", label: "Edit profile", route: "/(modals)/edit-profile" },
-    { icon: "notification", label: "Notifications", route: "/(modals)/notifications" },
-    { icon: "bookmark", label: "Saved", route: "/(modals)/saved-posts" },
-    { icon: "folder", label: "Library", route: "/(modals)/library" },
-    { icon: "bookmark", label: "Archived posts", route: "/(modals)/archived-posts" },
-    { icon: "star", label: "Close friends", route: "/(modals)/close-friends" },
-    { icon: "wallet", label: "Wallet & stars", route: "/(modals)/wallet" },
-    { icon: "ticket", label: "Subscriptions", route: "/(modals)/subscriptions" },
-    { icon: "shield", label: "Admin", route: "/(modals)/admin", adminOnly: true as const },
+  const mergedUser = profile && user ? {
+    ...user,
+    id: profile.id,
+    username: profile.username,
+    displayName: profile.displayName ?? undefined,
+    bio: profile.bio ?? undefined,
+    avatarUrl: profile.avatar ?? undefined,
+    postsCount: profile.counts.posts,
+    followersCount: profile.counts.followers,
+    followingCount: profile.counts.following,
+  } : user;
+
+  const [refreshing, setRefreshing] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } catch (error) {
+      console.warn("Profile refresh failed", error);
+      showToast("Couldn't refresh your profile", "error");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refresh]);
+
+  const navigateToEditProfile = useCallback(() => {
+    router.push("/(modals)/edit-profile");
+  }, [router]);
+
+  const navigateToSettings = useCallback(() => {
+    router.push("/(modals)/settings");
+  }, [router]);
+
+  const shareProfile = useCallback(async () => {
+    if (!mergedUser?.username) return;
+    const profileUrl = Linking.createURL(`/profile/${encodeURIComponent(mergedUser.username)}`);
+    const displayName = mergedUser.displayName?.trim() || mergedUser.username;
+    try {
+      await Share.share({
+        message: `${displayName} (@${mergedUser.username}) on AuraLenz\n${profileUrl}`,
+      });
+    } catch (error) {
+      console.warn("Profile sharing failed", error);
+      showToast("Couldn't share your profile", "error");
+    }
+  }, [mergedUser]);
+
+  const navigateToFollowList = useCallback(
+    (mode: "followers" | "following", title: string) => {
+      if (!mergedUser?.id) return;
+      router.push({
+        pathname: "/profile/follow-list",
+        params: { userId: mergedUser.id, mode, title },
+      });
+    },
+    [router, mergedUser?.id],
+  );
+
+  const onLogout = useCallback(async () => {
+    try {
+      await logout();
+      return true;
+    } catch (error) {
+      console.warn("Log out failed", error);
+      showToast("Couldn't log out", "error");
+      return false;
+    }
+  }, [logout]);
+
+  const accountRows: ProfileSettingsRow[] = [
+    {
+      label: "Notifications",
+      icon: "notification",
+      onPress: () => router.push("/(modals)/notifications"),
+    },
+    {
+      label: "Wallet & stars",
+      icon: "wallet",
+      value: "Unavailable",
+      valueColor: palette.accent,
+      loadingValue: authLoading,
+      onPress: () => router.push("/(modals)/wallet"),
+    },
+    {
+      label: "Subscriptions",
+      icon: "ticket",
+      onPress: () => router.push("/(modals)/subscriptions"),
+    },
   ];
 
-  if (loading) {
-    return (
-      <Screen header={
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile</Text>
-          <TouchableOpacity
-            onPress={() => router.push("/(modals)/settings")}
-            style={[styles.settingsBtn, { backgroundColor: colors.card + "80" }]}
-          >
-            <Icon name="setting" set="light" size={20} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
-      }>
-        <ProfileHeaderSkeleton />
-      </Screen>
-    );
-  }
+  const quickActions = [
+    {
+      label: "Saved",
+      icon: "bookmark",
+      onPress: () => router.push("/(modals)/saved-posts"),
+    },
+    {
+      label: "Library",
+      icon: "folder",
+      onPress: () => router.push("/(modals)/library"),
+    },
+    {
+      label: "Archive",
+      icon: "document",
+      onPress: () => router.push("/(modals)/archived-posts"),
+    },
+    {
+      label: "Close friends",
+      icon: "star",
+      onPress: () => router.push("/(modals)/close-friends"),
+    },
+  ];
+
+  const highlightColors = {
+    ...appColors,
+    background: palette.background,
+    border: palette.hairline,
+    muted: palette.elevated,
+    mutedForeground: palette.muted,
+    foreground: palette.foreground,
+    primary: palette.accent,
+    primaryForeground: palette.accentForeground,
+  };
 
   return (
-    <Screen
-      header={
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile</Text>
-          <TouchableOpacity
-            onPress={() => router.push("/(modals)/settings")}
-            style={[styles.settingsBtn, { backgroundColor: colors.card + "80" }]}
-          >
-            <Icon name="setting" set="light" size={20} color={colors.mutedForeground} />
-          </TouchableOpacity>
+    <View style={[styles.screen, { backgroundColor: palette.background }]}>
+      <ProfileHeader
+        safeAreaTop={insets.top}
+        scrolled={headerScrolled}
+        isDark={isDark}
+        palette={palette}
+        onSettings={navigateToSettings}
+      />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingBottom: ProfileLayout.scrollBottomPadding + insets.bottom,
+          },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={palette.accent}
+            colors={[palette.accent]}
+          />
+        }
+        onScroll={(event) => {
+          setHeaderScrolled(
+            event.nativeEvent.contentOffset.y > ProfileLayout.headerScrollThreshold,
+          );
+        }}
+        scrollEventThrottle={ProfileLayout.scrollEventThrottleMs}
+      >
+        <View style={styles.contentStack}>
+          <ProfileIdentity
+            user={mergedUser}
+            loading={authLoading || isLoading}
+            palette={palette}
+            onEdit={navigateToEditProfile}
+            onShare={() => void shareProfile()}
+          />
+
+          <StatsCard
+            posts={mergedUser?.postsCount ?? 0}
+            followers={mergedUser?.followersCount ?? 0}
+            following={mergedUser?.followingCount ?? 0}
+            loading={authLoading || isLoading}
+            palette={palette}
+            onFollowers={() => navigateToFollowList("followers", "Followers")}
+            onFollowing={() => navigateToFollowList("following", "Following")}
+          />
+
+          {mergedUser?.id ? (
+            <HighlightsRow userId={mergedUser.id} colors={highlightColors} />
+          ) : null}
+
+          <QuickActions actions={quickActions} palette={palette} />
+
+          <SettingsSection
+            title="Account"
+            rows={accountRows}
+            palette={palette}
+          />
+
+          {mergedUser?.role === "admin" ? (
+            <SettingsSection
+              title="Admin"
+              rows={[
+                {
+                  label: "Admin",
+                  icon: "shield",
+                  onPress: () => router.push("/(modals)/admin"),
+                },
+              ]}
+              palette={palette}
+              emphasized
+            />
+          ) : null}
+
+          <LogoutButton
+            palette={palette}
+            safeAreaBottom={insets.bottom}
+            onConfirm={onLogout}
+          />
         </View>
-      }
-      scroll
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
-    >
-      <View style={styles.profileSection}>
-        <View style={[styles.avatar, { backgroundColor: colors.muted }]}>
-          {user?.avatarUrl ? (
-            <CachedImage source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
-          ) : (
-            <Icon name="user" set="light" size={36} color={colors.mutedForeground} />
-          )}
-        </View>
-        <Text style={[styles.username, { color: colors.foreground }]}>
-          {user?.username || "User"}
-        </Text>
-        {user?.bio && (
-          <Text style={[styles.bio, { color: colors.mutedForeground }]}>{user.bio}</Text>
-        )}
-
-        <View style={styles.statsRow}>
-          {[
-            { label: "Posts", value: user?.postsCount || 0 },
-            { label: "Followers", value: user?.followersCount || 0, mode: "followers" as const },
-            { label: "Following", value: user?.followingCount || 0, mode: "following" as const },
-          ].map((stat) =>
-            stat.mode && user?.id ? (
-              <TouchableOpacity
-                key={stat.label}
-                style={styles.stat}
-                onPress={() =>
-                  router.push({
-                    pathname: "/profile/follow-list",
-                    params: { userId: user.id, mode: stat.mode, title: stat.label },
-                  })
-                }
-              >
-                <Text style={[styles.statValue, { color: colors.foreground }]}>{stat.value}</Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
-              </TouchableOpacity>
-            ) : (
-              <View key={stat.label} style={styles.stat}>
-                <Text style={[styles.statValue, { color: colors.foreground }]}>{stat.value}</Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{stat.label}</Text>
-              </View>
-            )
-          )}
-        </View>
-      </View>
-
-      {user?.id ? <HighlightsRow userId={user.id} colors={colors} /> : null}
-
-      <View style={styles.menuSection}>
-        {menuItems
-          .filter((item) => !item.adminOnly || user?.role === "admin")
-          .map((item) => (
-            <TouchableOpacity
-              key={item.label}
-              onPress={() => router.push(item.route as any)}
-              style={[styles.menuRow, { borderBottomColor: colors.border + "30" }]}
-            >
-              <Icon name={item.icon} set="light" size={22} color={colors.foreground} />
-              <Text style={[styles.menuLabel, { color: colors.foreground }]}>{item.label}</Text>
-              <Icon name="arrow-right" set="light" size={16} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          ))}
-
-        <TouchableOpacity
-          onPress={logout}
-          style={[styles.menuRow, styles.logoutRow]}
-        >
-          <Icon name="logout" set="light" size={22} color={Colors.light.destructive} />
-          <Text style={[styles.menuLabel, { color: Colors.light.destructive }]}>Log Out</Text>
-        </TouchableOpacity>
-      </View>
-    </Screen>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+  screen: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: ProfileLayout.pagePadding,
+    paddingTop: Spacing.sm,
   },
-  headerTitle: { ...Typography.h3 },
-  settingsBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scrollContent: { paddingBottom: Spacing.xl },
-  profileSection: {
-    alignItems: "center",
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
-  },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.md,
-    overflow: "hidden",
-  },
-  avatarImg: { width: 88, height: 88 },
-  username: { ...Typography.h2 },
-  bio: {
-    ...Typography.bodySmall,
-    marginTop: Spacing.xs,
-    textAlign: "center",
-    paddingHorizontal: Spacing.xl,
-  },
-  statsRow: {
-    flexDirection: "row",
+  contentStack: {
     gap: Spacing.xl,
-    marginTop: Spacing.base,
-  },
-  stat: { alignItems: "center" },
-  statValue: { ...Typography.h4 },
-  statLabel: { ...Typography.caption, marginTop: 2 },
-  menuSection: {
-    paddingHorizontal: Spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: Spacing.md,
-  },
-  menuRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-    paddingHorizontal: 0,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Gap.md,
-  },
-  menuLabel: {
-    ...Typography.body,
-    flex: 1,
-  },
-  logoutRow: {
-    marginTop: Spacing.sm,
-    borderBottomWidth: 0,
   },
 });

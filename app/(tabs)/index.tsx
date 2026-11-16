@@ -228,7 +228,7 @@ export default function FeedScreen() {
           onPress={() => router.push("/(modals)/live-rooms")}
           style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
         >
-          <Icon name="people" set="light" size={20} color={colors.mutedForeground} />
+          <Icon name="video" set="light" size={20} color={colors.mutedForeground} />
         </PressableScale>
         <PressableScale
           onPress={() => router.push("/search")}
@@ -1116,7 +1116,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: {
     ...Typography.h3,

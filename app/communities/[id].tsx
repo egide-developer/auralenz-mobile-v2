@@ -156,7 +156,7 @@ export default function CommunityScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border + "40" }]}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.headerBtn}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -299,7 +299,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 0.5,
   },
   headerBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { ...Typography.h4, flex: 1, textAlign: "center", paddingHorizontal: 8 },

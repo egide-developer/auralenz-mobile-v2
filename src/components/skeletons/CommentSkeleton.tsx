@@ -1,25 +1,37 @@
-// AuraLenz — Comment Skeleton
-// Matches CommentSheet comment items
-
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Gap, IconSize, Radius, Spacing } from "../../theme/spacing";
 import { Skeleton, SkeletonCircle, SkeletonText } from "./Skeleton";
-import { Spacing, Radius, Gap } from "../../theme/spacing";
 
 export function CommentSkeleton({ depth = 0 }: { depth?: number }) {
   return (
-    <View style={[styles.comment, depth > 0 && { marginLeft: 36 }]}>
-      <View style={styles.commentRow}>
-        <SkeletonCircle size={30} style={styles.avatar} />
-        <View style={styles.commentBody}>
-          <SkeletonText lines={1} width="50%" lineHeight={20} style={styles.commentUser} />
-          <SkeletonText lines={2} width={["80%", "50%"]} lineHeight={18} style={styles.commentText} />
-          <View style={styles.commentActions}>
-            <SkeletonText lines={1} width="40%" lineHeight={14} style={styles.commentTime} />
-            <SkeletonText lines={1} width="30%" lineHeight={16} style={styles.replyBtn} />
-          </View>
+    <View
+      style={[styles.comment, depth > 0 && styles.reply]}
+      accessible={false}
+    >
+      <SkeletonCircle size={Spacing["2xl"] - Gap.xs} />
+      <View style={styles.commentBody}>
+        <Skeleton width="44%" height={Spacing.md + Gap.xs} />
+        <SkeletonText
+          lines={2}
+          width={["88%", "58%"]}
+          lineHeight={Spacing.lg}
+          style={styles.commentText}
+        />
+        <View style={styles.commentActions}>
+          <Skeleton width={Spacing["2xl"]} height={Spacing.sm} />
+          {depth === 0 ? (
+            <Skeleton width={Spacing.xl} height={Spacing.sm} />
+          ) : null}
         </View>
-        <SkeletonCircle size={28} style={styles.likeBtn} />
+      </View>
+      <View style={styles.likes}>
+        <SkeletonCircle size={IconSize.sm} />
+        <Skeleton
+          width={Spacing.md}
+          height={Spacing.xs}
+          borderRadius={Radius.xs}
+        />
       </View>
     </View>
   );
@@ -27,9 +39,9 @@ export function CommentSkeleton({ depth = 0 }: { depth?: number }) {
 
 export function CommentSkeletonList({ count = 6 }: { count?: number }) {
   return (
-    <View style={styles.list}>
-      {Array.from({ length: count }).map((_, i) => (
-        <CommentSkeleton key={i} depth={i % 2} />
+    <View style={styles.list} accessible={false}>
+      {Array.from({ length: count }).map((_, index) => (
+        <CommentSkeleton key={index} depth={index % 2} />
       ))}
     </View>
   );
@@ -37,49 +49,34 @@ export function CommentSkeletonList({ count = 6 }: { count?: number }) {
 
 const styles = StyleSheet.create({
   list: {
+    gap: Spacing.md,
     padding: Spacing.lg,
-    paddingBottom: 8,
+    paddingBottom: Spacing.sm,
   },
   comment: {
-    marginBottom: 4,
-  },
-  commentRow: {
     flexDirection: "row",
-    paddingVertical: 10,
+    alignItems: "flex-start",
+    gap: Gap.sm,
   },
-  avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 10,
+  reply: {
+    marginLeft: Spacing["2xl"],
   },
   commentBody: {
     flex: 1,
-  },
-  commentUser: {
-    marginBottom: 2,
+    gap: Gap.xs,
   },
   commentText: {
-    lineHeight: 18,
+    marginTop: Gap.xs,
   },
   commentActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    marginTop: 6,
+    gap: Gap.md,
+    marginTop: Gap.xs,
   },
-  commentTime: {
-    fontSize: 11,
-  },
-  replyBtn: {
-    fontSize: 12,
-  },
-  likeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignSelf: "flex-start",
-    marginTop: 10,
-    marginLeft: 6,
+  likes: {
+    alignItems: "center",
+    gap: Gap.xs,
+    paddingTop: Gap.xs,
   },
 });

@@ -1,10 +1,7 @@
-// AuraLenz — List Item Skeleton
-// Matches menu rows, chat rows, notification rows, user rows
-
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Skeleton, SkeletonCircle, SkeletonText } from "./Skeleton";
-import { Spacing, Radius, Gap } from "../../theme/spacing";
+import { StyleSheet, View } from "react-native";
+import { AvatarSize, Gap, IconSize, Spacing } from "../../theme/spacing";
+import { Skeleton, SkeletonCircle, SkeletonText, useSkeletonColors } from "./Skeleton";
 
 interface ListItemSkeletonProps {
   avatarSize?: number;
@@ -15,37 +12,53 @@ interface ListItemSkeletonProps {
 }
 
 export function ListItemSkeleton({
-  avatarSize = 48,
+  avatarSize = AvatarSize.lg,
   showTime = false,
   showAction = false,
   lines = 1,
   showBadge = false,
 }: ListItemSkeletonProps) {
   return (
-    <View style={styles.container}>
-      <SkeletonCircle size={avatarSize} style={styles.avatar} />
+    <View style={styles.row} accessible={false}>
+      <SkeletonCircle size={avatarSize} />
       <View style={styles.content}>
-        <View style={styles.header}>
-          <SkeletonText lines={1} width="60%" lineHeight={21} />
-          {showTime && <SkeletonText lines={1} width="30%" lineHeight={14} style={styles.time} />}
+        <View style={styles.heading}>
+          <Skeleton width="48%" height={Spacing.md + Gap.xs} />
+          {showTime ? <Skeleton width="22%" height={Spacing.sm + Gap.xs} /> : null}
         </View>
-        <SkeletonText lines={lines} width={["80%", "50%"]} lineHeight={18} />
+        <SkeletonText
+          lines={lines}
+          width={["78%", "52%"]}
+          lineHeight={Spacing.lg}
+        />
       </View>
-      {(showAction || showBadge) && (
+      {showAction || showBadge ? (
         <View style={styles.trailing}>
-          {showBadge && <SkeletonCircle size={20} />}
-          {showAction && <SkeletonCircle size={20} />}
+          {showBadge ? <SkeletonCircle size={IconSize.md} /> : null}
+          {showAction ? <SkeletonCircle size={IconSize.md} /> : null}
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
 
-export function ListItemSkeletonList({ count = 6, ...props }: { count?: number } & ListItemSkeletonProps) {
+export function ListItemSkeletonList({
+  count = 6,
+  ...props
+}: { count?: number } & ListItemSkeletonProps) {
+  const colors = useSkeletonColors();
+
   return (
-    <View style={styles.list}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={[styles.item, i === 0 ? {} : { borderTopWidth: 0.5 }]}>
+    <View style={styles.list} accessible={false}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.item,
+            { borderTopColor: colors.divider },
+            index > 0 && styles.dividedItem,
+          ]}
+        >
           <ListItemSkeleton {...props} />
         </View>
       ))}
@@ -58,27 +71,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   item: {
-    borderTopWidth: 0.5,
-    borderTopColor: "rgba(0,0,0,0.06)",
+    minHeight: AvatarSize.lg + Spacing.md * 2,
   },
-  container: {
+  dividedItem: { borderTopWidth: StyleSheet.hairlineWidth },
+  row: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Spacing.md,
     gap: Gap.md,
   },
-  avatar: {},
   content: {
     flex: 1,
-    gap: 2,
+    gap: Gap.xs,
   },
-  header: {
+  heading: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-  },
-  time: {
-    textAlign: "right",
   },
   trailing: {
     flexDirection: "row",

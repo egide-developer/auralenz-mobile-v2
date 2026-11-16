@@ -21,6 +21,7 @@ import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, Radius } from "../../src/theme/spacing";
 import { FontFamily, Typography } from "../../src/theme/typography";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 interface Person {
   _id: string;
@@ -141,20 +142,23 @@ export default function SubscriptionsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.screen, styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+        <View style={[styles.screen, styles.centered, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaScreen>
     );
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+    <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={{ marginRight: Spacing.md }}>
           <Icon name="arrow-left" set="light" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Subscriptions</Text>
-      </View>
+        </View>
 
       <View style={[styles.tabs, { backgroundColor: colors.card }]}>
         {(["subscribed", "earning"] as Tab[]).map((value) => (
@@ -173,9 +177,9 @@ export default function SubscriptionsScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {tab === "subscribed" ? (
           mine.length === 0 ? (
             <View style={styles.emptyBox}>
@@ -301,7 +305,8 @@ export default function SubscriptionsScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+      </View>
+    </SafeAreaScreen>
   );
 }
 

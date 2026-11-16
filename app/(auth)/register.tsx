@@ -17,6 +17,7 @@ import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState("");
@@ -51,14 +52,15 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.foreground }]}>
             Create account
@@ -165,8 +167,9 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           </Link>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

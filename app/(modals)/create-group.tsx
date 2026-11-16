@@ -91,7 +91,7 @@ export default function CreateGroupScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 8, borderBottomColor: colors.border + "40" }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <Icon name="close-square" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -179,7 +179,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
   },
   backBtn: { width: 60, height: 32, justifyContent: "center" },
   headerTitle: { ...Typography.h4 },

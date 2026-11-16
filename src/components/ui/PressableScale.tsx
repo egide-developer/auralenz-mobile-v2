@@ -1,4 +1,4 @@
-import { TouchableOpacity } from "react-native";
+import { TouchableOpacity, type AccessibilityRole } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -11,6 +11,8 @@ export function PressableScale({
   scaleTo = 0.96,
   disabled,
   hitSlop,
+  accessibilityLabel,
+  accessibilityRole,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
@@ -19,6 +21,8 @@ export function PressableScale({
   scaleTo?: number;
   disabled?: boolean;
   hitSlop?: number;
+  accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
 }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -27,6 +31,8 @@ export function PressableScale({
       activeOpacity={0.9}
       disabled={disabled}
       hitSlop={hitSlop}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
       onPress={onPress}
       onLongPress={onLongPress}
       onPressIn={() => {

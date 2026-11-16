@@ -35,26 +35,31 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { name: "home", icon: "home", path: "/(tabs)" },
-  { name: "search", icon: "search", path: "/(tabs)/search" },
-  { name: "reels", icon: "play", path: "/(tabs)/reels" },
-  { name: "messages", icon: "chat", path: "/(tabs)/messages", badge: true },
-  { name: "profile", icon: "user", path: "/(tabs)/profile" },
+  { name: "home", icon: "home", path: "/" },
+  { name: "search", icon: "search", path: "/search" },
+  { name: "reels", icon: "play", path: "/reels" },
+  { name: "messages", icon: "chat", path: "/messages", badge: true },
+  { name: "profile", icon: "user", path: "/profile" },
 ];
 
 const MAX_DOCK_WIDTH = 416;
-const INDICATOR_SPRING = { damping: 26, stiffness: 200 };
+const INDICATOR_SPRING = { damping: 36, stiffness: 400, overshootClamping: true };
+
+function normalizePathname(pathname: string) {
+  return pathname.replace(/\/\([^)]+\)/g, "") || "/";
+}
 
 export function BottomNav() {
   const { width: screenWidth } = useWindowDimensions();
   const dockMaxWidth = Math.min(screenWidth - 20, MAX_DOCK_WIDTH);
   const pathname = usePathname();
+  const normalizedPathname = normalizePathname(pathname);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const themeIsDark = useThemeStore((s) => s.isDark);
   const totalUnread = useUnreadStore((s) => s.totalUnread);
-  const isCreate = pathname.startsWith("/create");
-  const isReelsTab = pathname === "/reels";
+  const isCreate = normalizedPathname.startsWith("/create");
+  const isReelsTab = normalizedPathname === "/reels";
   const isDark = isReelsTab || themeIsDark;
 
   const [pillWidth, setPillWidth] = useState(0);
@@ -63,12 +68,15 @@ export function BottomNav() {
   // Compute active index from pathname
   const activeIndex = React.useMemo(() => {
     return NAV_ITEMS.findIndex((item) => {
-      if (item.path === "/(tabs)") {
-        return pathname === "/(tabs)" || pathname === "/(tabs)/";
+      if (item.path === "/") {
+        return normalizedPathname === "/" || normalizedPathname === "/index";
       }
-      return pathname.startsWith(item.path);
+      return (
+        normalizedPathname === item.path ||
+        normalizedPathname.startsWith(`${item.path}/`)
+      );
     });
-  }, [pathname]);
+  }, [normalizedPathname]);
 
   const indicatorX = useSharedValue(0);
   const indicatorStyle = useAnimatedStyle(() => ({
@@ -103,10 +111,6 @@ export function BottomNav() {
     };
   }, []);
 
-  if (isReelsTab) {
-    return null;
-  }
-
   const onPillLayout = (e: LayoutChangeEvent) => {
     setPillWidth(Math.max(0, e.nativeEvent.layout.width - Spacing.xs * 2));
   };
@@ -125,6 +129,7 @@ export function BottomNav() {
 
   return (
     <Animated.View
+      pointerEvents="box-none"
       style={[
         styles.container,
         keyboardStyle,
@@ -150,7 +155,10 @@ export function BottomNav() {
                 <Animated.View
                   style={[
                     styles.activePill,
-                    { width: tabWidth },
+                    {
+                      width: tabWidth,
+                      backgroundColor: primary + "33",
+                    },
                     indicatorStyle,
                   ]}
                 />
@@ -165,7 +173,7 @@ export function BottomNav() {
                     isActive={isActive}
                     isDark={isDark}
                     unreadCount={item.badge ? totalUnread : 0}
-                    onPress={() => router.push(item.path as any)}
+                    onPress={() => router.navigate(item.path)}
                     index={index}
                     tabWidth={tabWidth}
                   />
@@ -221,11 +229,7 @@ function TabItem({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      style={[
-        styles.tabButton,
-        { width: tabWidth > 0 ? tabWidth : undefined },
-        isActive && { backgroundColor: primary + "20" },
-      ]}
+      style={[styles.tabButton, { width: tabWidth > 0 ? tabWidth : undefined }]}
       accessibilityLabel={item.name}
       accessibilityState={{ selected: isActive }}
     >
@@ -257,7 +261,6 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 50,
     alignItems: "center",
-    pointerEvents: "box-none",
   },
   dockWrapper: {
     width: "100%",
@@ -271,7 +274,7 @@ const styles = StyleSheet.create({
   },
   pillShadowWrap: {
     flex: 1,
-    borderRadius: Radius.xl,
+    borderRadius: Radius.pill,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 20,
     shadowOpacity: 0.12,
@@ -281,7 +284,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: Radius.xl,
+    borderRadius: Radius.pill,
     paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.xs,
     overflow: "hidden",
@@ -289,7 +292,7 @@ const styles = StyleSheet.create({
   },
   pillBorder: {
     ...StyleSheet.absoluteFill,
-    borderRadius: Radius.xl,
+    borderRadius: Radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
   // Active pill background - slides with spring
@@ -298,17 +301,14 @@ const styles = StyleSheet.create({
     top: Spacing.xs,
     bottom: Spacing.xs,
     left: Spacing.xs,
-    borderRadius: Radius.lg,
-    backgroundColor: "#99CC3366", // 40% opacity - very visible
-    borderWidth: 2,
-    borderColor: "#99CC33", // bright green border
+    borderRadius: Radius.pill,
   },
   tabButton: {
     flex: 1,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: Radius.lg,
+    borderRadius: Radius.pill,
   },
   tabContent: {
     alignItems: "center",

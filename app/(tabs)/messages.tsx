@@ -39,6 +39,20 @@ import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { onNewMessage } from "../../src/services/socket";
 import type { Conversation, UserPreview } from "../../src/types";
+import {
+  extractConversationPayloads,
+  mapConversationPayload,
+  mapLocalConversationSummaryToUi,
+  mapMessagePayload,
+} from "../../src/repositories/chatMappers";
+import {
+  getConversation,
+  listConversationSummaries,
+  upsertConversations,
+} from "../../src/repositories/conversations";
+import { upsertMessages } from "../../src/repositories/messages";
+import { repositoryTopic } from "../../src/repositories/changes";
+import { useRepositoryQuery } from "../../src/hooks/useRepositoryQuery";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
@@ -60,9 +74,10 @@ export default function MessagesScreen() {
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
   const currentUser = useAuthStore((s) => s.user);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const userId = currentUser?.id;
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [refreshComplete, setRefreshComplete] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
   const [query, setQuery] = useState("");
 
   const [composeOpen, setComposeOpen] = useState(false);
@@ -74,6 +89,24 @@ export default function MessagesScreen() {
 
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const overlayOpacity = useSharedValue(0);
+  const conversationsTopic = useMemo(
+    () => repositoryTopic(userId ?? "signed-out", "conversations"),
+    [userId],
+  );
+  const loadLocalConversations = useCallback(async () => {
+    if (!userId) return [];
+    const summaries = await listConversationSummaries(userId);
+    return summaries.map(mapLocalConversationSummaryToUi);
+  }, [userId]);
+  const localConversationQuery = useRepositoryQuery<Conversation[]>(
+    conversationsTopic,
+    loadLocalConversations,
+  );
+  const conversations = localConversationQuery.data ?? [];
+  useEffect(() => {
+    setRefreshComplete(false);
+    setRefreshFailed(false);
+  }, [userId]);
 
   const openCompose = useCallback(() => {
     setComposeOpen(true);
@@ -99,15 +132,34 @@ export default function MessagesScreen() {
   }));
 
   const fetchConversations = useCallback(async () => {
+    if (!userId) {
+      setRefreshComplete(true);
+      setRefreshing(false);
+      return;
+    }
     try {
       const { data } = await api.get(API.messages.conversations);
-      setConversations(data.data || data.conversations || data);
-    } catch {
+      const mapped = extractConversationPayloads(data).flatMap((payload) => {
+        const conversation = mapConversationPayload(payload, userId);
+        return conversation ? [conversation] : [];
+      });
+      await upsertMessages(
+        userId,
+        mapped.flatMap(({ preview }) => (preview ? [preview] : [])),
+      );
+      await upsertConversations(
+        userId,
+        mapped.map(({ conversation }) => conversation),
+      );
+      setRefreshFailed(false);
+    } catch (error) {
+      console.error("[Messages] Failed to refresh conversations", error);
+      setRefreshFailed(true);
     } finally {
-      setLoading(false);
+      setRefreshComplete(true);
       setRefreshing(false);
     }
-  }, []);
+  }, [userId]);
 
   // Tabs stay mounted, so a plain mount-only effect never refires after you
   // read a thread and come back — the list would keep showing it as unread.
@@ -120,29 +172,31 @@ export default function MessagesScreen() {
 
   useEffect(() => {
     const unsubscribe = onNewMessage(({ message, conversationId }) => {
-      setConversations((prev) => {
-        const idx = prev.findIndex((c) => c.id === conversationId);
-        if (idx === -1) return prev;
-        const isMine = message.senderId === currentUser?.id;
-        const updated: Conversation = {
-          ...prev[idx],
-          lastMessage: {
-            text: message.isDeleted ? "Message deleted" : message.text,
-            messageType: message.messageType,
-            senderId: message.senderId,
-            senderName: prev[idx].lastMessage?.senderName || "",
-            messageId: message.id,
-            isDeleted: message.isDeleted,
-            timestamp: message.createdAt,
-          },
-          unreadCount: isMine ? prev[idx].unreadCount : prev[idx].unreadCount + 1,
-        };
-        const next = prev.filter((c) => c.id !== conversationId);
-        return [updated, ...next];
+      if (!userId) return;
+      const mappedMessage = mapMessagePayload(message, conversationId);
+      if (!mappedMessage) {
+        console.error("[Messages] Ignored an invalid incoming message payload");
+        return;
+      }
+      void (async () => {
+        await upsertMessages(userId, [mappedMessage]);
+        const existing = await getConversation(userId, conversationId);
+        if (!existing) return;
+        await upsertConversations(userId, [{
+          ...existing,
+          lastMessageId: mappedMessage.id,
+          unreadCount:
+            mappedMessage.senderId === currentUser?.id
+              ? existing.unreadCount
+              : existing.unreadCount + 1,
+          updatedAt: mappedMessage.updatedAt,
+        }]);
+      })().catch((error: unknown) => {
+        console.error("[Messages] Failed to store an incoming message", error);
       });
     });
     return unsubscribe;
-  }, [currentUser?.id]);
+  }, [currentUser?.id, userId]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return conversations;
@@ -322,12 +376,32 @@ export default function MessagesScreen() {
           />
         }
         ListEmptyComponent={
-          !loading ? (
+          conversations.length > 0 || refreshComplete ? (
             <Animated.View entering={FadeIn.duration(300)} style={styles.emptyState}>
-              <Icon name="chat" set="light" size={48} color={colors.mutedForeground + "60"} />
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                {query ? "No matches found" : "No conversations yet"}
-              </Text>
+              {refreshFailed && conversations.length === 0 && !query ? (
+                <>
+                  <Icon name="danger-circle" set="light" size={40} color={colors.mutedForeground} />
+                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                    Couldn't load conversations
+                  </Text>
+                  <PressableScale
+                    onPress={() => {
+                      setRefreshComplete(false);
+                      void fetchConversations();
+                    }}
+                    style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+                  >
+                    <Text style={[styles.retryText, { color: colors.primaryForeground }]}>Try again</Text>
+                  </PressableScale>
+                </>
+              ) : (
+                <>
+                  <Icon name="chat" set="light" size={48} color={colors.mutedForeground + "60"} />
+                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                    {query ? "No matches found" : "No conversations yet"}
+                  </Text>
+                </>
+              )}
             </Animated.View>
           ) : (
             <ConversationRowSkeletonList count={6} />
@@ -466,7 +540,7 @@ export default function MessagesScreen() {
               contentContainerStyle={styles.discoverList}
               ListEmptyComponent={
                 searching ? (
-                  <ConversationRowSkeletonList count={4} />
+                  <ConversationRowSkeletonList count={4} variant="person" />
                 ) : (
                   <View style={styles.discoverEmpty}>
                     <Text style={[styles.discoverEmptyText, { color: colors.mutedForeground }]}>
@@ -521,7 +595,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: { ...Typography.h3 },
   headerSubtitle: { ...Typography.caption, marginTop: 2 },
@@ -563,6 +636,17 @@ const styles = StyleSheet.create({
     gap: Gap.md,
   },
   emptyText: { ...Typography.body },
+  retryBtn: {
+    marginTop: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.pill,
+  },
+  retryText: {
+    fontFamily: FontFamily.semibold,
+    fontSize: Typography.bodySmall.fontSize,
+    lineHeight: Typography.bodySmall.lineHeight,
+  },
   conversationRow: {
     flexDirection: "row",
     alignItems: "center",

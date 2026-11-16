@@ -1,40 +1,48 @@
-// AuraLenz — Search User Row Skeleton
-// Matches SearchScreen user rows
-
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Skeleton, SkeletonCircle, SkeletonText } from "./Skeleton";
-import { Spacing, Radius, Gap } from "../../theme/spacing";
+import { StyleSheet, View } from "react-native";
+import { Gap, Radius, Spacing } from "../../theme/spacing";
+import { Skeleton, SkeletonCircle, SkeletonText, useSkeletonColors } from "./Skeleton";
 
-export function SearchUserSkeleton({ showFollow = true }: { showFollow?: boolean }) {
+export function SearchUserSkeleton({
+  showFollow = true,
+  showVerified = false,
+}: {
+  showFollow?: boolean;
+  showVerified?: boolean;
+}) {
   return (
-    <View style={styles.row}>
-      <SkeletonCircle size={44} style={styles.avatar} />
+    <View style={styles.row} accessible={false}>
+      <SkeletonCircle size={44} />
       <View style={styles.content}>
         <View style={styles.usernameRow}>
-          <SkeletonText lines={1} width="60%" lineHeight={21} />
-          <SkeletonCircle size={14} />
+          <Skeleton width="58%" height={Spacing.md + Gap.xs} />
+          {showVerified ? (
+            <Skeleton width={Spacing.md} height={Spacing.md} borderRadius={Radius.xs} />
+          ) : null}
         </View>
-        <SkeletonText lines={1} width="70%" lineHeight={16} />
+        <SkeletonText width="68%" lineHeight={Spacing.md + Gap.xs} />
       </View>
-      {showFollow && (
-        <Skeleton
-          width={80}
-          height={32}
-          borderRadius={9999}
-          style={styles.followBtn}
-        />
-      )}
+      {showFollow ? (
+        <Skeleton width={80} height={Spacing["2xl"]} borderRadius={Radius.pill} />
+      ) : null}
     </View>
   );
 }
 
 export function SearchUserSkeletonList({ count = 6 }: { count?: number }) {
+  const colors = useSkeletonColors();
+
   return (
-    <View style={styles.list}>
-      {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={[styles.item, i > 0 && { borderTopWidth: 0.5 }]}>
-          <SearchUserSkeleton />
+    <View style={styles.list} accessible={false}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.item,
+            { borderBottomColor: colors.divider },
+          ]}
+        >
+          <SearchUserSkeleton showVerified={index === 1} />
         </View>
       ))}
     </View>
@@ -46,8 +54,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   item: {
-    borderTopWidth: 0.5,
-    borderTopColor: "rgba(0,0,0,0.06)",
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   row: {
     flexDirection: "row",
@@ -55,17 +62,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     gap: Gap.md,
   },
-  avatar: {},
   content: {
     flex: 1,
-    gap: 2,
+    gap: Gap.xs,
   },
   usernameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-  },
-  followBtn: {
-    marginLeft: Gap.sm,
+    gap: Gap.sm,
   },
 });

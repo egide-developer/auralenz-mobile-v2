@@ -15,6 +15,7 @@ import { API } from "../../src/api/endpoints";
 import { normalizeStoryGroups, extractStoryGroupsPayload } from "../../src/utils/stories";
 import { AddToHighlightSheet } from "../../src/components/ui/AddToHighlightSheet";
 import type { Story, StoryGroup, StorySticker } from "../../src/types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 const STORY_DURATION = 5000;
@@ -26,6 +27,7 @@ export default function StoryViewerScreen() {
     storyIndex?: string;
   }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
@@ -40,6 +42,8 @@ export default function StoryViewerScreen() {
   const startTimeRef = useRef(Date.now());
 
   const story = storyGroup?.stories[currentIndex];
+  const touchTop = Math.max(80, insets.top + 80);
+  const touchBottom = Math.max(80, insets.bottom + 80);
   const isOwn = story?.userId === user?.id;
 
   const [activeSticker, setActiveSticker] = useState<StorySticker | null>(story?.stickers?.[0] ?? null);
@@ -159,7 +163,7 @@ export default function StoryViewerScreen() {
         <TouchableOpacity
           style={{
             position: "absolute",
-            bottom: 40,
+            bottom: Math.max(40, insets.bottom + 20),
             left: 12,
             right: 12,
             flexDirection: "row",
@@ -180,7 +184,7 @@ export default function StoryViewerScreen() {
       )}
       {isOwn && (
         <TouchableOpacity
-          style={{ position: "absolute", bottom: 40, right: 12, padding: 10 }}
+          style={{ position: "absolute", bottom: Math.max(40, insets.bottom + 20), right: 12, padding: 10 }}
           onPress={() => {
             if (timerRef.current) clearInterval(timerRef.current);
             setHighlightSheetVisible(true);
@@ -206,7 +210,7 @@ export default function StoryViewerScreen() {
       <View
         style={{
           position: "absolute",
-          top: 48,
+          top: Math.max(48, insets.top + 8),
           left: 12,
           right: 12,
           flexDirection: "row",
@@ -245,7 +249,7 @@ export default function StoryViewerScreen() {
       <View
         style={{
           position: "absolute",
-          top: 58,
+          top: Math.max(58, insets.top + 18),
           left: 12,
           right: 12,
           flexDirection: "row",
@@ -277,12 +281,12 @@ export default function StoryViewerScreen() {
 
       {/* Tap zones */}
       <TouchableOpacity
-        style={{ position: "absolute", top: 80, left: 0, width: SCREEN_W * 0.35, height: SCREEN_H - 160 }}
+        style={{ position: "absolute", top: touchTop, left: 0, width: SCREEN_W * 0.35, height: SCREEN_H - touchTop - touchBottom }}
         onPress={goPrev}
         activeOpacity={1}
       />
       <TouchableOpacity
-        style={{ position: "absolute", top: 80, right: 0, width: SCREEN_W * 0.65, height: SCREEN_H - 160 }}
+        style={{ position: "absolute", top: touchTop, right: 0, width: SCREEN_W * 0.65, height: SCREEN_H - touchTop - touchBottom }}
         onPress={() => {
           if (timerRef.current) clearInterval(timerRef.current);
           goNext();
@@ -295,7 +299,7 @@ export default function StoryViewerScreen() {
         <View
           style={{
             position: "absolute",
-            bottom: 80,
+            bottom: Math.max(80, insets.bottom + 40),
             left: 12,
             right: 12,
             flexDirection: "row",
@@ -337,7 +341,7 @@ export default function StoryViewerScreen() {
         <View
           style={{
             position: "absolute",
-            bottom: 130,
+            bottom: Math.max(130, insets.bottom + 90),
             left: 12,
             flexDirection: "row",
             backgroundColor: "rgba(0,0,0,0.7)",

@@ -2,25 +2,30 @@
 // Base shimmering placeholder using Reanimated UI-thread animation
 
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
+  cancelAnimation,
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withRepeat,
   Easing,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useThemeStore } from "../../stores/themeStore";
 import { SkeletonColors } from "../../theme/colors";
-import { Radius, Spacing } from "../../theme/spacing";
+import { Gap, Radius, Spacing } from "../../theme/spacing";
+
+export type SkeletonTone = "default" | "overlay";
 
 interface SkeletonProps {
   width?: number | string;
   height?: number;
   borderRadius?: number;
-  style?: any;
-  round?: boolean; // makes it a circle
+  style?: StyleProp<ViewStyle>;
+  round?: boolean;
   aspectRatio?: number;
+  tone?: SkeletonTone;
 }
 
 export function Skeleton({
@@ -30,84 +35,104 @@ export function Skeleton({
   style,
   round = false,
   aspectRatio,
+  tone = "default",
 }: SkeletonProps) {
-  const isDark = useThemeStore((s) => s.isDark);
-  const colors = isDark ? SkeletonColors.dark : SkeletonColors.light;
+  const colors = useSkeletonColors();
+  const baseColor = tone === "overlay" ? colors.overlayBase : colors.base;
+  const highlightColor =
+    tone === "overlay" ? colors.overlayHighlight : colors.highlight;
 
-  const translateX = useSharedValue(-1.5);
+  const translateX = useSharedValue(-50);
 
   React.useEffect(() => {
-    translateX.value = withTiming(-1.5, { duration: 0, easing: Easing.linear });
-    translateX.value = withTiming(1.5, {
-      duration: 1200,
-      easing: Easing.linear,
-    });
-  }, []);
+    translateX.value = withRepeat(
+      withTiming(0, { duration: 1600, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(translateX);
+  }, [translateX]);
 
-  // Restart loop
   const animatedStyle = useAnimatedStyle(() => {
-    if (translateX.value >= 1.5) {
-      translateX.value = withTiming(-1.5, { duration: 0, easing: Easing.linear });
-      translateX.value = withTiming(1.5, {
-        duration: 1200,
-        easing: Easing.linear,
-      });
-    }
-    return { transform: [{ translateX: `${translateX.value * 100}%` }] };
+    return { transform: [{ translateX: `${translateX.value}%` }] };
   }, []);
 
-  const r = round ? 9999 : borderRadius;
+  const r = round ? Radius.pill : borderRadius;
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.container,
-        { width, height, borderRadius: r, aspectRatio },
+        { width, height, borderRadius: r, aspectRatio, backgroundColor: baseColor },
         style,
-        animatedStyle,
       ]}
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
     >
       <View style={styles.mask} pointerEvents="none">
-        <LinearGradient
-          colors={[colors.base, colors.highlight, colors.base]}
-          style={styles.gradient}
-          start={{ x: -1.5, y: 0 }}
-          end={{ x: 1.5, y: 0 }}
-        />
+        <Animated.View style={[styles.gradientTrack, animatedStyle]}>
+          <LinearGradient
+            colors={[baseColor, highlightColor, baseColor]}
+            style={styles.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          />
+        </Animated.View>
       </View>
-    </Animated.View>
+    </View>
   );
+}
+
+export function useSkeletonColors() {
+  const isDark = useThemeStore((state) => state.isDark);
+  return isDark ? SkeletonColors.dark : SkeletonColors.light;
 }
 
 const styles = StyleSheet.create({
   container: {
     overflow: "hidden",
-    backgroundColor: "transparent",
+  },
+  textLines: {
+    width: "100%",
+    flexDirection: "column",
   },
   mask: {
     ...StyleSheet.absoluteFill,
     overflow: "hidden",
   },
+  gradientTrack: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: "200%",
+  },
   gradient: {
     ...StyleSheet.absoluteFill,
-    width: "300%",
   },
 });
 
 export function SkeletonCircle({
   size = 40,
   style,
-}: { size?: number; style?: any }) {
-  return <Skeleton width={size} height={size} round style={style} />;
+  tone,
+}: {
+  size?: number;
+  style?: StyleProp<ViewStyle>;
+  tone?: SkeletonTone;
+}) {
+  return <Skeleton width={size} height={size} round style={style} tone={tone} />;
 }
 
 interface SkeletonTextProps {
   lines?: number;
   lineHeight?: number;
   width?: number | string | (number | string)[];
-  style?: any;
+  style?: StyleProp<ViewStyle>;
   lineGap?: number;
   lastLineWidth?: number | string;
+  tone?: SkeletonTone;
 }
 
 export function SkeletonText({
@@ -115,8 +140,9 @@ export function SkeletonText({
   lineHeight = 20,
   width = "100%",
   style,
-  lineGap = 8,
-  lastLineWidth = "60%",
+  lineGap = Gap.sm,
+  lastLineWidth = "62%",
+  tone,
 }: SkeletonTextProps) {
   const getWidth = (i: number) => {
     if (Array.isArray(width)) {
@@ -126,14 +152,14 @@ export function SkeletonText({
   };
 
   return (
-    <View style={style}>
+    <View style={[styles.textLines, { gap: lineGap }, style]}>
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton
           key={i}
           width={getWidth(i)}
-          height={lineHeight - 4}
+          height={Math.max(lineHeight - Spacing.xs, Spacing.sm)}
           borderRadius={Radius.sm}
-          style={{ marginBottom: i === lines - 1 ? 0 : lineGap }}
+          tone={tone}
         />
       ))}
     </View>
@@ -145,7 +171,8 @@ interface SkeletonImageProps {
   height: number;
   aspectRatio?: number;
   borderRadius?: number;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
+  tone?: SkeletonTone;
 }
 
 export function SkeletonImage({
@@ -154,6 +181,7 @@ export function SkeletonImage({
   aspectRatio,
   borderRadius = Radius.md,
   style,
+  tone,
 }: SkeletonImageProps) {
   return (
     <Skeleton
@@ -162,6 +190,7 @@ export function SkeletonImage({
       aspectRatio={aspectRatio}
       borderRadius={borderRadius}
       style={style}
+      tone={tone}
     />
   );
 }

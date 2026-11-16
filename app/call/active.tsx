@@ -7,6 +7,7 @@ import { getWebRTC } from "../../src/services/webrtc";
 import { Colors } from "../../src/theme/colors";
 import { FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function formatElapsed(secs: number) {
   const m = Math.floor(secs / 60);
@@ -16,6 +17,7 @@ function formatElapsed(secs: number) {
 
 export default function ActiveCallScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
   const status = useCallStore((s) => s.status);
@@ -67,7 +69,7 @@ export default function ActiveCallScreen() {
         )
       ) : null}
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(70, insets.top + 24) }]}>
         <Text style={[styles.name, { color: isVideo ? "#fff" : colors.foreground }]}>
           {remoteUser?.username || "Call"}
         </Text>
@@ -89,7 +91,11 @@ export default function ActiveCallScreen() {
       )}
 
       {isVideo && RTCView && localStream && !isCameraOff && (
-        <TouchableOpacity onPress={switchCamera} activeOpacity={0.85} style={styles.selfVideoWrap}>
+        <TouchableOpacity
+          onPress={switchCamera}
+          activeOpacity={0.85}
+          style={[styles.selfVideoWrap, { top: Math.max(80, insets.top + 24) }]}
+        >
           <RTCView streamURL={localStream.toURL()} style={styles.selfVideo} objectFit="cover" mirror zOrder={1} />
         </TouchableOpacity>
       )}
@@ -132,7 +138,10 @@ export default function ActiveCallScreen() {
       </View>
 
       <TouchableOpacity
-        style={[styles.endCall, { backgroundColor: colors.destructive }]}
+        style={[
+          styles.endCall,
+          { backgroundColor: colors.destructive, marginBottom: Math.max(48, insets.bottom + 24) },
+        ]}
         onPress={handleEnd}
       >
         <Icon name="call" set="bold" size={26} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
@@ -144,7 +153,7 @@ export default function ActiveCallScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "space-between", alignItems: "center" },
   remoteVideo: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },
-  header: { alignItems: "center", paddingTop: 70, zIndex: 10 },
+  header: { alignItems: "center", zIndex: 10 },
   name: { fontFamily: FontFamily.bold, fontSize: 22 },
   timer: { fontFamily: FontFamily.regular, fontSize: 15, marginTop: 4 },
   audioAvatarWrap: { alignItems: "center", justifyContent: "center" },
@@ -159,7 +168,6 @@ const styles = StyleSheet.create({
   audioAvatarImg: { width: 120, height: 120, borderRadius: 60 },
   selfVideoWrap: {
     position: "absolute",
-    top: 80,
     right: 20,
     width: 100,
     height: 140,

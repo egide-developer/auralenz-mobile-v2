@@ -1,40 +1,61 @@
-// AuraLenz — Reel Skeleton
-// Matches ReelsFeed full-screen video layout
-
 import React from "react";
-import { View, StyleSheet, Dimensions } from "react-native";
-import { Skeleton, SkeletonCircle, SkeletonText } from "./Skeleton";
-import { Spacing, Radius, Gap } from "../../theme/spacing";
-
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SCREEN_HEIGHT = Dimensions.get("window").height;
+import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AvatarSize, Gap, IconSize, Spacing } from "../../theme/spacing";
+import {
+  Skeleton,
+  SkeletonCircle,
+  SkeletonText,
+  useSkeletonColors,
+} from "./Skeleton";
 
 export function ReelSkeleton() {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const colors = useSkeletonColors();
+
   return (
-    <View style={styles.reel}>
+    <View
+      style={[
+        styles.reel,
+        { width, height, backgroundColor: colors.media },
+      ]}
+      accessible={false}
+    >
       <Skeleton
-        style={styles.video}
-        width={SCREEN_WIDTH}
-        height={SCREEN_HEIGHT}
+        width={width}
+        height={height}
+        borderRadius={0}
+        style={styles.media}
       />
 
-      <View style={styles.bottomOverlay}>
+      <View
+        style={[
+          styles.bottomOverlay,
+          { bottom: insets.bottom + Spacing["4xl"] + Spacing.md },
+        ]}
+      >
         <View style={styles.bottomInfo}>
           <View style={styles.reelHeader}>
-            <SkeletonCircle size={28} style={styles.reelAvatar} />
+            <SkeletonCircle size={AvatarSize.sm} tone="overlay" />
             <View style={styles.reelMeta}>
-              <SkeletonText lines={1} width="60%" lineHeight={20} style={styles.reelUsername} />
-              <SkeletonText lines={1} width="40%" lineHeight={16} style={styles.reelTime} />
+              <SkeletonText width="62%" lineHeight={Spacing.lg} tone="overlay" />
+              <SkeletonText width="42%" lineHeight={Spacing.sm} tone="overlay" />
             </View>
           </View>
-          <SkeletonText lines={2} width={["80%", "50%"]} lineHeight={20} style={styles.reelCaption} />
+          <SkeletonText
+            lines={2}
+            width={["84%", "56%"]}
+            lineHeight={Spacing.lg}
+            tone="overlay"
+          />
         </View>
 
-        <View style={styles.reelActions}>
-          {["like", "comment", "share", "remix", "tip"].map((_, i) => (
-            <View key={i} style={styles.reelActionBtn}>
-              <SkeletonCircle size={28} style={styles.reelActionIcon} />
-              <SkeletonText lines={1} width={30} lineHeight={16} style={styles.reelActionText} />
+        <View style={styles.actions}>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <View key={index} style={styles.action}>
+              <SkeletonCircle size={IconSize.lg} tone="overlay" />
+              <Skeleton width={Spacing.xl} height={Spacing.xs} tone="overlay" />
             </View>
           ))}
         </View>
@@ -45,9 +66,9 @@ export function ReelSkeleton() {
 
 export function ReelSkeletonList({ count = 3 }: { count?: number }) {
   return (
-    <View style={styles.list}>
-      {Array.from({ length: count }).map((_, i) => (
-        <ReelSkeleton key={i} />
+    <View style={styles.list} accessible={false}>
+      {Array.from({ length: count }).map((_, index) => (
+        <ReelSkeleton key={index} />
       ))}
     </View>
   );
@@ -55,62 +76,40 @@ export function ReelSkeletonList({ count = 3 }: { count?: number }) {
 
 const styles = StyleSheet.create({
   reel: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#000",
+    overflow: "hidden",
   },
-  video: {
+  media: {
     ...StyleSheet.absoluteFill,
   },
   bottomOverlay: {
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 0,
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingHorizontal: Spacing.base,
   },
   bottomInfo: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: Gap.md,
   },
   reelHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
-  },
-  reelAvatar: {
-    backgroundColor: "rgba(255,255,255,0.2)",
+    gap: Gap.sm,
+    marginBottom: Spacing.md,
   },
   reelMeta: {
-    marginLeft: 8,
+    flex: 1,
+    gap: Gap.xs,
   },
-  reelUsername: {
-    color: "#FFFFFF",
-  },
-  reelTime: {
-    color: "rgba(255,255,255,0.7)",
-    marginLeft: 4,
-  },
-  reelCaption: {
-    color: "#FFFFFF",
-    marginTop: 8,
-  },
-  reelActions: {
+  actions: {
     alignItems: "center",
-    gap: 18,
+    gap: Spacing.md,
   },
-  reelActionBtn: {
+  action: {
     alignItems: "center",
-    gap: 4,
-  },
-  reelActionIcon: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-  },
-  reelActionText: {
-    color: "#FFFFFF",
+    gap: Gap.xs,
   },
   list: {
     flex: 1,

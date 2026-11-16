@@ -19,6 +19,7 @@ import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, Radius } from "../../src/theme/spacing";
 import { FontFamily, Typography } from "../../src/theme/typography";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 interface StarPack {
   id: string;
@@ -147,22 +148,26 @@ export default function WalletScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.screen, styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+        <View style={[styles.screen, styles.centered, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaScreen>
     );
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+    <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={{ marginRight: Spacing.md }}>
           <Icon name="arrow-left" set="light" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Wallet & Stars</Text>
-      </View>
+        </View>
 
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -285,8 +290,9 @@ export default function WalletScreen() {
             );
           })
         )}
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </SafeAreaScreen>
   );
 }
 

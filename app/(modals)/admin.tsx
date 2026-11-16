@@ -10,6 +10,7 @@ import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 interface DashboardData {
   totalUsers?: number;
@@ -42,10 +43,12 @@ export default function AdminScreen() {
 
   if (user?.role !== "admin") {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
-        <Icon name="shield-fail" set="bold" size={48} color={colors.mutedForeground + "60"} />
-        <Text style={[styles.deniedText, { color: colors.mutedForeground }]}>Access Denied</Text>
-      </View>
+      <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+        <View style={[styles.centered, { backgroundColor: colors.background }]}>
+          <Icon name="shield-fail" set="bold" size={48} color={colors.mutedForeground + "60"} />
+          <Text style={[styles.deniedText, { color: colors.mutedForeground }]}>Access Denied</Text>
+        </View>
+      </SafeAreaScreen>
     );
   }
 
@@ -57,12 +60,13 @@ export default function AdminScreen() {
   ];
 
   return (
-    <ScrollView
-      style={[styles.screen, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchDashboard(); }} tintColor={colors.primary} />}
-    >
-      <View style={[styles.header, { borderBottomColor: colors.border + "66" }]}>
+    <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+      <ScrollView
+        style={[styles.screen, { backgroundColor: colors.background }]}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchDashboard(); }} tintColor={colors.primary} />}
+      >
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -100,7 +104,8 @@ export default function AdminScreen() {
           ))}
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaScreen>
   );
 }
 
@@ -116,7 +121,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: 12,
     paddingBottom: Spacing.md,
-    borderBottomWidth: 0.5,
   },
   headerTitle: { ...Typography.h4 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },

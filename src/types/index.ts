@@ -44,6 +44,8 @@ export interface Post {
   isLiked: boolean;
   isSaved: boolean;
   createdAt: string;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
 }
 
 export interface PostMedia {
@@ -144,6 +146,7 @@ export interface Message {
   viewOnceConsumedAt?: string | null;
   /** Client-generated id used as a stable list key across the optimistic → confirmed transition. */
   clientId?: string;
+  status?: "pending" | "sent" | "delivered" | "read" | "failed";
   /** True while an optimistically-added message is still in flight to the server. */
   pending?: boolean;
   failed?: boolean;

@@ -18,6 +18,7 @@ import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { SafeAreaScreen } from "../../src/components/layout";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -75,14 +76,15 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaScreen style={{ backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.foreground }]}>
             Welcome back
@@ -250,8 +252,9 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </Link>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaScreen>
   );
 }
 

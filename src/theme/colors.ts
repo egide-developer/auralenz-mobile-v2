@@ -89,14 +89,59 @@ export const Colors = {
 
 export type ColorScheme = keyof typeof Colors;
 
-// Skeleton-specific colors (slightly lighter than background for shimmer base)
+export const ProfileColors = {
+  dark: {
+    background: "#0A0A0B",
+    surface: "#141416",
+    elevated: "#1C1C1F",
+    hairline: "rgba(255,255,255,0.06)",
+    foreground: "#F5F5F5",
+    muted: "#8A8A8F",
+    accent: Colors.dark.primary,
+    accentForeground: Colors.dark.primaryForeground,
+    accentTint: "rgba(153,204,51,0.12)",
+    accentBorder: "rgba(153,204,51,0.34)",
+    danger: "#FF4D3D",
+    headerOverlay: "rgba(10,10,11,0.84)",
+    modalScrim: "rgba(0,0,0,0.64)",
+    avatarGradient: ["#263A10", "#3D531D"],
+  },
+  light: {
+    background: Colors.light.background,
+    surface: Colors.light.card,
+    elevated: Colors.light.secondary,
+    hairline: Colors.light.border,
+    foreground: Colors.light.foreground,
+    muted: Colors.light.mutedForeground,
+    accent: Colors.light.primary,
+    accentForeground: Colors.light.primaryForeground,
+    accentTint: "rgba(127,163,34,0.10)",
+    accentBorder: "rgba(127,163,34,0.34)",
+    danger: Colors.light.destructive,
+    headerOverlay: "rgba(245,243,239,0.88)",
+    modalScrim: "rgba(0,0,0,0.48)",
+    avatarGradient: ["#D8E7B2", "#99B957"],
+  },
+} as const;
+
+// Skeleton colors stay neutral; overlays adapt to media surfaces in both themes.
 export const SkeletonColors = {
   light: {
-    base: "#E8E6E0",      // lighter than background #F5F3EF
-    highlight: "#F5F3EF", // background color for shimmer
+    base: Colors.light.secondary,
+    highlight: Colors.light.background,
+    surface: Colors.light.card,
+    divider: Colors.light.border,
+    media: Colors.light.secondary,
+    overlayBase: "rgba(26,26,26,0.12)",
+    overlayHighlight: "rgba(26,26,26,0.20)",
   },
   dark: {
-    base: "#1A1A1A",      // lighter than background #0A0A0A
-    highlight: "#242424", // slightly lighter for shimmer
+    base: Colors.dark.secondary,
+    highlight: Colors.dark.border,
+    surface: Colors.dark.card,
+    divider: Colors.dark.border,
+    media: Colors.dark.background,
+    overlayBase: "rgba(240,239,235,0.12)",
+    overlayHighlight: "rgba(240,239,235,0.20)",
   },
 } as const;
