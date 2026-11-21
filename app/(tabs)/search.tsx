@@ -1,143 +1,314 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, RefreshControl } from "react-native";
-import { CachedImage } from "../../src/components/ui/CachedImage";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import {
+  FlatList,
+  Keyboard,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { router } from "expo-router";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
-import { Radius, Spacing, Gap } from "../../src/theme/spacing";
-import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
+import { Gap, Radius, Spacing } from "../../src/theme/spacing";
+import { Typography } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
-import { Button } from "../../src/components/ui";
 import { Screen } from "../../src/components/layout";
-import { SearchUserSkeleton, PostGridSkeleton } from "../../src/components/skeletons";
-import type { Post } from "../../src/types";
-import { useSearchUsers, useSuggestedUsers, useRecommendedPosts } from "../../src/hooks/useSearch";
+import {
+  PostGridSkeleton,
+  SearchUserSkeleton,
+  SearchUserSkeletonList,
+} from "../../src/components/skeletons";
+import {
+  PostTile,
+  RecentSearches,
+  SearchFilters,
+  SearchStatus,
+  SectionTitle,
+  TagRow,
+  TrendingTags,
+  UserRow,
+  type SearchFilterKey,
+} from "../../src/components/search";
+import {
+  useRecommendedPosts,
+  useRecentSearches,
+  useSearchPosts,
+  useSearchUsers,
+  useSuggestedUsers,
+  useTagCounts,
+  useTrendingPosts,
+  useTrendingTags,
+} from "../../src/hooks/useSearch";
+import { mapApiPostsPayload } from "../../src/repositories/profileMappers";
 import { useAuthStore } from "../../src/stores/authStore";
+import { showToast } from "../../src/stores/toastStore";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
+import type { Post, UserPreview } from "../../src/types";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
 const GRID_GAP = 2;
-const GRID_ITEM_SIZE = (SCREEN_WIDTH - Spacing.lg * 2 - GRID_GAP) / 2;
+const DISCOVER_PAGE_SIZE = 24;
 
-interface SearchUser {
-  id: string;
-  username: string;
-  avatarUrl?: string;
-  displayName?: string;
-  bio?: string;
-  isVerified?: boolean;
-  isFollowing?: boolean;
+function applyPostFilter(posts: Post[], filter: SearchFilterKey): Post[] {
+  if (filter === "media") {
+    return posts.filter((post) =>
+      post.media.some((item) => item.type === "image" || item.type === "video"),
+    );
+  }
+  if (filter === "places") {
+    return posts.filter((post) => Boolean(post.location));
+  }
+  return posts;
 }
 
-const RECENT_LIMIT = 8;
-
-function toSearchUser(user: { id: string; username: string; avatarUrl?: string; displayName?: string; isVerified?: boolean; isOnline?: boolean; hasStory?: boolean; hasUnviewedStory?: boolean }): SearchUser {
-  return {
-    id: user.id,
-    username: user.username,
-    avatarUrl: user.avatarUrl,
-    displayName: user.displayName,
-    bio: undefined,
-    isVerified: user.isVerified,
-    isFollowing: false,
-  };
+function collectTags(posts: Post[], match?: string): string[] {
+  const needle = match?.trim().toLowerCase();
+  const frequency = new Map<string, number>();
+  for (const post of posts) {
+    for (const raw of post.tags) {
+      const tag = raw.trim().replace(/^#/, "").toLowerCase();
+      if (!tag) continue;
+      if (needle && !tag.includes(needle)) continue;
+      frequency.set(tag, (frequency.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...frequency.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([tag]) => tag);
 }
 
-function mapPostWriteToPost(post: { id: string; authorId: string; content: string; media: { url: string; type: "image" | "video" | "audio"; thumbnailUrl?: string; width?: number; height?: number; aspectRatio?: number; duration?: number }[]; createdAt: string; updatedAt: string; deletedAt: string | null }): Post {
-  return {
-    id: post.id,
-    userId: post.authorId,
-    author: { id: post.authorId, username: "", isVerified: false },
-    caption: post.content,
-    media: post.media.map(m => ({
-      id: "",
-      url: m.url,
-      type: m.type,
-      width: m.width,
-      height: m.height,
-      aspectRatio: m.aspectRatio,
-      thumbnailUrl: m.thumbnailUrl,
-      duration: m.duration,
-    })),
-    tags: [],
-    location: undefined,
-    likesCount: 0,
-    commentsCount: 0,
-    sharesCount: 0,
-    isLiked: false,
-    isSaved: false,
-    createdAt: post.createdAt,
-  };
+interface UserListViewProps {
+  listKey: string;
+  users: UserPreview[];
+  query?: string;
+  currentUserId?: string;
+  isFollowing: (user: UserPreview) => boolean;
+  onSelect: (user: UserPreview) => void;
+  onFollow: (user: UserPreview) => void;
+  header?: ReactElement;
+  empty: ReactElement;
+  refreshControl: ReactElement;
+}
+
+function UserListView({
+  listKey,
+  users,
+  query,
+  currentUserId,
+  isFollowing,
+  onSelect,
+  onFollow,
+  header,
+  empty,
+  refreshControl,
+}: UserListViewProps) {
+  return (
+    <FlatList
+      key={listKey}
+      style={styles.list}
+      data={users}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.listContent}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
+      ListHeaderComponent={header}
+      ListEmptyComponent={empty}
+      renderItem={({ item }) => (
+        <UserRow
+          user={item}
+          query={query}
+          isFollowing={isFollowing(item)}
+          isSelf={item.id === currentUserId}
+          onPress={() => onSelect(item)}
+          onFollow={() => onFollow(item)}
+        />
+      )}
+    />
+  );
+}
+
+interface PostGridViewProps {
+  listKey: string;
+  posts: Post[];
+  itemSize: number;
+  onOpen: (post: Post) => void;
+  header?: ReactElement;
+  empty: ReactElement;
+  footer?: ReactElement;
+  onEndReached?: () => void;
+  refreshControl: ReactElement;
+}
+
+function PostGridView({
+  listKey,
+  posts,
+  itemSize,
+  onOpen,
+  header,
+  empty,
+  footer,
+  onEndReached,
+  refreshControl,
+}: PostGridViewProps) {
+  return (
+    <FlatList
+      key={listKey}
+      style={styles.list}
+      data={posts}
+      numColumns={2}
+      keyExtractor={(item) => item.id}
+      columnWrapperStyle={styles.columnWrapper}
+      contentContainerStyle={styles.listContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
+      onEndReachedThreshold={0.5}
+      onEndReached={onEndReached}
+      ListHeaderComponent={header}
+      ListEmptyComponent={empty}
+      ListFooterComponent={footer}
+      renderItem={({ item }) => (
+        <PostTile post={item} size={itemSize} onPress={() => onOpen(item)} />
+      )}
+    />
+  );
+}
+
+interface TagListViewProps {
+  listKey: string;
+  tags: { tag: string; total: number }[];
+  query?: string;
+  onSelect: (tag: string) => void;
+  header?: ReactElement;
+  empty: ReactElement;
+  refreshControl: ReactElement;
+}
+
+function TagListView({ listKey, tags, query, onSelect, header, empty, refreshControl }: TagListViewProps) {
+  return (
+    <FlatList
+      key={listKey}
+      style={styles.list}
+      data={tags}
+      keyExtractor={(item) => item.tag}
+      contentContainerStyle={styles.listContent}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
+      ListHeaderComponent={header}
+      ListEmptyComponent={empty}
+      renderItem={({ item }) => (
+        <TagRow tag={item.tag} total={item.total} query={query} onSelect={onSelect} />
+      )}
+    />
+  );
 }
 
 export default function SearchScreen() {
   const isDark = useThemeStore((s) => s.isDark);
   const colors = isDark ? Colors.dark : Colors.light;
+  const { width } = useWindowDimensions();
+  const itemSize = Math.max(0, Math.floor((width - Spacing.lg * 2 - GRID_GAP) / 2));
+
+  const currentUserId = useAuthStore((state) => state.user?.id);
+
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [recent, setRecent] = useState<SearchUser[]>([]);
-  const [suggestedState, setSuggestedState] = useState<SearchUser[]>([]);
+  const [filter, setFilter] = useState<SearchFilterKey>("top");
+  const [refreshing, setRefreshing] = useState(false);
+  const [followOverrides, setFollowOverrides] = useState<Record<string, boolean>>({});
+
+  const [discoverExtra, setDiscoverExtra] = useState<Post[]>([]);
   const [discoverPage, setDiscoverPage] = useState(1);
   const [discoverHasMore, setDiscoverHasMore] = useState(true);
-  const [discoverLoadingMore, setDiscoverLoadingMore] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [discoverPostsState, setDiscoverPostsState] = useState<Post[]>([]);
-
-  const { user } = useAuthStore();
-
-  const { data: searchResults, isLoading: searching, error: searchError, refresh: refreshSearch } = useSearchUsers(debouncedQuery);
-  const { data: suggestedUsers, isLoading: suggestedLoading, refresh: refreshSuggested } = useSuggestedUsers();
-  const { data: discoverPosts, isLoading: discoverLoading, error: discoverError, refresh: refreshDiscover } = useRecommendedPosts(discoverPage, 24, debouncedQuery.trim().length > 0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => clearTimeout(handle);
   }, [query]);
 
-  useEffect(() => {
-    if (discoverPosts) {
-      setDiscoverPostsState(discoverPosts.map(mapPostWriteToPost));
-    }
-  }, [discoverPosts]);
+  const hasQuery = debouncedQuery.length > 0;
 
-  useEffect(() => {
-    if (suggestedUsers) {
-      setSuggestedState(suggestedUsers.map(toSearchUser));
-    }
-  }, [suggestedUsers]);
+  const usersResult = useSearchUsers(debouncedQuery);
+  const postsResult = useSearchPosts(debouncedQuery);
+  const suggestedResult = useSuggestedUsers();
+  const discoverResult = useRecommendedPosts(1, DISCOVER_PAGE_SIZE);
+  const trendingResult = useTrendingPosts(1, 30);
+  const trendingTagsResult = useTrendingTags(trendingResult, 5);
+  const recents = useRecentSearches();
 
-  const loadMoreDiscover = useCallback(async () => {
-    if (discoverLoadingMore || !discoverHasMore || debouncedQuery.trim().length > 0) return;
-    setDiscoverLoadingMore(true);
-    const nextPage = discoverPage + 1;
-    try {
-      const { data: response } = await api.get(`${API.posts.recommended}?page=${nextPage}&limit=24`);
-      const { mapRecommendedPostsPayload } = await import("../../src/repositories/profileMappers");
-      const nextPosts = mapRecommendedPostsPayload(response);
-      if (!nextPosts || nextPosts.length === 0) {
-        setDiscoverHasMore(false);
-        setDiscoverLoadingMore(false);
-        return;
+  const suggested = suggestedResult.data ?? [];
+  const trendingPosts = trendingResult.data ?? [];
+  const trendingTags = trendingTagsResult.data ?? [];
+  const people = usersResult.data ?? [];
+  const postResults = postsResult.data ?? [];
+  const recentSearches = recents.data;
+
+  // Reset the appended explore pages whenever the first page changes.
+  useEffect(() => {
+    setDiscoverExtra([]);
+    setDiscoverPage(1);
+    setDiscoverHasMore(true);
+  }, [discoverResult.data]);
+
+  const discoverPosts = useMemo(
+    () => [...(discoverResult.data ?? []), ...discoverExtra],
+    [discoverResult.data, discoverExtra],
+  );
+
+  const queryLower = debouncedQuery.toLowerCase();
+
+  const resultTags = useMemo(
+    () => (filter === "tags" && hasQuery ? collectTags(postResults, queryLower) : []),
+    [filter, hasQuery, postResults, queryLower],
+  );
+  const resultTagCounts = useTagCounts(resultTags, 6);
+  const tagResults = useMemo(() => {
+    if (!resultTagCounts.data) return [];
+    return [...resultTagCounts.data]
+      .filter((entry) => entry.total > 0)
+      .sort((a, b) => b.total - a.total);
+  }, [resultTagCounts.data]);
+
+  const browseGrid = useMemo(
+    () => applyPostFilter(discoverPosts, filter),
+    [discoverPosts, filter],
+  );
+  const queryGrid = useMemo(
+    () => applyPostFilter(postResults, filter),
+    [postResults, filter],
+  );
+
+  const isFollowing = useCallback(
+    (user: UserPreview) => followOverrides[user.id] ?? false,
+    [followOverrides],
+  );
+
+  const toggleFollow = useCallback(
+    async (user: UserPreview) => {
+      const previous = followOverrides[user.id] ?? false;
+      setFollowOverrides((prev) => ({ ...prev, [user.id]: !previous }));
+      try {
+        const { data } = await api.post(API.users.follow(user.id));
+        if (typeof data?.isFollowing === "boolean") {
+          setFollowOverrides((prev) => ({ ...prev, [user.id]: data.isFollowing }));
+        }
+      } catch (cause) {
+        console.warn("Follow toggle failed", cause);
+        setFollowOverrides((prev) => ({ ...prev, [user.id]: previous }));
+        showToast("Couldn't update follow", "error");
       }
-      if (nextPosts && nextPosts.length > 0) {
-        setDiscoverPostsState((prev) => [...prev, ...nextPosts.map(mapPostWriteToPost)]);
-        setDiscoverHasMore(nextPosts.length === 24);
-        setDiscoverPage(nextPage);
-      } else {
-        setDiscoverHasMore(false);
-      }
-    } catch (error) {
-      console.warn("Load more discover failed", error);
-      setDiscoverHasMore(false);
-    }
-    setDiscoverLoadingMore(false);
-  }, [discoverLoadingMore, discoverHasMore, discoverPage, debouncedQuery]);
+    },
+    [followOverrides],
+  );
 
   const openPost = useCallback((post: Post) => {
-    const hasVideo = post.media?.some((m) => m.type === "video");
+    const hasVideo = post.media?.some((item) => item.type === "video");
     if (hasVideo) {
       router.push({
         pathname: "/reels/[postId]",
@@ -151,287 +322,488 @@ export default function SearchScreen() {
     }
   }, []);
 
-  const openUser = useCallback((user: SearchUser) => {
-    setRecent((prev) => [user, ...prev.filter((u) => u.id !== user.id)].slice(0, RECENT_LIMIT));
-    router.push(`/profile/${user.username}`);
+  const rememberTerm = useCallback(
+    (term: string) => {
+      void recents.record(term).catch((cause) => {
+        console.warn("Couldn't save recent search", cause);
+      });
+    },
+    [recents],
+  );
+
+  const openUser = useCallback(
+    (user: UserPreview) => {
+      rememberTerm(user.username);
+      router.push(`/profile/${user.username}`);
+    },
+    [rememberTerm],
+  );
+
+  const selectTerm = useCallback(
+    (term: string) => {
+      rememberTerm(term);
+      setQuery(term);
+    },
+    [rememberTerm],
+  );
+
+  const selectTag = useCallback(
+    (tag: string) => {
+      rememberTerm(tag);
+      setQuery(tag);
+    },
+    [rememberTerm],
+  );
+
+  const cancelSearch = useCallback(() => {
+    setQuery("");
+    setDebouncedQuery("");
+    setFilter("top");
+    Keyboard.dismiss();
   }, []);
 
-  const removeRecent = useCallback((id: string) => {
-    setRecent((prev) => prev.filter((u) => u.id !== id));
-  }, []);
+  const commitQuery = useCallback(() => {
+    const term = query.trim();
+    if (term.length < 2) return;
+    rememberTerm(term);
+    Keyboard.dismiss();
+  }, [query, rememberTerm]);
 
-  const toggleFollow = useCallback(async (user: SearchUser) => {
-    const wasFollowing = !!user.isFollowing;
-    const apply = (list: SearchUser[]) =>
-      list.map((u) => (u.id === user.id ? { ...u, isFollowing: !wasFollowing } : u));
-    setSuggestedState(apply);
-    setRecent(apply);
+  const loadMoreDiscover = useCallback(async () => {
+    if (loadingMore || !discoverHasMore || hasQuery) return;
+    setLoadingMore(true);
+    const nextPage = discoverPage + 1;
     try {
-      await api.post(API.users.follow(user.id));
-    } catch {
-      const revert = (list: SearchUser[]) =>
-        list.map((u) => (u.id === user.id ? { ...u, isFollowing: wasFollowing } : u));
-      setSuggestedState(revert);
-      setRecent(revert);
+      const { data } = await api.get(
+        `${API.posts.recommended}?page=${nextPage}&limit=${DISCOVER_PAGE_SIZE}`,
+      );
+      const rows = mapApiPostsPayload(data);
+      if (rows.length === 0) {
+        setDiscoverHasMore(false);
+        return;
+      }
+      setDiscoverExtra((prev) => [...prev, ...rows]);
+      setDiscoverPage(nextPage);
+      setDiscoverHasMore(rows.length === DISCOVER_PAGE_SIZE);
+    } catch (cause) {
+      console.warn("Load more explore posts failed", cause);
+      setDiscoverHasMore(false);
+    } finally {
+      setLoadingMore(false);
     }
-  }, []);
+  }, [loadingMore, discoverHasMore, hasQuery, discoverPage]);
 
-  const handleRefresh = useCallback(async () => {
+  async function handleRefresh() {
     setRefreshing(true);
     try {
-      await Promise.all([refreshSearch(), refreshSuggested(), refreshDiscover()]);
+      const jobs: Promise<void>[] = [
+        discoverResult.refresh(),
+        trendingResult.refresh(),
+        suggestedResult.refresh(),
+        trendingTagsResult.refresh(),
+      ];
+      if (hasQuery) {
+        jobs.push(usersResult.refresh(), postsResult.refresh(), resultTagCounts.refresh());
+      }
+      await Promise.allSettled(jobs);
     } finally {
       setRefreshing(false);
     }
-  }, [refreshSearch, refreshSuggested, refreshDiscover]);
+  }
 
-  const hasQuery = debouncedQuery.trim().length > 0;
-  const results = searchResults?.map(toSearchUser) ?? [];
-  const suggested = suggestedState;
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+      tintColor={colors.primary}
+      colors={[colors.primary]}
+    />
+  );
 
   const header = (
     <View style={styles.header}>
-      <Text style={[styles.headerTitle, { color: colors.foreground }]}>Search</Text>
-      <TouchableOpacity onPress={handleRefresh} hitSlop={8}>
+      <Text style={[styles.headerTitle, { color: colors.foreground }]}>Explore Search</Text>
+      <TouchableOpacity accessibilityLabel="Refresh" hitSlop={8} onPress={handleRefresh}>
         <Icon name="refresh" set="light" size={20} color={colors.mutedForeground} />
       </TouchableOpacity>
     </View>
   );
 
-  return (
-    <Screen header={header} scroll showsVerticalScrollIndicator={false}>
-      <View style={styles.searchContainer}>
+  const controls = (
+    <View>
+      <View style={styles.searchRow}>
         <View
           style={[
             styles.searchBar,
-            { backgroundColor: colors.card + "90" },
-            Shadows[isDark ? "dark" : "light"]["soft"],
+            { backgroundColor: colors.card },
+            Shadows[isDark ? "dark" : "light"].soft,
           ]}
         >
           <Icon name="search" set="light" size={18} color={colors.mutedForeground} />
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search users..."
+            placeholder="Search people, posts, tags..."
             placeholderTextColor={colors.mutedForeground + "80"}
             style={[styles.searchInput, { color: colors.foreground }]}
+            autoCapitalize="none"
             autoCorrect={false}
+            returnKeyType="search"
+            onSubmitEditing={commitQuery}
+            accessibilityLabel="Search"
           />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
-              <Icon name="close-square" set="bold" size={18} color={colors.mutedForeground} />
+          {query.length > 0 ? (
+            <TouchableOpacity
+              accessibilityLabel="Clear search"
+              hitSlop={8}
+              onPress={() => setQuery("")}
+            >
+              <Icon name="close" set="light" size={18} color={colors.mutedForeground} />
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
+        {query.length > 0 ? (
+          <TouchableOpacity accessibilityLabel="Cancel search" hitSlop={8} onPress={cancelSearch}>
+            <Text style={[styles.cancel, { color: colors.primary }]}>Cancel</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
-
-      {hasQuery ? (
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={
-            !searching ? (
-              <View style={styles.emptyState}>
-                <Icon name="search" set="light" size={44} color={colors.mutedForeground + "60"} />
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  {debouncedQuery ? "No results" : "Searching..."}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <ActivityIndicator size="large" color={colors.primary} />
-              </View>
-            )
-          }
-          renderItem={({ item, index }) => (
-            <UserRow
-              user={item}
-              colors={colors}
-              index={index}
-              onPress={() => openUser(item)}
-              onFollow={() => toggleFollow(item)}
-            />
-          )}
-        />
-      ) : discoverLoading && discoverPostsState.length === 0 ? (
-        <PostGridSkeleton rows={3} />
-      ) : (
-        <FlatList
-          key="discover-grid"
-          data={discoverPostsState}
-          numColumns={2}
-          keyExtractor={(item) => item.id}
-          columnWrapperStyle={styles.discoverColumnWrapper}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          onEndReachedThreshold={0.5}
-          onEndReached={loadMoreDiscover}
-          ListFooterComponent={
-            discoverLoadingMore ? (
-              <PostGridSkeleton rows={1} horizontalPadding={0} />
-            ) : (
-              <View />
-            )
-          }
-          ListHeaderComponent={
-            <View>
-              {recent.length > 0 && (
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent</Text>
-                    <TouchableOpacity onPress={() => setRecent([])} hitSlop={8}>
-                      <Text style={[styles.clearText, { color: colors.primary }]}>Clear all</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {recent.map((user, index) => (
-                    <Animated.View key={user.id} entering={FadeInDown.duration(250).delay(index * 30)}>
-                      <View style={styles.recentRow}>
-                        <TouchableOpacity style={styles.userRowMain} onPress={() => openUser(user)}>
-                          <Avatar user={user} colors={colors} size={40} />
-                          <Text style={[styles.username, { color: colors.foreground }]} numberOfLines={1}>
-                            {user.username}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => removeRecent(user.id)} hitSlop={8}>
-                          <Icon name="close-square" set="light" size={16} color={colors.mutedForeground} />
-                        </TouchableOpacity>
-                      </View>
-                    </Animated.View>
-                  ))}
-                </View>
-              )}
-
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Suggested for you</Text>
-                </View>
-                {suggestedLoading ? (
-                  <View style={styles.emptyState}>
-                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Loading...</Text>
-                  </View>
-                ) : suggested.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Icon name="add-user" set="light" size={40} color={colors.mutedForeground + "50"} />
-                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                      No suggestions right now
-                    </Text>
-                  </View>
-                ) : (
-                  suggested.map((user, index) => (
-                    <UserRow
-                      key={user.id}
-                      user={user}
-                      colors={colors}
-                      index={index}
-                      subtitle={user.bio}
-                      onPress={() => openUser(user)}
-                      onFollow={() => toggleFollow(user)}
-                    />
-                  ))
-                )}
-              </View>
-            </View>
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Icon name="discovery" set="light" size={40} color={colors.mutedForeground + "50"} />
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Nothing to explore yet</Text>
-            </View>
-          }
-          renderItem={({ item }) => {
-            const thumb = item.media?.[0];
-            return (
-              <TouchableOpacity style={styles.discoverGridItem} onPress={() => openPost(item)} activeOpacity={0.85}>
-                {thumb ? (
-                  <CachedImage source={{ uri: thumb.url }} style={styles.discoverGridImage} contentFit="cover" />
-                ) : (
-                  <View style={[styles.discoverGridImage, { backgroundColor: colors.muted }]} />
-                )}
-                {thumb?.type === "video" ? (
-                  <View style={styles.discoverVideoBadge}>
-                    <Icon name="video" set="bold" size={12} color="#FFFFFF" />
-                  </View>
-                ) : null}
-              </TouchableOpacity>
-            );
-          }}
-        />
-      )}
-    </Screen>
-  );
-}
-
-function Avatar({ user, colors, size }: { user: SearchUser; colors: any; size: number }) {
-  return (
-    <View
-      style={[
-        styles.avatar,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: colors.muted },
-      ]}
-    >
-      {user.avatarUrl ? (
-        <CachedImage
-          source={{ uri: user.avatarUrl }}
-          style={{ width: size, height: size, borderRadius: size / 2 }}
-        />
-      ) : (
-        <Icon name="user" set="light" size={size * 0.45} color={colors.mutedForeground} />
-      )}
+      <SearchFilters value={filter} onChange={setFilter} />
     </View>
   );
-}
 
-function UserRow({
-  user,
-  colors,
-  index,
-  subtitle,
-  onPress,
-  onFollow,
-}: {
-  user: SearchUser;
-  colors: any;
-  index: number;
-  subtitle?: string;
-  onPress: () => void;
-  onFollow: () => void;
-}) {
-  return (
-    <Animated.View entering={FadeInDown.duration(250).delay(Math.min(index, 8) * 30)}>
-      <View style={[styles.resultRow, { borderBottomColor: colors.border + "20" }]}>
-        <TouchableOpacity style={styles.userRowMain} onPress={onPress} activeOpacity={0.75}>
-          <Avatar user={user} colors={colors} size={44} />
-          <View style={styles.resultMeta}>
-            <View style={styles.usernameRow}>
-              <Text style={[styles.username, { color: colors.foreground }]} numberOfLines={1}>
-                {user.username}
-              </Text>
-              {user.isVerified && (
-                <Icon name="tick-square" set="bold" size={14} color={colors.verified || colors.primary} />
-              )}
-            </View>
-            {subtitle ? (
-              <Text style={[styles.displayName, { color: colors.mutedForeground }]} numberOfLines={1}>
-                {subtitle}
-              </Text>
-            ) : null}
-          </View>
-        </TouchableOpacity>
-        <Button
-          title={user.isFollowing ? "Following" : "Follow"}
-          onPress={onFollow}
-          variant={user.isFollowing ? "outline" : "primary"}
-          size="sm"
-        />
+  const shell = (content: ReactNode) => (
+    <Screen header={header}>
+      <View style={styles.body}>
+        {controls}
+        {content}
       </View>
-    </Animated.View>
+    </Screen>
+  );
+
+  const userRow = (user: UserPreview, listQuery?: string) => (
+    <UserRow
+      key={user.id}
+      user={user}
+      query={listQuery}
+      isFollowing={isFollowing(user)}
+      isSelf={user.id === currentUserId}
+      onPress={() => openUser(user)}
+      onFollow={() => void toggleFollow(user)}
+    />
+  );
+
+  const suggestedBody = suggestedResult.isLoading ? (
+    <View>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <SearchUserSkeleton key={index} showVerified={index === 1} />
+      ))}
+    </View>
+  ) : suggestedResult.error && suggested.length === 0 ? (
+    <SearchStatus
+      message="Couldn't load suggestions"
+      error={suggestedResult.error}
+      onRetry={() => void suggestedResult.refresh().catch(() => {})}
+    />
+  ) : suggested.length === 0 ? (
+    <SearchStatus iconName="add-user" message="No suggestions right now" />
+  ) : (
+    <View>{suggested.map((user) => userRow(user))}</View>
+  );
+
+  const trendingTagsBody = trendingTagsResult.isLoading ? (
+    <View>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <SearchUserSkeleton key={index} showFollow={false} />
+      ))}
+    </View>
+  ) : trendingTagsResult.error && trendingTags.length === 0 ? (
+    <SearchStatus
+      message="Couldn't load trending tags"
+      error={trendingTagsResult.error}
+      onRetry={() => void trendingTagsResult.refresh().catch(() => {})}
+    />
+  ) : (
+    <TrendingTags tags={trendingTags} onSelect={selectTag} />
+  );
+
+  const recentSection = (
+    <RecentSearches
+      searches={recentSearches}
+      query={query}
+      onSelect={selectTerm}
+      onRemove={(term) => void recents.remove(term).catch(() => {})}
+      onClear={() => void recents.clear().catch(() => {})}
+    />
+  );
+
+  const browseGridEmpty = discoverResult.error ? (
+    <SearchStatus
+      iconName="discovery"
+      message="Couldn't load the explore grid"
+      error={discoverResult.error}
+      onRetry={() => void discoverResult.refresh().catch(() => {})}
+    />
+  ) : (
+    <SearchStatus iconName="discovery" message="Nothing to explore yet" />
+  );
+
+  const queryEmpty = usersResult.isLoading || postsResult.isLoading ? (
+    <PostGridSkeleton rows={2} horizontalPadding={0} />
+  ) : (usersResult.error ?? postsResult.error) ? (
+    <SearchStatus
+      message="Couldn't run that search"
+      error={usersResult.error ?? postsResult.error}
+      onRetry={() => {
+        void Promise.allSettled([usersResult.refresh(), postsResult.refresh()]);
+      }}
+    />
+  ) : people.length > 0 ? (
+    <SearchStatus message="No posts found" />
+  ) : (
+    <SearchStatus message={`No results for “${debouncedQuery}”`} />
+  );
+
+  const queryTopHeader = (
+    <View>
+      {people.length > 0 || usersResult.isLoading || usersResult.error ? (
+        <View>
+          <SectionTitle title="People" iconName="people" />
+          {usersResult.isLoading ? (
+            <View>
+              {Array.from({ length: 3 }).map((_, index) => (
+                <SearchUserSkeleton key={index} showVerified={index === 1} />
+              ))}
+            </View>
+          ) : usersResult.error && people.length === 0 ? (
+            <SearchStatus
+              message="Couldn't load people"
+              error={usersResult.error}
+              onRetry={() => void usersResult.refresh().catch(() => {})}
+            />
+          ) : (
+            people.map((user) => userRow(user, debouncedQuery))
+          )}
+        </View>
+      ) : null}
+      <SectionTitle title="Posts" iconName="image" />
+    </View>
+  );
+
+  const browseTopHeader = (
+    <View>
+      {recentSection}
+      {trendingTagsBody}
+      <SectionTitle title="Suggested for you" iconName="people" />
+      {suggestedBody}
+    </View>
+  );
+
+  /* ── Browse (no query) ─────────────────────────────────────────────── */
+  if (!hasQuery) {
+    if (filter === "users") {
+      if (suggestedResult.isLoading && suggested.length === 0) {
+        return shell(<SearchUserSkeletonList count={6} />);
+      }
+      return shell(
+        <UserListView
+          listKey="browse-users"
+          users={suggested}
+          currentUserId={currentUserId}
+          isFollowing={isFollowing}
+          onSelect={openUser}
+          onFollow={(user) => void toggleFollow(user)}
+          header={<SectionTitle title="Suggested for you" iconName="people" />}
+          empty={
+            suggestedResult.error ? (
+              <SearchStatus
+                message="Couldn't load suggestions"
+                error={suggestedResult.error}
+                onRetry={() => void suggestedResult.refresh().catch(() => {})}
+              />
+            ) : (
+              <SearchStatus iconName="add-user" message="No suggestions right now" />
+            )
+          }
+          refreshControl={refreshControl}
+        />,
+      );
+    }
+
+    if (filter === "tags") {
+      if (trendingTagsResult.isLoading && trendingTags.length === 0) {
+        return shell(<SearchUserSkeletonList count={5} />);
+      }
+      return shell(
+        <TagListView
+          listKey="browse-tags"
+          tags={trendingTags}
+          onSelect={selectTag}
+          header={<SectionTitle title="Trending now" iconName="flame" />}
+          empty={
+            trendingTagsResult.error ? (
+              <SearchStatus
+                iconName="flame"
+                message="Couldn't load trending tags"
+                error={trendingTagsResult.error}
+                onRetry={() => void trendingTagsResult.refresh().catch(() => {})}
+              />
+            ) : (
+              <SearchStatus iconName="pricetag" message="No trending tags yet" />
+            )
+          }
+          refreshControl={refreshControl}
+        />,
+      );
+    }
+
+    if (filter === "posts") {
+      if (trendingResult.isLoading && trendingPosts.length === 0) {
+        return shell(<PostGridSkeleton rows={3} />);
+      }
+      return shell(
+        <PostGridView
+          listKey="browse-posts"
+          posts={trendingPosts}
+          itemSize={itemSize}
+          onOpen={openPost}
+          header={<SectionTitle title="Trending posts" iconName="flame" />}
+          empty={
+            trendingResult.error ? (
+              <SearchStatus
+                message="Couldn't load trending posts"
+                error={trendingResult.error}
+                onRetry={() => void trendingResult.refresh().catch(() => {})}
+              />
+            ) : (
+              <SearchStatus iconName="discovery" message="Nothing trending right now" />
+            )
+          }
+          refreshControl={refreshControl}
+        />,
+      );
+    }
+
+    // top / media / places all read the explore grid.
+    if (discoverResult.isLoading && browseGrid.length === 0) {
+      return shell(<PostGridSkeleton rows={3} />);
+    }
+    const showSections = filter === "top";
+    return shell(
+      <PostGridView
+        listKey={`browse-${filter}`}
+        posts={browseGrid}
+        itemSize={itemSize}
+        onOpen={openPost}
+        onEndReached={loadMoreDiscover}
+        header={showSections ? browseTopHeader : <SectionTitle title={filter === "media" ? "Media" : "Places"} />}
+        footer={loadingMore ? <PostGridSkeleton rows={1} horizontalPadding={0} /> : undefined}
+        empty={browseGridEmpty}
+        refreshControl={refreshControl}
+      />,
+    );
+  }
+
+  /* ── Query results ─────────────────────────────────────────────────── */
+  if (filter === "users") {
+    if (usersResult.isLoading && people.length === 0) {
+      return shell(<SearchUserSkeletonList count={6} />);
+    }
+    return shell(
+      <UserListView
+        listKey="query-users"
+        users={people}
+        query={debouncedQuery}
+        currentUserId={currentUserId}
+        isFollowing={isFollowing}
+        onSelect={openUser}
+        onFollow={(user) => void toggleFollow(user)}
+        empty={
+          usersResult.error ? (
+            <SearchStatus
+              message="Couldn't run that search"
+              error={usersResult.error}
+              onRetry={() => void usersResult.refresh().catch(() => {})}
+            />
+          ) : (
+            <SearchStatus message={`No people found for “${debouncedQuery}”`} />
+          )
+        }
+        refreshControl={refreshControl}
+      />,
+    );
+  }
+
+  if (filter === "tags") {
+    const tagsLoading = postsResult.isLoading || resultTagCounts.isLoading;
+    if (tagsLoading && tagResults.length === 0) {
+      return shell(<SearchUserSkeletonList count={5} />);
+    }
+    return shell(
+      <TagListView
+        listKey="query-tags"
+        tags={tagResults}
+        query={debouncedQuery}
+        onSelect={selectTag}
+        empty={
+          postsResult.error ?? resultTagCounts.error ? (
+            <SearchStatus
+              iconName="pricetag"
+              message="Couldn't look up tags"
+              error={postsResult.error ?? resultTagCounts.error}
+              onRetry={() => {
+                void Promise.allSettled([postsResult.refresh(), resultTagCounts.refresh()]);
+              }}
+            />
+          ) : (
+            <SearchStatus iconName="pricetag" message={`No tags found for “${debouncedQuery}”`} />
+          )
+        }
+        refreshControl={refreshControl}
+      />,
+    );
+  }
+
+  if (postsResult.isLoading && queryGrid.length === 0) {
+    return shell(<PostGridSkeleton rows={3} />);
+  }
+
+  const peopleOnly = filter === "top" ? queryTopHeader : undefined;
+  const gridEmpty =
+    filter === "top" ? (
+      queryEmpty
+    ) : postsResult.error ? (
+      <SearchStatus
+        message="Couldn't run that search"
+        error={postsResult.error}
+        onRetry={() => void postsResult.refresh().catch(() => {})}
+      />
+    ) : (
+      <SearchStatus
+        message={`No ${filter === "media" ? "media" : filter === "places" ? "places" : "posts"} found for “${debouncedQuery}”`}
+      />
+    );
+
+  return shell(
+    <PostGridView
+      listKey={`query-${filter}`}
+      posts={queryGrid}
+      itemSize={itemSize}
+      onOpen={openPost}
+      header={peopleOnly}
+      empty={gridEmpty}
+      refreshControl={refreshControl}
+    />,
   );
 }
 
 const styles = StyleSheet.create({
+  body: {
+    flex: 1,
+  },
+  list: {
+    flex: 1,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -439,90 +811,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
   },
-  headerTitle: { ...Typography.h3 },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+  headerTitle: {
+    ...Typography.h3,
   },
-  searchBar: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: Radius.xl,
-    paddingHorizontal: 16,
-    height: 44,
+    gap: Gap.md,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     gap: Gap.sm,
+    height: 44,
+    paddingHorizontal: Spacing.base,
+    borderRadius: Radius.xl,
   },
   searchInput: {
     flex: 1,
     ...Typography.body,
+    paddingVertical: 0,
+  },
+  cancel: {
+    ...Typography.button,
   },
   listContent: {
     paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing["3xl"],
   },
-  emptyState: {
-    paddingVertical: Spacing["3xl"],
-    alignItems: "center",
-    gap: Gap.md,
-  },
-  emptyText: {
-    ...Typography.body,
-  },
-  section: {
-    marginBottom: Spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.xs,
-  },
-  sectionTitle: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
-    lineHeight: 20,
-  },
-  clearText: {
-    ...Typography.button,
-  },
-  recentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: Spacing.xs,
-  },
-  resultRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: Gap.md,
-  },
-  userRowMain: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Gap.md,
-  },
-  avatar: {
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  resultMeta: { flex: 1 },
-  usernameRow: { flexDirection: "row", alignItems: "center", gap: Gap.xs },
-  username: { fontFamily: FontFamily.medium, fontSize: FontSize.base, lineHeight: 21 },
-  displayName: { ...Typography.caption, marginTop: 2 },
-  discoverColumnWrapper: { gap: GRID_GAP },
-  discoverGridItem: {
-    width: GRID_ITEM_SIZE,
-    height: GRID_ITEM_SIZE,
+  columnWrapper: {
+    gap: GRID_GAP,
     marginBottom: GRID_GAP,
-    borderRadius: Radius.md,
-    overflow: "hidden",
-    position: "relative",
   },
-  discoverGridImage: { width: "100%", height: "100%" },
-  discoverVideoBadge: { position: "absolute", top: 6, right: 6 },
 });

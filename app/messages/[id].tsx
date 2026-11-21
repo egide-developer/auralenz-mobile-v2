@@ -45,7 +45,8 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
@@ -618,17 +619,17 @@ function MessageRow({
       )}
       {isMine && (
         <View style={styles.deliveryStatusRow}>
-          <Ionicons
-            name={
+          <AppIcon
+            icon={
               message.failed
-                ? "alert-circle-outline"
+                ? icons.alertCircleOutline
                 : message.pending
-                  ? "time-outline"
+                  ? icons.timeOutline
                   : message.status === "read" ||
                       message.status === "delivered" ||
                       message.readBy?.some((entry) => entry.user !== message.senderId)
-                    ? "checkmark-done-outline"
-                    : "checkmark"
+                    ? icons.checkmarkDone
+                    : icons.checkmark
             }
             size={12}
             color={
@@ -1982,7 +1983,7 @@ export default function ChatDetailScreen() {
               {smartReplyLoading ? (
                 <ActivityIndicator size="small" color={colors.mutedForeground} />
               ) : (
-                <Ionicons name="sparkles" size={19} color={colors.mutedForeground} />
+                <AppIcon icon={icons.sparkles} size={19} color={colors.mutedForeground}  />
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowAttachMenu(true)} style={styles.attachBtn} hitSlop={6}>
@@ -2002,8 +2003,8 @@ export default function ChatDetailScreen() {
               accessibilityLabel={viewOnceArmed ? "View once armed" : "Send as view once"}
               accessibilityState={{ selected: viewOnceArmed }}
             >
-              <Ionicons
-                name={viewOnceArmed ? "flame" : "flame-outline"}
+              <AppIcon
+                icon={viewOnceArmed ? icons.flame : icons.flameOutline}
                 size={20}
                 color={viewOnceArmed ? colors.primary : colors.mutedForeground}
               />
@@ -2038,7 +2039,7 @@ export default function ChatDetailScreen() {
                 scaleTo={0.85}
                 style={[styles.sendBtn, { backgroundColor: colors.muted }]}
               >
-                <Ionicons name="mic" size={18} color={colors.mutedForeground} />
+                <AppIcon icon={icons.mic} size={18} color={colors.mutedForeground}  />
               </PressableScale>
             )}
           </>
@@ -2082,7 +2083,7 @@ export default function ChatDetailScreen() {
                 setSummaryVisible(true);
               }}
             >
-              <Ionicons name="sparkles" size={19} color={colors.primary} />
+              <AppIcon icon={icons.sparkles} size={19} color={colors.primary}  />
               <Text style={[styles.attachMenuText, { color: colors.foreground }]}>AI summary</Text>
             </TouchableOpacity>
             <View style={[styles.attachMenuDivider, { backgroundColor: colors.border + "40" }]} />

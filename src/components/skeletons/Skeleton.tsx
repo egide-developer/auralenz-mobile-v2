@@ -4,7 +4,6 @@
 import React from "react";
 import { View, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
-  cancelAnimation,
   useSharedValue,
   useAnimatedStyle,
   withTiming,
@@ -46,21 +45,20 @@ export function Skeleton({
 
   React.useEffect(() => {
     translateX.value = withRepeat(
-      withTiming(0, { duration: 1600, easing: Easing.linear }),
+      withTiming(50, { duration: 1600, easing: Easing.linear }),
       -1,
       false,
     );
-    return () => cancelAnimation(translateX);
-  }, [translateX]);
+  }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
     return { transform: [{ translateX: `${translateX.value}%` }] };
-  }, []);
+  });
 
   const r = round ? Radius.pill : borderRadius;
 
   return (
-    <View
+    <Animated.View
       style={[
         styles.container,
         { width, height, borderRadius: r, aspectRatio, backgroundColor: baseColor },
@@ -80,7 +78,7 @@ export function Skeleton({
           />
         </Animated.View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

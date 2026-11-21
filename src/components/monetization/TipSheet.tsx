@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   grabber: { width: 40, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: Spacing.lg },
   titleRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
-  title: { fontFamily: FontFamily.bold, fontSize: 18, flex: 1 },
+  title: { fontFamily: FontFamily.bold, fontSize: 20, flex: 1 },
   balance: { ...Typography.bodySmall, marginTop: Spacing.xs, marginBottom: Spacing.lg },
   presets: { flexDirection: "row", gap: Spacing.sm },
   preset: {
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
   },
-  presetLabel: { fontFamily: FontFamily.semibold, fontSize: 16 },
+  presetLabel: { fontFamily: FontFamily.semibold, fontSize: 18 },
   customRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -252,14 +252,14 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   shortfallText: { ...Typography.bodySmall },
-  shortfallLink: { fontFamily: FontFamily.semibold, fontSize: 13 },
+  shortfallLink: { fontFamily: FontFamily.semibold, fontSize: 15 },
   send: {
     marginTop: Spacing.lg,
     paddingVertical: Spacing.base,
     borderRadius: Radius.pill,
     alignItems: "center",
   },
-  sendLabel: { fontFamily: FontFamily.bold, fontSize: 16 },
+  sendLabel: { fontFamily: FontFamily.bold, fontSize: 18 },
   cancel: { marginTop: Spacing.md, alignItems: "center", paddingVertical: Spacing.sm },
   cancelLabel: { ...Typography.bodySmall },
 });

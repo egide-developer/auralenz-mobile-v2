@@ -57,8 +57,8 @@ export function ConversationRowSkeletonList({
           style={[
             styles.dividedRow,
             { borderTopColor: colors.divider },
-            index === 0 && styles.firstRow,
-          ]}
+            ...(index === 0 ? [styles.firstRow] : []),
+          ] as const}
         >
           <ConversationRowSkeleton variant={variant} />
         </View>

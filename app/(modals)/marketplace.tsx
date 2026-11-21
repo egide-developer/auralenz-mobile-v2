@@ -22,7 +22,8 @@ import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { LISTING_CATEGORIES } from "../../src/types";
@@ -172,7 +173,7 @@ export default function MarketplaceModal() {
                 hitSlop={8}
                 accessibilityLabel="Remove listing"
               >
-                <Ionicons name="trash-outline" size={15} color={colors.destructive} />
+                <AppIcon icon={icons.trash} size={15} color={colors.destructive}  />
               </TouchableOpacity>
             )}
           </View>
@@ -207,8 +208,8 @@ export default function MarketplaceModal() {
           style={styles.headerBtn}
           accessibilityLabel="Sell an item"
         >
-          <Ionicons
-            name={createOpen ? "close-circle-outline" : "add-circle-outline"}
+          <AppIcon
+            icon={createOpen ? icons.closeCircle : icons.addCircle}
             size={22}
             color={createOpen ? colors.destructive : colors.foreground}
           />
@@ -366,7 +367,7 @@ export default function MarketplaceModal() {
             }
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <Ionicons name="storefront-outline" size={44} color={colors.mutedForeground + "60"} />
+                <AppIcon icon={icons.storefrontOutline} size={44} color={colors.mutedForeground + "60"}  />
                 <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                   {tab === "mine" ? "No listings yet" : "No listings found"}
                 </Text>

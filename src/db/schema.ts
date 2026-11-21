@@ -204,6 +204,18 @@ export const searchCache = sqliteTable(
   (table) => [index("search_cache_fetched_at_idx").on(table.fetchedAt)],
 );
 
+/** Search terms the user committed to, newest first. One row per term. */
+export const recentSearches = sqliteTable(
+  "recent_searches",
+  {
+    term: text("term").primaryKey().notNull(),
+    lastSearchedAt: text("last_searched_at").notNull(),
+  },
+  (table) => [
+    index("recent_searches_last_searched_at_idx").on(table.lastSearchedAt),
+  ],
+);
+
 export const outbox = sqliteTable(
   "outbox",
   {
@@ -248,6 +260,7 @@ export const localSchema = {
   profiles,
   posts,
   searchCache,
+  recentSearches,
   outbox,
   syncState,
   messagePages,

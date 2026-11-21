@@ -20,7 +20,8 @@ import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { VideoView } from "expo-video";
 import { useCachedVideoPlayer } from "../../src/hooks/useCachedVideoPlayer";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
@@ -193,7 +194,7 @@ export default function PostDetailScreen() {
 
       <View style={styles.actionsRow}>
         <TouchableOpacity style={styles.actionBtn} onPress={toggleLike}>
-          <Ionicons name={post.isLiked ? "heart" : "heart-outline"} size={24} color={post.isLiked ? Colors.light.destructive : colors.foreground} />
+          <AppIcon icon={icons.heart} size={24} color={post.isLiked ? Colors.light.destructive : colors.foreground} strokeWidth={post.isLiked ? 2.2 : 1.5} />
           <Text style={[styles.actionText, { color: colors.foreground }]}>{post.likesCount}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => setCommentsVisible(true)}>

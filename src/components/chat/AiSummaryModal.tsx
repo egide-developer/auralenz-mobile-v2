@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   centerFill: { alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 48 },
   caption: { ...Typography.bodySmall },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: Radius.pill, marginTop: 4 },
-  retryText: { fontFamily: FontFamily.semibold, fontSize: 13 },
+  retryText: { fontFamily: FontFamily.semibold, fontSize: 15 },
   content: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg },
   summary: { ...Typography.body, lineHeight: 21 },
   section: { marginTop: Spacing.lg, gap: 8 },

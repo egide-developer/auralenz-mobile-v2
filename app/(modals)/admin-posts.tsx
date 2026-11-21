@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { showToast } from "../../src/stores/toastStore";
 import { CachedImage } from "../../src/components/ui/CachedImage";
@@ -108,11 +109,7 @@ export default function AdminPostsScreen() {
           {thumbnail?.url && !isVideo ? (
             <CachedImage source={{ uri: thumbnail.url }} style={styles.thumbImage} contentFit="cover" />
           ) : (
-            <Ionicons
-              name={isVideo ? "videocam" : "image-outline"}
-              size={20}
-              color={colors.mutedForeground}
-            />
+            <AppIcon icon={isVideo ? icons.videocam : icons.imageOutline} size={20} color={colors.mutedForeground} />
           )}
         </View>
 
@@ -142,7 +139,7 @@ export default function AdminPostsScreen() {
           <ActivityIndicator size="small" color={colors.destructive} />
         ) : (
           <TouchableOpacity onPress={() => deletePost(item)} hitSlop={8} style={styles.deleteBtn}>
-            <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+            <AppIcon icon={icons.trash} size={20} color={colors.destructive}  />
           </TouchableOpacity>
         )}
       </View>
@@ -153,13 +150,13 @@ export default function AdminPostsScreen() {
     <SafeAreaScreen style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+          <AppIcon icon={icons.chevronBack} size={24} color={colors.foreground}  />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Manage Posts</Text>
       </View>
 
       <View style={[styles.searchBox, { backgroundColor: colors.card }]}>
-        <Ionicons name="search" size={16} color={colors.mutedForeground} />
+        <AppIcon icon={icons.search} size={16} color={colors.mutedForeground}  />
         <TextInput
           value={query}
           onChangeText={setQuery}
@@ -170,7 +167,7 @@ export default function AdminPostsScreen() {
         />
         {query ? (
           <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
+            <AppIcon icon={icons.closeCircle} size={16} color={colors.mutedForeground}  />
           </TouchableOpacity>
         ) : null}
       </View>

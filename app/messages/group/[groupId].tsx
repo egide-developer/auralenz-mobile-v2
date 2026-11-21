@@ -29,7 +29,8 @@ import { Spacing, Radius } from "../../../src/theme/spacing";
 import { Typography, FontFamily } from "../../../src/theme/typography";
 import { Icon } from "../../../src/components/ui/Icon";
 import { AiSummaryModal } from "../../../src/components/chat/AiSummaryModal";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../../src/components/ui/AppIcon";
+import { icons } from "../../../src/constants/icons";
 import api from "../../../src/api/client";
 import { API } from "../../../src/api/endpoints";
 import {
@@ -439,7 +440,7 @@ export default function GroupChatScreen() {
                 setSummaryVisible(true);
               }}
             >
-              <Ionicons name="sparkles" size={19} color={colors.primary} />
+              <AppIcon icon={icons.sparkles} size={19} color={colors.primary}  />
               <Text style={[styles.menuItemText, { color: colors.foreground }]}>AI summary</Text>
             </TouchableOpacity>
             <View style={[styles.menuDivider, { backgroundColor: colors.border + "40" }]} />

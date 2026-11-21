@@ -19,6 +19,12 @@ export const localMigrations = {
         tag: "0002_posts_optimistic",
         breakpoints: true,
       },
+      {
+        idx: 3,
+        when: Date.UTC(2026, 10, 18),
+        tag: "0003_recent_searches",
+        breakpoints: true,
+      },
     ],
   },
   migrations: {
@@ -157,6 +163,15 @@ ALTER TABLE posts ADD COLUMN previous_content TEXT;
 ALTER TABLE posts ADD COLUMN previous_media TEXT;
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS posts_client_id_uidx ON posts (client_id);
+    `,
+    m0003: `
+CREATE TABLE IF NOT EXISTS recent_searches (
+  term TEXT PRIMARY KEY NOT NULL,
+  last_searched_at TEXT NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS recent_searches_last_searched_at_idx
+  ON recent_searches (last_searched_at);
     `,
   },
 };

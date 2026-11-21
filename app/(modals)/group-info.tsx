@@ -12,8 +12,8 @@ import { useCallback, useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
-
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { CachedImage } from "../../src/components/ui/CachedImage";
@@ -223,7 +223,7 @@ export default function GroupInfoScreen() {
     >
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+          <AppIcon icon={icons.back} size={24} color={colors.foreground}  />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Group info</Text>
         <View style={{ width: 24 }} />
@@ -235,7 +235,7 @@ export default function GroupInfoScreen() {
             {avatarPreview || group.avatarUrl ? (
               <CachedImage source={{ uri: avatarPreview || group.avatarUrl }} style={styles.avatarImage} />
             ) : (
-              <Ionicons name="people" size={36} color={colors.mutedForeground} />
+              <AppIcon icon={icons.people} size={36} color={colors.mutedForeground}  />
             )}
             {uploadingAvatar ? (
               <View style={styles.avatarOverlay}>
@@ -309,7 +309,7 @@ export default function GroupInfoScreen() {
                   {participant.avatarUrl ? (
                     <CachedImage source={{ uri: participant.avatarUrl }} style={styles.memberAvatarImage} />
                   ) : (
-                    <Ionicons name="person" size={16} color={colors.mutedForeground} />
+                    <AppIcon icon={icons.person} size={16} color={colors.mutedForeground}  />
                   )}
                   {isOnline(participant.id) ? (
                     <View style={[styles.onlineDot, { borderColor: colors.background }]} />
@@ -329,14 +329,14 @@ export default function GroupInfoScreen() {
               {isAdmin && !isSelf ? (
                 <View style={styles.memberActions}>
                   <TouchableOpacity onPress={() => toggleRole(participant)} hitSlop={8} style={styles.memberActionBtn}>
-                    <Ionicons
-                      name={participant.role === "admin" ? "shield" : "shield-outline"}
+                    <AppIcon
+                      icon={participant.role === "admin" ? icons.shield : icons.shieldOutline}
                       size={18}
                       color={participant.role === "admin" ? colors.primary : colors.mutedForeground}
                     />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => removeParticipant(participant)} hitSlop={8} style={styles.memberActionBtn}>
-                    <Ionicons name="person-remove-outline" size={18} color="#FF4757" />
+                    <AppIcon icon={icons.userRemove} size={18} color="#FF4757" />
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -347,13 +347,13 @@ export default function GroupInfoScreen() {
 
       <View style={styles.section}>
         <TouchableOpacity onPress={leaveGroup} style={styles.dangerRow}>
-          <Ionicons name="exit-outline" size={20} color="#FF4757" />
+          <AppIcon icon={icons.exitOutline} size={20} color="#FF4757"  />
           <Text style={styles.dangerText}>Leave group</Text>
         </TouchableOpacity>
 
         {isAdmin ? (
           <TouchableOpacity onPress={deleteGroup} style={styles.dangerRow}>
-            <Ionicons name="trash-outline" size={20} color="#FF4757" />
+            <AppIcon icon={icons.trash} size={20} color="#FF4757"  />
             <Text style={styles.dangerText}>Delete group</Text>
           </TouchableOpacity>
         ) : null}

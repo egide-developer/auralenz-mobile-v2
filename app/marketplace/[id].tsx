@@ -23,7 +23,8 @@ import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { LISTING_CATEGORIES } from "../../src/types";
@@ -232,7 +233,7 @@ export default function MarketplaceListingScreen() {
                 {removing ? (
                   <ActivityIndicator size="small" color={colors.destructive} />
                 ) : (
-                  <Ionicons name="trash-outline" size={21} color={colors.destructive} />
+                  <AppIcon icon={icons.trash} size={21} color={colors.destructive}  />
                 )}
               </TouchableOpacity>
             </>
@@ -278,7 +279,7 @@ export default function MarketplaceListingScreen() {
                 <CachedImage source={{ uri: images[0] }} style={StyleSheet.absoluteFill} contentFit="cover" />
               ) : (
                 <View style={styles.mediaPlaceholder}>
-                  <Ionicons name="image-outline" size={40} color={colors.mutedForeground + "60"} />
+                  <AppIcon icon={icons.imageOutline} size={40} color={colors.mutedForeground + "60"}  />
                 </View>
               )}
             </View>

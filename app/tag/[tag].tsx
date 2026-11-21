@@ -10,7 +10,8 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
@@ -91,7 +92,7 @@ export default function TagResultsScreen() {
           ItemSeparatorComponent={() => <View style={{ height: GRID_GAP }} />}
           ListEmptyComponent={
             <View style={styles.centerFill}>
-              <Ionicons name="pricetag-outline" size={40} color={colors.mutedForeground + "60"} />
+              <AppIcon icon={icons.pricetagOutline} size={40} color={colors.mutedForeground + "60"}  />
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No posts tagged #{tag} yet</Text>
             </View>
           }

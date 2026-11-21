@@ -60,8 +60,8 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     paddingTop: 12,
   },
-  title: { fontSize: 15, fontWeight: "600", textAlign: "center", paddingVertical: 12 },
+  title: { fontSize: 17, fontWeight: "600", textAlign: "center", paddingVertical: 12 },
   row: { paddingVertical: 14, paddingHorizontal: 20 },
-  rowText: { fontSize: 15 },
+  rowText: { fontSize: 17 },
   cancel: { marginTop: 4 },
 });

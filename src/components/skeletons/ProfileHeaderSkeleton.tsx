@@ -49,14 +49,14 @@ export function ProfileHeaderSkeleton({
             { backgroundColor: colors.surface, borderColor: colors.divider },
           ]}
         >
-          {[0, 1, 2].map((index) => (
+          {([0, 1, 2] as const).map((index) => (
             <View
               key={index}
               style={[
                 styles.stat,
                 { borderLeftColor: colors.divider },
-                index > 0 && styles.dividedStat,
-              ]}
+                ...(index > 0 ? [styles.dividedStat] : []),
+              ] as const}
             >
               <Skeleton width="48%" height={Spacing.xl} />
               <Skeleton width="58%" height={Spacing.md} />

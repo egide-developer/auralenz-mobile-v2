@@ -39,7 +39,7 @@ export function PostGridSkeleton({
             style={[
               styles.item,
               { width: itemWidth, height: itemWidth },
-            ]}
+            ] as const}
           >
             <Skeleton width="100%" height={itemWidth} borderRadius={Radius.sm} />
             {index % 4 === 0 ? (

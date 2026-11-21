@@ -11,7 +11,8 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { showToast } from "../../src/stores/toastStore";
 import { Colors } from "../../src/theme/colors";
@@ -126,13 +127,13 @@ export default function AdminLogsScreen() {
     <SafeAreaScreen style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+          <AppIcon icon={icons.chevronBack} size={24} color={colors.foreground}  />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>System Logs</Text>
       </View>
 
       <View style={[styles.searchBox, { backgroundColor: colors.card }]}>
-        <Ionicons name="search" size={16} color={colors.mutedForeground} />
+        <AppIcon icon={icons.search} size={16} color={colors.mutedForeground}  />
         <TextInput
           value={search}
           onChangeText={setSearch}
@@ -143,7 +144,7 @@ export default function AdminLogsScreen() {
         />
         {search ? (
           <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
+            <AppIcon icon={icons.closeCircle} size={16} color={colors.mutedForeground}  />
           </TouchableOpacity>
         ) : null}
       </View>

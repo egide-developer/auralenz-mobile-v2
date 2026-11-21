@@ -3,7 +3,8 @@ export type RepositoryEntity =
   | "messages"
   | "profiles"
   | "posts"
-  | "search";
+  | "search"
+  | "recentSearches";
 
 type Listener = () => void;
 

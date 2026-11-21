@@ -1,346 +1,181 @@
-// AuraLenz BottomNav — active tab has sliding pill + filled icon only
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  useWindowDimensions,
-  LayoutChangeEvent,
-  Keyboard,
-  Platform,
-} from "react-native";
-import { usePathname, useRouter } from "expo-router";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
+import { useRef, useEffect } from "react";
+import { Pressable, Text, View, StyleSheet, Animated, Easing } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { Icon } from "../ui/Icon";
-import { PlusSolid } from "../ui/icons/plus-solid";
+import { router, usePathname } from "expo-router";
 import { useThemeStore } from "../../stores/themeStore";
 import { useUnreadStore } from "../../stores/unreadStore";
 import { Colors } from "../../theme/colors";
-import { Radius, Spacing, Gap } from "../../theme/spacing";
-import { FontFamily } from "../../theme/typography";
+import { Spacing } from "../../theme/spacing";
+import { FontFamily, Typography } from "../../theme/typography";
+import { AppIcon } from "../ui/AppIcon";
+import { icons } from "../../constants/icons";
+import type { IconSvgElement } from "@hugeicons/react-native";
 
 interface NavItem {
   name: string;
-  icon: string;
+  icon: IconSvgElement;
   path: string;
   badge?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { name: "home", icon: "home", path: "/" },
-  { name: "search", icon: "search", path: "/search" },
-  { name: "reels", icon: "play", path: "/reels" },
-  { name: "messages", icon: "chat", path: "/messages", badge: true },
-  { name: "profile", icon: "user", path: "/profile" },
+  { name: "home", icon: icons.home, path: "/" },
+  { name: "search", icon: icons.search, path: "/search" },
+  { name: "reels", icon: icons.play, path: "/reels" },
+  { name: "messages", icon: icons.message, path: "/messages", badge: true },
+  { name: "profile", icon: icons.user, path: "/profile" },
 ];
 
-const MAX_DOCK_WIDTH = 416;
-const INDICATOR_SPRING = { damping: 36, stiffness: 400, overshootClamping: true };
+const ACCENT_TINT_LIGHT = "rgba(127,163,34,0.10)";
+const ACCENT_TINT_DARK = "rgba(153,204,51,0.12)";
 
-function normalizePathname(pathname: string) {
-  return pathname.replace(/\/\([^)]+\)/g, "") || "/";
+function createAnimations(): Animated.Value[] {
+  return NAV_ITEMS.map(() => new Animated.Value(0));
 }
 
 export function BottomNav() {
-  const { width: screenWidth } = useWindowDimensions();
-  const dockMaxWidth = Math.min(screenWidth - 20, MAX_DOCK_WIDTH);
-  const pathname = usePathname();
-  const normalizedPathname = normalizePathname(pathname);
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const themeIsDark = useThemeStore((s) => s.isDark);
-  const totalUnread = useUnreadStore((s) => s.totalUnread);
-  const isCreate = normalizedPathname.startsWith("/create");
-  const isReelsTab = normalizedPathname === "/reels";
-  const isDark = isReelsTab || themeIsDark;
+  const pathname = usePathname();
+  const isDark = useThemeStore((s) => s.isDark);
+  const unreadCount = useUnreadStore((s) => s.totalUnread);
+  const c = isDark ? Colors.dark : Colors.light;
 
-  const [pillWidth, setPillWidth] = useState(0);
-  const tabWidth = pillWidth > 0 ? pillWidth / NAV_ITEMS.length : 0;
+  const isActive = (path: string): boolean => {
+    if (path === "/") return pathname === "/" || pathname === "";
+    return pathname.startsWith(path);
+  };
 
-  // Compute active index from pathname
-  const activeIndex = React.useMemo(() => {
-    return NAV_ITEMS.findIndex((item) => {
-      if (item.path === "/") {
-        return normalizedPathname === "/" || normalizedPathname === "/index";
-      }
-      return (
-        normalizedPathname === item.path ||
-        normalizedPathname.startsWith(`${item.path}/`)
-      );
-    });
-  }, [normalizedPathname]);
+  const accentTint = isDark ? ACCENT_TINT_DARK : ACCENT_TINT_LIGHT;
 
-  const indicatorX = useSharedValue(0);
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.value }],
-  }));
-
-  // Animate indicator on mount and when activeIndex/tabWidth changes
-  React.useEffect(() => {
-    if (tabWidth > 0 && activeIndex >= 0) {
-      indicatorX.value = withSpring(activeIndex * tabWidth, INDICATOR_SPRING);
-    } else if (activeIndex >= 0) {
-      indicatorX.value = activeIndex * (screenWidth / NAV_ITEMS.length);
-    }
-  }, [activeIndex, tabWidth, screenWidth]);
-
-  const keyboardY = useSharedValue(0);
-  const keyboardStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: keyboardY.value }],
-  }));
+  const activeAnimationsRef = useRef<Animated.Value[]>([]);
+  if (activeAnimationsRef.current.length === 0) {
+    activeAnimationsRef.current = createAnimations();
+  }
+  const activeAnimations = activeAnimationsRef.current;
 
   useEffect(() => {
-    if (Platform.OS !== "android") return;
-    const show = Keyboard.addListener("keyboardDidShow", (e) => {
-      keyboardY.value = withTiming(e.endCoordinates.height, { duration: 250 });
+    NAV_ITEMS.forEach((item, index) => {
+      const active = isActive(item.path);
+      Animated.timing(activeAnimations[index], {
+        toValue: active ? 1 : 0,
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
     });
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
-      keyboardY.value = withTiming(0, { duration: 250 });
-    });
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
-
-  const onPillLayout = (e: LayoutChangeEvent) => {
-    setPillWidth(Math.max(0, e.nativeEvent.layout.width - Spacing.xs * 2));
-  };
-
-  const handleCreate = () => {
-    if (!isCreate) {
-      router.push("/create");
-      return;
-    }
-    router.back();
-  };
-
-  const c = isDark ? Colors.dark : Colors.light;
-  const bg = isDark ? Colors.dark.background : Colors.light.background;
-  const primary = isDark ? Colors.dark.primary : Colors.light.primary;
+  }, [pathname]);
 
   return (
-    <Animated.View
-      pointerEvents="box-none"
+    <View
       style={[
         styles.container,
-        keyboardStyle,
-        { paddingBottom: insets.bottom, backgroundColor: bg },
+        {
+          backgroundColor: c.background,
+          borderTopColor: c.border,
+          paddingBottom: Math.max(insets.bottom, Spacing.md),
+        },
       ]}
     >
-      <View style={[styles.dockWrapper, { maxWidth: dockMaxWidth }]}>
-        <View style={styles.dockRow}>
-          {/* Main pill with 5 tabs */}
-          <View style={styles.pillShadowWrap}>
-            <View onLayout={onPillLayout} style={[styles.pill, { backgroundColor: c.card }]}>
-              <BlurView
-                intensity={isDark ? 30 : 40}
-                tint={isDark ? "dark" : "light"}
-                style={StyleSheet.absoluteFill}
-              />
+      <View style={styles.inner}>
+        {NAV_ITEMS.map((item, index) => {
+          const active = isActive(item.path);
+          const badgeCount = item.badge ? unreadCount : 0;
+          const anim = activeAnimations[index];
 
-              {/* Visible border on pill */}
-              <View style={[styles.pillBorder, { borderColor: c.border }]} />
+          const iconColor = active ? c.primary : c.mutedForeground;
 
-              {/* Sliding active pill background */}
-              {tabWidth > 0 && activeIndex >= 0 && (
+          return (
+            <Pressable
+              key={item.name}
+              onPress={() => router.push(item.path)}
+              style={styles.navItem}
+            >
+              <View style={styles.itemColumn}>
                 <Animated.View
                   style={[
-                    styles.activePill,
+                    styles.iconContainer,
                     {
-                      width: tabWidth,
-                      backgroundColor: primary + "33",
+                      backgroundColor: anim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ["transparent", accentTint],
+                      }),
+                      width: anim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [28, 64],
+                      }),
+                      height: anim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [28, 36],
+                      }),
+                      borderRadius: anim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [14, 18],
+                      }),
                     },
-                    indicatorStyle,
                   ]}
-                />
-              )}
-
-              {NAV_ITEMS.map((item, index) => {
-                const isActive = activeIndex === index;
-                return (
-                  <TabItem
-                    key={item.path}
-                    item={item}
-                    isActive={isActive}
-                    isDark={isDark}
-                    unreadCount={item.badge ? totalUnread : 0}
-                    onPress={() => router.navigate(item.path)}
-                    index={index}
-                    tabWidth={tabWidth}
+                >
+                  <AppIcon
+                    icon={item.icon}
+                    size={28}
+                    color={iconColor}
+                    strokeWidth={1.5}
                   />
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Create FAB */}
-          <TouchableOpacity
-            onPress={handleCreate}
-            activeOpacity={0.85}
-            style={[
-              styles.fab,
-              { backgroundColor: isDark ? Colors.dark.primary : Colors.light.primary },
-            ]}
-          >
-            <PlusSolid
-              size={24}
-              color={isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground}
-              strokeWidth={2.5}
-            />
-          </TouchableOpacity>
-        </View>
+                </Animated.View>
+                {badgeCount > 0 && (
+                  <View style={[styles.badge, { backgroundColor: c.primary }]}>
+                    <Text style={[styles.badgeText, { color: c.primaryForeground }]}>
+                      {badgeCount > 99 ? "99+" : badgeCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
-    </Animated.View>
-  );
-}
-
-interface TabItemProps {
-  item: NavItem;
-  isActive: boolean;
-  isDark: boolean;
-  unreadCount: number;
-  onPress: () => void;
-  index: number;
-  tabWidth: number;
-}
-
-function TabItem({
-  item,
-  isActive,
-  isDark,
-  unreadCount,
-  onPress,
-  index,
-  tabWidth,
-}: TabItemProps) {
-  const c = isDark ? Colors.dark : Colors.light;
-  const primary = isDark ? Colors.dark.primary : Colors.light.primary;
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={[styles.tabButton, { width: tabWidth > 0 ? tabWidth : undefined }]}
-      accessibilityLabel={item.name}
-      accessibilityState={{ selected: isActive }}
-    >
-      <View style={styles.tabContent}>
-        <Icon
-          name={item.icon}
-          set={isActive ? "bold" : "light"}
-          size={22}
-          color={isActive ? primary : c.mutedForeground}
-        />
-
-        {item.badge && unreadCount > 0 && (
-          <View style={[styles.badge, { backgroundColor: primary }]}>
-            <Text style={[styles.badgeText, { color: isDark ? Colors.dark.primaryForeground : Colors.light.primaryForeground }]}>
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 50,
-    alignItems: "center",
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  dockWrapper: {
-    width: "100%",
+  inner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingTop: Spacing.sm,
     paddingHorizontal: Spacing.md,
   },
-  dockRow: {
-    flexDirection: "row",
+  navItem: {
     alignItems: "center",
     justifyContent: "center",
-    gap: Gap.md,
-  },
-  pillShadowWrap: {
     flex: 1,
-    borderRadius: Radius.pill,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 20,
-    shadowOpacity: 0.12,
-    elevation: 6,
-  },
-  pill: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.xs,
-    overflow: "hidden",
+  },
+  itemColumn: {
+    alignItems: "center",
     position: "relative",
   },
-  pillBorder: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: Radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  // Active pill background - slides with spring
-  activePill: {
-    position: "absolute",
-    top: Spacing.xs,
-    bottom: Spacing.xs,
-    left: Spacing.xs,
-    borderRadius: Radius.pill,
-  },
-  tabButton: {
-    flex: 1,
-    height: 48,
+  iconContainer: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: Radius.pill,
-  },
-  tabContent: {
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-    gap: 2,
-  },
-  fab: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 16,
-    shadowOpacity: 0.24,
-    elevation: 4,
   },
   badge: {
     position: "absolute",
-    top: -4,
-    right: -8,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    top: -2,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 5,
+    paddingHorizontal: 4,
   },
   badgeText: {
-    fontFamily: FontFamily.medium,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 9,
+    fontFamily: FontFamily.bold,
+    lineHeight: 12,
   },
 });

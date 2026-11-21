@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   },
   username: {
     fontFamily: FontFamily.medium,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
   },
 });

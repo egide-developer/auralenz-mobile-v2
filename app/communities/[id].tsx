@@ -22,7 +22,8 @@ import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { showToast } from "../../src/stores/toastStore";
@@ -166,12 +167,12 @@ export default function CommunityScreen() {
         <View style={styles.headerActions}>
           {community?.isJoined && community?.myRole !== "owner" && (
             <TouchableOpacity onPress={confirmLeave} hitSlop={10} style={styles.headerBtn} accessibilityLabel="Leave community">
-              <Ionicons name="log-out-outline" size={21} color={colors.mutedForeground} />
+              <AppIcon icon={icons.logoutOutline} size={21} color={colors.mutedForeground}  />
             </TouchableOpacity>
           )}
           {community?.myRole === "owner" && (
             <TouchableOpacity onPress={confirmDelete} hitSlop={10} style={styles.headerBtn} accessibilityLabel="Delete community">
-              <Ionicons name="trash-outline" size={21} color={colors.destructive} />
+              <AppIcon icon={icons.trash} size={21} color={colors.destructive}  />
             </TouchableOpacity>
           )}
         </View>
@@ -197,7 +198,7 @@ export default function CommunityScreen() {
                 {community?.avatarUrl ? (
                   <CachedImage source={{ uri: community.avatarUrl }} style={styles.bannerAvatarImg} />
                 ) : (
-                  <Ionicons name="people" size={30} color={colors.primary} />
+                  <AppIcon icon={icons.people} size={30} color={colors.primary}  />
                 )}
               </View>
               <View style={styles.bannerMeta}>
@@ -236,7 +237,7 @@ export default function CommunityScreen() {
                   <UserLink user={item.author} colors={colors} avatarSize={34} showUsername={true} />
                   {canDelete && (
                     <TouchableOpacity onPress={() => deletePost(item.id)} hitSlop={8}>
-                      <Ionicons name="trash-outline" size={16} color={colors.mutedForeground} />
+                      <AppIcon icon={icons.trash} size={16} color={colors.mutedForeground}  />
                     </TouchableOpacity>
                   )}
                 </View>

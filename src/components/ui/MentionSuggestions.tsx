@@ -86,7 +86,7 @@ export function MentionSuggestions({
                 <CachedImage source={{ uri: item.avatarUrl }} style={{ width: 28, height: 28 }} />
               ) : null}
             </View>
-            <Text style={{ color: colors.foreground, fontSize: 14 }}>{item.username}</Text>
+            <Text style={{ color: colors.foreground, fontSize: 16 }}>{item.username}</Text>
           </TouchableOpacity>
         )}
       />

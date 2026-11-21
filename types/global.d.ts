@@ -195,6 +195,7 @@ declare module 'react/jsx-runtime' {
     interface IntrinsicElements {
       [elemName: string]: any;
     }
+    interface IntrinsicAttributes extends React.Attributes {}
   }
   export const jsx: any;
   export const jsxs: any;

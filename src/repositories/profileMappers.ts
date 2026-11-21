@@ -36,12 +36,16 @@ function mapUserPreview(value: unknown): UserPreview | null {
   const isOnline = booleanValue(value.isOnline);
   const hasStory = booleanValue(value.hasStory);
   const hasUnviewedStory = booleanValue(value.hasUnviewedStory);
+  const bio = stringValue(value.bio);
+  const followersCount = numberValue(value.followersCount);
 
   return {
     id,
     username: username ?? "",
     displayName,
     avatarUrl,
+    bio: bio ?? undefined,
+    followersCount: followersCount ?? undefined,
     isVerified,
     ...(isOnline !== null ? { isOnline } : {}),
     ...(hasStory !== null ? { hasStory } : {}),
@@ -196,6 +200,100 @@ export function mapRecommendedPostsPayload(value: unknown, authorId?: string): P
 
 export function mapTrendingPostsPayload(value: unknown, authorId?: string): PostWrite[] {
   return mapPostsListPayload(value, authorId);
+}
+
+/**
+ * Maps an API post payload (search / trending / recommended responses) into the
+ * UI `Post` shape, keeping author, tags, location and engagement counts that
+ * the write-model mapper deliberately drops.
+ */
+export function mapApiPost(value: unknown): Post | null {
+  if (!isRecord(value)) return null;
+
+  const id = stringValue(value.id) ?? stringValue(value._id);
+  if (!id) return null;
+
+  const authorValue = isRecord(value.author) ? value.author : null;
+  const authorId = authorValue
+    ? stringValue(authorValue.id) ?? stringValue(authorValue._id)
+    : null;
+  if (!authorId) return null;
+
+  const author =
+    mapUserPreview({ ...authorValue, id: authorId }) ?? {
+      id: authorId,
+      username: "",
+      isVerified: false,
+    };
+
+  const collaborators = Array.isArray(value.collaborators)
+    ? value.collaborators.flatMap((item) => {
+        const mapped = mapUserPreview(item);
+        return mapped ? [mapped] : [];
+      })
+    : [];
+
+  const tags = Array.isArray(value.tags)
+    ? value.tags.filter(
+        (tag): tag is string => typeof tag === "string" && tag.length > 0,
+      )
+    : [];
+
+  const media = mapPostMediaArray(value.media).map((item, index) => ({
+    ...item,
+    id: `${id}:${index}`,
+  }));
+
+  const location = stringValue(value.location);
+  const caption = stringValue(value.caption);
+  const createdAt = stringValue(value.createdAt) ?? new Date().toISOString();
+  const deletedAt = stringValue(value.deletedAt);
+  const remixOf = stringValue(value.remixOf);
+  const remixSource = value.remixSource ? mapUserPreview(value.remixSource) : null;
+
+  return {
+    id,
+    userId: authorId,
+    author,
+    collaborators: collaborators.length > 0 ? collaborators : undefined,
+    remixOf: remixOf ?? undefined,
+    remixSource,
+    isRemix: booleanValue(value.isRemix) ?? false,
+    caption: caption ?? undefined,
+    media,
+    tags,
+    location: location ?? undefined,
+    likesCount: numberValue(value.likesCount) ?? 0,
+    commentsCount: numberValue(value.commentsCount) ?? 0,
+    sharesCount: numberValue(value.sharesCount) ?? 0,
+    isLiked: booleanValue(value.isLiked) ?? false,
+    isSaved: booleanValue(value.isSaved) ?? false,
+    createdAt,
+    isDeleted: booleanValue(value.isDeleted) ?? false,
+    deletedAt,
+  };
+}
+
+export function mapApiPostsPayload(value: unknown): Post[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => {
+      const mapped = mapApiPost(item);
+      return mapped ? [mapped] : [];
+    });
+  }
+  if (!isRecord(value)) return [];
+
+  const dataRecord = isRecord(value.data) ? value.data : value;
+  const postsArray = Array.isArray(dataRecord.posts)
+    ? dataRecord.posts
+    : Array.isArray(dataRecord.items)
+      ? dataRecord.items
+      : [];
+
+  return postsArray.flatMap((item) => {
+    const mapped = mapApiPost(item);
+    return mapped ? [mapped] : [];
+  });
 }
 
 export { mapUserPreview };

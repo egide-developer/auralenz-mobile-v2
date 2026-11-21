@@ -1,7 +1,8 @@
 import { View, Text, TouchableOpacity, Dimensions, TextInput } from "react-native";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { VideoView } from "expo-video";
 import { useCachedVideoPlayer } from "../../src/hooks/useCachedVideoPlayer";
 import { prefetchVideo } from "../../src/utils/videoCache";
@@ -176,7 +177,7 @@ export default function StoryViewerScreen() {
             router.push(`/story/insights/${story.id}`);
           }}
         >
-          <Ionicons name="eye-outline" size={18} color="#fff" />
+          <AppIcon icon={icons.eyeOutline} size={18} color="#fff"  />
           <Text style={{ color: "#fff", marginLeft: 6, fontSize: 13 }}>
             {story.viewsCount} {story.viewsCount === 1 ? "view" : "views"}
           </Text>
@@ -190,7 +191,7 @@ export default function StoryViewerScreen() {
             setHighlightSheetVisible(true);
           }}
         >
-          <Ionicons name="star-outline" size={22} color="#fff" />
+          <AppIcon icon={icons.starOutline} size={22} color="#fff"  />
         </TouchableOpacity>
       )}
       {isOwn && user?.id ? (
@@ -275,7 +276,7 @@ export default function StoryViewerScreen() {
           })}
         </Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={26} color="#fff" />
+          <AppIcon icon={icons.close} size={26} color="#fff"  />
         </TouchableOpacity>
       </View>
 

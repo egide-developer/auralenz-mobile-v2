@@ -1,7 +1,8 @@
 import { View, Text, TouchableOpacity, Dimensions } from "react-native";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { VideoView } from "expo-video";
 import { useCachedVideoPlayer } from "../../src/hooks/useCachedVideoPlayer";
 import { CachedImage } from "../../src/components/ui/CachedImage";
@@ -116,7 +117,7 @@ export default function HighlightViewerScreen() {
           {highlight.title}
         </Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={26} color="#fff" />
+          <AppIcon icon={icons.close} size={26} color="#fff"  />
         </TouchableOpacity>
       </View>
 

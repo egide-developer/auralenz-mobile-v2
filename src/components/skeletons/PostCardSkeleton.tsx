@@ -52,7 +52,7 @@ export function PostCardSkeleton({ style }: { style?: StyleProp<ViewStyle> }) {
       />
 
       <View style={styles.actions}>
-        {[true, true, false, false].map((hasCount, index) => (
+        {([true, true, false, false] as const).map((hasCount, index) => (
           <View key={index} style={styles.action}>
             <SkeletonCircle size={IconSize.md} />
             {hasCount ? (
@@ -72,7 +72,7 @@ export function PostCardSkeletonList({ count = 4 }: { count?: number }) {
     <View style={styles.list}>
       {Array.from({ length: count }).map((_, index) => (
         <PostCardSkeleton key={index} />
-      ))}
+      )) as React.ReactElement[]}
     </View>
   );
 }

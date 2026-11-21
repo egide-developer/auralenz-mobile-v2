@@ -18,8 +18,9 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from "react-native-reanimated";
 import { captureRef } from "react-native-view-shot";
 import * as VideoThumbnails from "expo-video-thumbnails";
-import { Ionicons } from "@expo/vector-icons";
-
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
+import type { IconSvgElement } from "@hugeicons/react-native";
 import { useVideoEditorStore } from "../../src/stores/videoEditorStore";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { showToast } from "../../src/stores/toastStore";
@@ -37,13 +38,13 @@ import {
 
 type Tool = "trim" | "filter" | "text" | "sticker" | "speed" | "audio";
 
-const TOOLS: { id: Tool; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { id: "trim", label: "Trim", icon: "cut-outline" },
-  { id: "filter", label: "Filter", icon: "color-filter-outline" },
-  { id: "text", label: "Text", icon: "text-outline" },
-  { id: "sticker", label: "Sticker", icon: "happy-outline" },
-  { id: "speed", label: "Speed", icon: "speedometer-outline" },
-  { id: "audio", label: "Audio", icon: "musical-notes-outline" },
+const TOOLS: { id: Tool; label: string; icon: IconSvgElement }[] = [
+  { id: "trim", label: "Trim", icon: icons.cutOutline },
+  { id: "filter", label: "Filter", icon: icons.colorFilterOutline },
+  { id: "text", label: "Text", icon: icons.textOutline },
+  { id: "sticker", label: "Sticker", icon: icons.happyOutline },
+  { id: "speed", label: "Speed", icon: icons.speedometerOutline },
+  { id: "audio", label: "Audio", icon: icons.musicalNotes },
 ];
 
 const TEXT_COLORS = ["#FFFFFF", "#000000", "#FF3B5C", "#FFD60A", "#32D74B", "#0A84FF", "#BF5AF2"];
@@ -217,7 +218,7 @@ export default function VideoEditorScreen() {
     <View style={[styles.screen, { backgroundColor: "#000", paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} hitSlop={10}>
-          <Ionicons name="close" size={26} color="#FFF" />
+          <AppIcon icon={icons.close} size={26} color="#FFF"  />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit video</Text>
         <TouchableOpacity onPress={handleDone} disabled={exporting} style={styles.headerBtn} hitSlop={10}>
@@ -270,7 +271,7 @@ export default function VideoEditorScreen() {
             }}
             style={styles.overlayActionBtn}
           >
-            <Ionicons name="remove" size={18} color="#FFF" />
+            <AppIcon icon={icons.remove} size={18} color="#FFF"  />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
@@ -280,10 +281,10 @@ export default function VideoEditorScreen() {
             }}
             style={styles.overlayActionBtn}
           >
-            <Ionicons name="add" size={18} color="#FFF" />
+            <AppIcon icon={icons.add} size={18} color="#FFF"  />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => removeOverlay(selectedOverlayId)} style={styles.overlayActionBtn}>
-            <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
+            <AppIcon icon={icons.trash} size={18} color="#FF6B6B"  />
           </TouchableOpacity>
         </View>
       ) : null}
@@ -320,7 +321,7 @@ export default function VideoEditorScreen() {
               onPress={() => setTextDraft({ id: null, value: "", color: "#FFFFFF" })}
               style={[styles.primaryAction, { backgroundColor: colors.primary }]}
             >
-              <Ionicons name="add" size={18} color="#FFF" />
+              <AppIcon icon={icons.add} size={18} color="#FFF"  />
               <Text style={styles.primaryActionText}>Add text</Text>
             </TouchableOpacity>
             {spec.overlays.filter((o) => o.kind === "text").length > 0 ? (
@@ -362,7 +363,7 @@ export default function VideoEditorScreen() {
         {tool === "audio" ? (
           <View style={styles.panelCenter}>
             <TouchableOpacity onPress={toggleMute} style={styles.muteRow}>
-              <Ionicons name={spec.mute ? "volume-mute" : "volume-high"} size={22} color="#FFF" />
+              <AppIcon icon={spec.mute ? icons.volumeMute : icons.volumeHigh} size={22} color="#FFF" />
               <Text style={styles.chipLabel}>{spec.mute ? "Original audio muted" : "Original audio on"}</Text>
             </TouchableOpacity>
             <Text style={styles.hint}>Add a music track from your library when posting.</Text>
@@ -373,7 +374,7 @@ export default function VideoEditorScreen() {
       <View style={[styles.toolbar, { paddingBottom: insets.bottom + 8 }]}>
         {TOOLS.map((t) => (
           <TouchableOpacity key={t.id} onPress={() => setTool(t.id)} style={styles.toolBtn}>
-            <Ionicons name={t.icon} size={22} color={tool === t.id ? colors.primary : "#999"} />
+            <AppIcon icon={t.icon} size={22} color={tool === t.id ? colors.primary : "#999"} />
             <Text style={[styles.toolLabel, { color: tool === t.id ? colors.primary : "#999" }]}>{t.label}</Text>
           </TouchableOpacity>
         ))}

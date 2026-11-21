@@ -22,7 +22,8 @@ import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { COMMUNITY_CATEGORIES } from "../../src/types";
@@ -141,7 +142,7 @@ export default function CommunitiesModal() {
             {item.avatarUrl ? (
               <CachedImage source={{ uri: item.avatarUrl }} style={styles.avatarImg} />
             ) : (
-              <Ionicons name="people" size={20} color={colors.primary} />
+              <AppIcon icon={icons.people} size={20} color={colors.primary}  />
             )}
           </View>
           <View style={styles.rowMeta}>
@@ -180,7 +181,7 @@ export default function CommunitiesModal() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Communities</Text>
         <TouchableOpacity onPress={() => setCreateOpen(true)} hitSlop={10} style={styles.headerBtn}>
-          <Ionicons name="add-circle-outline" size={22} color={colors.foreground} />
+          <AppIcon icon={icons.addCircle} size={22} color={colors.foreground}  />
         </TouchableOpacity>
       </View>
 
@@ -236,7 +237,7 @@ export default function CommunitiesModal() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={44} color={colors.mutedForeground + "60"} />
+              <AppIcon icon={icons.peopleOutline} size={44} color={colors.mutedForeground + "60"}  />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                 {tab === "mine" ? "No communities yet" : "No communities found"}
               </Text>

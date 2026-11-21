@@ -1,7 +1,8 @@
 import { View, Text, ScrollView, TouchableOpacity, Switch } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { FontFamily } from "../../src/theme/typography";
@@ -20,7 +21,7 @@ export default function NotificationSettingsScreen() {
     <SafeAreaScreen style={{ backgroundColor: colors.background }}>
       <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, flexDirection: "row", alignItems: "center" }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}><Ionicons name="chevron-back" size={24} color={colors.foreground} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}><AppIcon icon={icons.chevronBack} size={24} color={colors.foreground}  /></TouchableOpacity>
         <Text style={{ fontFamily: FontFamily.bold, fontSize: 20, color: colors.foreground }}>Notification Settings</Text>
       </View>
       <View style={{ paddingHorizontal: 16, marginTop: 8 }}>

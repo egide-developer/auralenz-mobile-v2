@@ -5,12 +5,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import {
-  Urbanist_400Regular,
-  Urbanist_500Medium,
-  Urbanist_600SemiBold,
-  Urbanist_700Bold,
-} from "@expo-google-fonts/urbanist";
 import { useAuthStore } from "../src/stores/authStore";
 import { useThemeStore } from "../src/stores/themeStore";
 import { Colors } from "../src/theme/colors";
@@ -28,10 +22,10 @@ export default function RootLayout() {
   const bg = isDark ? Colors.dark.background : Colors.light.background;
 
   const [fontsLoaded] = useFonts({
-    "Urbanist-Regular": Urbanist_400Regular,
-    "Urbanist-Medium": Urbanist_500Medium,
-    "Urbanist-SemiBold": Urbanist_600SemiBold,
-    "Urbanist-Bold": Urbanist_700Bold,
+    "Urbanist-Regular": require("../assets/fonts/Urbanist-Regular.ttf"),
+    "Urbanist-Medium": require("../assets/fonts/Urbanist-Medium.ttf"),
+    "Urbanist-SemiBold": require("../assets/fonts/Urbanist-SemiBold.ttf"),
+    "Urbanist-Bold": require("../assets/fonts/Urbanist-Bold.ttf"),
   });
 
   useEffect(() => {

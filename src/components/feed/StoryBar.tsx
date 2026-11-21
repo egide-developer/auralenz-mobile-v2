@@ -46,10 +46,9 @@ export function StoryBar({ colors, isDark }: { colors: any; isDark: boolean }) {
     }, [fetchGroups])
   );
 
-  if (loading) return null;
-
   const myGroup = groups.find((g) => g.userId === user?.id);
   const otherGroups = groups.filter((g) => g.userId !== user?.id);
+  const skeletonCount = loading ? 5 : otherGroups.length;
 
   return (
     <View style={[styles.wrap, { borderBottomColor: colors.border + "40" }]}>
@@ -90,31 +89,60 @@ export function StoryBar({ colors, isDark }: { colors: any; isDark: boolean }) {
           </Text>
         </Animated.View>
 
-        {otherGroups.map((group, i) => (
-          <Animated.View
-            key={group.userId}
-            entering={FadeIn.duration(300).delay(60 * (i + 1))}
-            style={styles.item}
-          >
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={() => router.push(`/story/${group.userId}`)}
-            >
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <View key={`skeleton-${i}`} style={styles.item}>
               <View style={styles.ringSlot}>
-                <GradientRing
-                  hasUnviewed={group.hasUnviewed}
-                  isDark={isDark}
-                  isCloseFriends={group.stories[group.stories.length - 1]?.visibility === "close_friends"}
-                >
-                  <Avatar uri={group.user?.avatarUrl} colors={colors} />
-                </GradientRing>
+                <View style={[styles.plainRing, { borderColor: colors.border }]}>
+                  <View
+                    style={{
+                      width: AVATAR_SIZE,
+                      height: AVATAR_SIZE,
+                      borderRadius: AVATAR_SIZE / 2,
+                      backgroundColor: colors.muted,
+                    }}
+                  />
+                </View>
               </View>
-            </TouchableOpacity>
-            <Text numberOfLines={1} style={[styles.label, { color: colors.foreground }]}>
-              {group.user?.username}
-            </Text>
-          </Animated.View>
-        ))}
+              <View
+                style={{
+                  marginTop: 6,
+                  width: 50,
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: colors.muted,
+                  alignSelf: "center",
+                }}
+              />
+            </View>
+          ))
+        ) : (
+          otherGroups.map((group, i) => (
+            <Animated.View
+              key={group.userId}
+              entering={FadeIn.duration(300).delay(60 * (i + 1))}
+              style={styles.item}
+            >
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => router.push(`/story/${group.userId}`)}
+              >
+                <View style={styles.ringSlot}>
+                  <GradientRing
+                    hasUnviewed={group.hasUnviewed}
+                    isDark={isDark}
+                    isCloseFriends={group.stories[group.stories.length - 1]?.visibility === "close_friends"}
+                  >
+                    <Avatar uri={group.user?.avatarUrl} colors={colors} />
+                  </GradientRing>
+                </View>
+              </TouchableOpacity>
+              <Text numberOfLines={1} style={[styles.label, { color: colors.foreground }]}>
+                {group.user?.username}
+              </Text>
+            </Animated.View>
+          ))
+        )}
       </ScrollView>
     </View>
   );

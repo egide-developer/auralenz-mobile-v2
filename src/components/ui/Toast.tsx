@@ -1,17 +1,19 @@
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
-import { Ionicons } from "@expo/vector-icons";
+import type { IconSvgElement } from "@hugeicons/react-native";
 import { useToastStore, type ToastKind } from "../../stores/toastStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { Colors } from "../../theme/colors";
 import { Spacing } from "../../theme/spacing";
 import { FontFamily } from "../../theme/typography";
+import { AppIcon } from "./AppIcon";
+import { icons } from "../../constants/icons";
 
-const ICONS: Record<ToastKind, keyof typeof Ionicons.glyphMap> = {
-  error: "alert-circle",
-  info: "information-circle",
-  success: "checkmark-circle",
+const ICONS: Record<ToastKind, IconSvgElement> = {
+  error: icons.danger,
+  info: icons.info,
+  success: icons.success,
 };
 
 const ACCENTS: Record<ToastKind, string> = {
@@ -42,7 +44,7 @@ export function ToastHost() {
             onPress={() => dismiss(toast.id)}
             style={[styles.toast, { backgroundColor: colors.card, borderColor: ACCENTS[toast.kind] }]}
           >
-            <Ionicons name={ICONS[toast.kind]} size={18} color={ACCENTS[toast.kind]} />
+            <AppIcon icon={ICONS[toast.kind]} size={18} color={ACCENTS[toast.kind]} />
             <Text style={[styles.message, { color: colors.foreground }]} numberOfLines={3}>
               {toast.message}
             </Text>
@@ -75,5 +77,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  message: { flex: 1, fontFamily: FontFamily.medium, fontSize: 14 },
+  message: { flex: 1, fontFamily: FontFamily.medium, fontSize: 16 },
 });

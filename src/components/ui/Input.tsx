@@ -1,17 +1,18 @@
-import { TextInput, Text, View, StyleSheet } from "react-native";
-import Animated, { useSharedValue } from "react-native-reanimated";
+import { TextInput, Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { useSharedValue } from "react-native-reanimated";
+import type { IconSvgElement } from "@hugeicons/react-native";
 import { Colors } from "../../theme/colors";
 import { Radius, Spacing, Gap } from "../../theme/spacing";
-import { FontFamily, Typography } from "../../theme/typography";
+import { FontFamily } from "../../theme/typography";
 import { useThemeStore } from "../../stores/themeStore";
-import { Icon } from "./Icon";
+import { AppIcon } from "./AppIcon";
 
 export type InputSize = "sm" | "md" | "lg";
 
 const sizeStyles: Record<InputSize, { paddingHorizontal: number; paddingVertical: number; height: number; fontSize: number }> = {
-  sm: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, height: 36, fontSize: 13 },
-  md: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, height: 44, fontSize: 15 },
-  lg: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, height: 52, fontSize: 16 },
+  sm: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, height: 36, fontSize: 15 },
+  md: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, height: 44, fontSize: 17 },
+  lg: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, height: 52, fontSize: 18 },
 };
 
 interface InputProps extends Omit<React.ComponentProps<typeof TextInput>, "style" | "onChangeText" | "value" | "placeholderTextColor" | "disabled"> {
@@ -22,8 +23,8 @@ interface InputProps extends Omit<React.ComponentProps<typeof TextInput>, "style
   size?: InputSize;
   disabled?: boolean;
   error?: string;
-  leftIcon?: string;
-  rightIcon?: string;
+  leftIcon?: IconSvgElement;
+  rightIcon?: IconSvgElement;
   onRightIconPress?: () => void;
   secureTextEntry?: boolean;
   style?: any;
@@ -82,7 +83,7 @@ export function Input({
       >
         {leftIcon && (
           <View style={styles.iconLeft}>
-            <Icon name={leftIcon} set="light" size={20} color={c.mutedForeground} />
+            <AppIcon icon={leftIcon} size={20} color={c.mutedForeground} />
           </View>
         )}
         <TextInput
@@ -117,7 +118,7 @@ export function Input({
             style={styles.iconRight}
             hitSlop={8}
           >
-            <Icon name={rightIcon} set="light" size={20} color={c.mutedForeground} />
+            <AppIcon icon={rightIcon} size={20} color={c.mutedForeground} />
           </TouchableOpacity>
         )}
       </View>
@@ -128,7 +129,7 @@ export function Input({
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.xs, width: "100%" },
-  label: { fontFamily: FontFamily.medium, fontSize: 13, lineHeight: 18 },
+  label: { fontFamily: FontFamily.medium, fontSize: 15, lineHeight: 20 },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -140,5 +141,5 @@ const styles = StyleSheet.create({
   },
   iconLeft: { paddingLeft: Spacing.xs },
   iconRight: { paddingRight: Spacing.xs },
-  error: { fontFamily: FontFamily.medium, fontSize: 11, lineHeight: 16 },
+  error: { fontFamily: FontFamily.medium, fontSize: 13, lineHeight: 18 },
 });

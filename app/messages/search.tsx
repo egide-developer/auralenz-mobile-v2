@@ -10,8 +10,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import { CachedImage } from "../../src/components/ui/CachedImage";
@@ -96,10 +96,10 @@ export default function MessageSearchScreen() {
     <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top + 8 }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+          <AppIcon icon={icons.back} size={24} color={colors.foreground}  />
         </TouchableOpacity>
         <View style={[styles.searchBox, { backgroundColor: colors.card }]}>
-          <Ionicons name="search" size={18} color={colors.mutedForeground} />
+          <AppIcon icon={icons.search} size={18} color={colors.mutedForeground}  />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -111,7 +111,7 @@ export default function MessageSearchScreen() {
           />
           {query.length > 0 ? (
             <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color={colors.mutedForeground} />
+              <AppIcon icon={icons.closeCircle} size={18} color={colors.mutedForeground}  />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -133,7 +133,7 @@ export default function MessageSearchScreen() {
                 {item.sender?.avatarUrl ? (
                   <CachedImage source={{ uri: item.sender.avatarUrl }} style={styles.avatarImage} />
                 ) : (
-                  <Ionicons name="person" size={16} color={colors.mutedForeground} />
+                  <AppIcon icon={icons.person} size={16} color={colors.mutedForeground}  />
                 )}
               </View>
               <View style={{ flex: 1 }}>

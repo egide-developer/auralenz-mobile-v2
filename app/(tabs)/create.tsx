@@ -1,6 +1,7 @@
 // AuraLenz post creation — Instagram-style 2-step flow:
 // 1. Select media (gallery picker, reorderable strip, remove, live preview)
 // 2. Details (caption, location, tags) -> Share
+import { icons } from "../../src/constants/icons";
 import {
   View,
   Text,
@@ -396,7 +397,7 @@ export default function CreateScreen() {
               multiline
               maxLength={2200}
               size="md"
-              leftIcon="edit-square"
+              leftIcon={icons.editAlt}
             />
           </View>
 
@@ -414,7 +415,7 @@ export default function CreateScreen() {
               value={location}
               onChangeText={setLocation}
               size="md"
-              leftIcon="location"
+              leftIcon={icons.location}
               style={{ flex: 1 }}
             />
           </View>
@@ -427,7 +428,7 @@ export default function CreateScreen() {
               value={tagsInput}
               onChangeText={setTagsInput}
               size="md"
-              leftIcon="edit-square"
+              leftIcon={icons.editAlt}
               style={{ flex: 1 }}
             />
           </View>

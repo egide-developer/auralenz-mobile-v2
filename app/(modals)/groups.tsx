@@ -8,7 +8,8 @@ import { Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
 import { PressableScale } from "../../src/components/ui/PressableScale";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
 import type { ChatGroup } from "../../src/types";
@@ -76,7 +77,7 @@ export default function GroupsScreen() {
               onPress={() => router.push("/(modals)/communities")}
             >
               <View style={[styles.communitiesIcon, { backgroundColor: colors.primary + "18" }]}>
-                <Ionicons name="people" size={17} color={colors.primary} />
+                <AppIcon icon={icons.people} size={17} color={colors.primary}  />
               </View>
               <View style={styles.meta}>
                 <Text style={[styles.name, { color: colors.foreground }]}>Communities</Text>

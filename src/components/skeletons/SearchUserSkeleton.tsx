@@ -40,11 +40,11 @@ export function SearchUserSkeletonList({ count = 6 }: { count?: number }) {
           style={[
             styles.item,
             { borderBottomColor: colors.divider },
-          ]}
+          ] as const}
         >
           <SearchUserSkeleton showVerified={index === 1} />
         </View>
-      ))}
+      )) as React.ReactElement[]}
     </View>
   );
 }

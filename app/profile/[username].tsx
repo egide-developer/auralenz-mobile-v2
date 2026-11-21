@@ -18,7 +18,8 @@ import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { TipSheet } from "../../src/components/monetization/TipSheet";
 import { ReportSheet } from "../../src/components/ui/ReportSheet";
 import { HighlightsRow } from "../../src/components/profile/HighlightsRow";
@@ -205,7 +206,7 @@ export default function UserProfileScreen() {
         </Text>
         {!isSelf ? (
           <TouchableOpacity onPress={() => setReportVisible(true)} style={styles.backBtn} hitSlop={8}>
-            <Ionicons name="ellipsis-horizontal" size={20} color={colors.foreground} />
+            <AppIcon icon={icons.ellipsisHorizontal} size={20} color={colors.foreground}  />
           </TouchableOpacity>
         ) : (
           <View style={styles.backBtn} />
@@ -302,7 +303,7 @@ export default function UserProfileScreen() {
           style={[styles.tipBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
           accessibilityLabel={`Send Stars to ${mappedProfile.username}`}
         >
-          <Ionicons name="star-outline" size={16} color={colors.foreground} />
+          <AppIcon icon={icons.starOutline} size={16} color={colors.foreground}  />
           <Text style={[styles.followBtnText, { color: colors.foreground }]}>Stars</Text>
         </TouchableOpacity>
         </View>

@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { showToast } from "../../src/stores/toastStore";
@@ -150,7 +151,7 @@ export default function AdminUsersScreen() {
           {item.avatarUrl ? (
             <CachedImage source={{ uri: item.avatarUrl }} style={styles.avatarImage} />
           ) : (
-            <Ionicons name="person" size={18} color={colors.mutedForeground} />
+            <AppIcon icon={icons.person} size={18} color={colors.mutedForeground}  />
           )}
         </View>
 
@@ -159,7 +160,7 @@ export default function AdminUsersScreen() {
             <Text style={[styles.username, { color: colors.foreground }]} numberOfLines={1}>
               {item.username}
             </Text>
-            {item.isVerified ? <Ionicons name="checkmark-circle" size={14} color={colors.verified} /> : null}
+            {item.isVerified ? <AppIcon icon={icons.checkmarkCircle} size={14} color={colors.verified}  /> : null}
           </View>
           <Text style={[styles.email, { color: colors.mutedForeground }]} numberOfLines={1}>
             {item.email || "No email on file"}
@@ -185,22 +186,22 @@ export default function AdminUsersScreen() {
         ) : (
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => toggleVerified(item)} hitSlop={8} style={styles.actionBtn}>
-              <Ionicons
-                name={item.isVerified ? "checkmark-circle" : "checkmark-circle-outline"}
+              <AppIcon
+                icon={item.isVerified ? icons.checkmarkCircle : icons.circle}
                 size={22}
                 color={item.isVerified ? colors.verified : colors.mutedForeground}
               />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => toggleRole(item)} hitSlop={8} style={styles.actionBtn}>
-              <Ionicons
-                name={item.role === "admin" ? "shield" : "shield-outline"}
+              <AppIcon
+                icon={item.role === "admin" ? icons.shield : icons.shieldOutline}
                 size={22}
                 color={item.role === "admin" ? colors.primary : colors.mutedForeground}
               />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => toggleSuspended(item)} hitSlop={8} style={styles.actionBtn}>
-              <Ionicons
-                name={item.isSuspended ? "lock-closed" : "lock-open-outline"}
+              <AppIcon
+                icon={item.isSuspended ? icons.lockClosed : icons.lockOpen}
                 size={22}
                 color={item.isSuspended ? colors.destructive : colors.mutedForeground}
               />
@@ -215,13 +216,13 @@ export default function AdminUsersScreen() {
     <SafeAreaScreen style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.foreground} />
+          <AppIcon icon={icons.chevronBack} size={24} color={colors.foreground}  />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Manage Users</Text>
       </View>
 
       <View style={[styles.searchBox, { backgroundColor: colors.card }]}>
-        <Ionicons name="search" size={16} color={colors.mutedForeground} />
+        <AppIcon icon={icons.search} size={16} color={colors.mutedForeground}  />
         <TextInput
           value={query}
           onChangeText={setQuery}
@@ -233,7 +234,7 @@ export default function AdminUsersScreen() {
         />
         {query ? (
           <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={colors.mutedForeground} />
+            <AppIcon icon={icons.closeCircle} size={16} color={colors.mutedForeground}  />
           </TouchableOpacity>
         ) : null}
       </View>

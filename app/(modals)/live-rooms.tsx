@@ -24,7 +24,8 @@ import { useLiveRoomStore } from "../../src/stores/liveRoomStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { FontSize, FontFamily, Typography } from "../../src/theme/typography";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { isLiveRoomAvailable } from "../../src/services/liveRoomMesh";
 
 export default function LiveRoomsModal() {
@@ -102,7 +103,7 @@ export default function LiveRoomsModal() {
             {item.participantsCount}/{item.maxParticipants}
           </Text>
           {item.host.id === currentUser?.id && (
-            <Ionicons name="person" size={16} color={colors.primary} />
+            <AppIcon icon={icons.person} size={16} color={colors.primary}  />
           )}
         </View>
       </View>

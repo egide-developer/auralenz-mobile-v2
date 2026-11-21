@@ -20,6 +20,8 @@ export interface UserPreview {
   username: string;
   displayName?: string;
   avatarUrl?: string;
+  bio?: string;
+  followersCount?: number;
   isVerified: boolean;
   isOnline?: boolean;
   hasStory?: boolean;

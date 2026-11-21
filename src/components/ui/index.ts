@@ -1,6 +1,6 @@
 export * from "./Button";
 export * from "./Input";
-export * from "./Icon";
+export * from "./AppIcon";
 export * from "./PressableScale";
 export * from "./CachedImage";
 export * from "./UserLink";

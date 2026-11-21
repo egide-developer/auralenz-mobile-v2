@@ -1,12 +1,20 @@
 import { desc, eq, inArray, lte } from "drizzle-orm";
 import { getUserDatabase } from "../db/client";
-import { searchCache, type JsonValue } from "../db/schema";
+import { recentSearches, searchCache, type JsonValue } from "../db/schema";
 import { getMessagesByIds } from "./messages";
 import { publishRepositoryChange, repositoryTopic } from "./changes";
 
 export const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
 
-export type SearchFamily = "users" | "suggested" | "recommended" | "trending" | "messages";
+export type SearchFamily =
+  | "users"
+  | "suggested"
+  | "recommended"
+  | "trending"
+  | "messages"
+  | "posts"
+  | "tagCounts"
+  | "trendingTags";
 
 export interface SearchCacheEntry {
   queryKey: string;
@@ -158,4 +166,71 @@ export async function cleanupSearchCache(userId: string): Promise<{ expired: num
   const expired = await cleanupExpiredSearchCache(userId);
   const capacity = await enforceSearchCacheCapacity(userId);
   return { expired, capacity };
+}
+
+/* ── Recent searches ────────────────────────────────────────────────────── */
+
+export interface RecentSearch {
+  term: string;
+  lastSearchedAt: string;
+}
+
+export const MAX_RECENT_SEARCHES = 10;
+
+function recentSearchesTopic(userId: string): string {
+  return repositoryTopic(userId, "recentSearches");
+}
+
+export async function listRecentSearches(userId: string): Promise<RecentSearch[]> {
+  const database = await getUserDatabase(userId);
+  return database
+    .select()
+    .from(recentSearches)
+    .orderBy(desc(recentSearches.lastSearchedAt))
+    .limit(MAX_RECENT_SEARCHES);
+}
+
+/** Moves a committed term to the top, dedupes it and trims the list. */
+export async function recordRecentSearch(userId: string, rawTerm: string): Promise<void> {
+  const term = rawTerm.trim();
+  if (!term) return;
+
+  const database = await getUserDatabase(userId);
+  await database
+    .insert(recentSearches)
+    .values({ term, lastSearchedAt: new Date().toISOString() })
+    .onConflictDoUpdate({
+      target: recentSearches.term,
+      set: { lastSearchedAt: new Date().toISOString() },
+    });
+
+  const rows = await database
+    .select({ term: recentSearches.term })
+    .from(recentSearches)
+    .orderBy(desc(recentSearches.lastSearchedAt));
+
+  if (rows.length > MAX_RECENT_SEARCHES) {
+    const overflow = rows.slice(MAX_RECENT_SEARCHES).map((row) => row.term);
+    await database
+      .delete(recentSearches)
+      .where(inArray(recentSearches.term, overflow))
+      .run();
+  }
+
+  publishRepositoryChange(recentSearchesTopic(userId));
+}
+
+export async function removeRecentSearch(userId: string, rawTerm: string): Promise<void> {
+  const term = rawTerm.trim();
+  if (!term) return;
+
+  const database = await getUserDatabase(userId);
+  await database.delete(recentSearches).where(eq(recentSearches.term, term)).run();
+  publishRepositoryChange(recentSearchesTopic(userId));
+}
+
+export async function clearRecentSearches(userId: string): Promise<void> {
+  const database = await getUserDatabase(userId);
+  await database.delete(recentSearches).run();
+  publishRepositoryChange(recentSearchesTopic(userId));
 }

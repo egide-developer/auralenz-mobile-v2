@@ -42,7 +42,7 @@ export function CommentSkeletonList({ count = 6 }: { count?: number }) {
     <View style={styles.list} accessible={false}>
       {Array.from({ length: count }).map((_, index) => (
         <CommentSkeleton key={index} depth={index % 2} />
-      ))}
+      )) as React.ReactElement[]}
     </View>
   );
 }

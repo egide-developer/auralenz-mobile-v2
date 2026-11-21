@@ -19,7 +19,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as VideoThumbnails from "expo-video-thumbnails";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
@@ -42,11 +43,13 @@ interface PickedMedia {
   durationMs?: number;
 }
 
+import type { IconSvgElement } from "@hugeicons/react-native";
+
 type StickerType = "poll" | "quiz" | "question";
-const STICKER_KINDS: { type: StickerType; label: string; icon: string }[] = [
-  { type: "poll", label: "Poll", icon: "bar-chart-outline" },
-  { type: "quiz", label: "Quiz", icon: "help-circle-outline" },
-  { type: "question", label: "Question", icon: "chatbubble-ellipses-outline" },
+const STICKER_KINDS: { type: StickerType; label: string; icon: IconSvgElement }[] = [
+  { type: "poll", label: "Poll", icon: icons.barChart },
+  { type: "quiz", label: "Quiz", icon: icons.helpCircle },
+  { type: "question", label: "Question", icon: icons.chatBubble },
 ];
 
 export default function CreateStoryScreen() {
@@ -219,7 +222,7 @@ export default function CreateStoryScreen() {
           <View style={{ flexDirection: "row", gap: 8 }}>
             {media.type === "video" ? (
               <TouchableOpacity style={styles.iconBtn} onPress={openVideoEditor} hitSlop={8}>
-                <Ionicons name="cut-outline" size={20} color="#FFFFFF" />
+                <AppIcon icon={icons.cutOutline} size={20} color="#FFFFFF"  />
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
@@ -241,7 +244,7 @@ export default function CreateStoryScreen() {
               onPress={() => setStickerPickerOpen((v) => !v)}
               hitSlop={8}
             >
-              <Ionicons name="apps-outline" size={20} color="#FFFFFF" />
+              <AppIcon icon={icons.apps} size={20} color="#FFFFFF"  />
             </TouchableOpacity>
           </View>
         </View>
@@ -280,7 +283,7 @@ export default function CreateStoryScreen() {
                 style={styles.stickerChooserItem}
                 onPress={() => setStickerType(k.type)}
               >
-                <Ionicons name={k.icon as any} size={22} color="#FFFFFF" />
+                <AppIcon icon={k.icon} size={22} color="#FFFFFF" />
                 <Text style={styles.stickerChooserLabel}>{k.label}</Text>
               </TouchableOpacity>
             ))}
@@ -311,8 +314,8 @@ export default function CreateStoryScreen() {
                   />
                   {stickerType === "quiz" ? (
                     <TouchableOpacity onPress={() => setStickerCorrectIndex(i)} hitSlop={8}>
-                      <Ionicons
-                        name={stickerCorrectIndex === i ? "checkmark-circle" : "checkmark-circle-outline"}
+                      <AppIcon
+                        icon={stickerCorrectIndex === i ? icons.checkmarkCircle : icons.circle}
                         size={22}
                         color={stickerCorrectIndex === i ? "#2ECC71" : "rgba(255,255,255,0.6)"}
                       />
@@ -346,8 +349,8 @@ export default function CreateStoryScreen() {
 
         {!stickerPickerOpen && stickerType && stickerQuestion.trim() ? (
           <TouchableOpacity style={styles.stickerPreviewChip} onPress={() => setStickerPickerOpen(true)}>
-            <Ionicons
-              name={STICKER_KINDS.find((k) => k.type === stickerType)?.icon as any}
+            <AppIcon
+              icon={STICKER_KINDS.find((k) => k.type === stickerType)?.icon ?? icons.info}
               size={14}
               color="#FFFFFF"
             />

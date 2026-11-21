@@ -19,7 +19,8 @@ import { useLiveRoomStore } from "../../src/stores/liveRoomStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../src/components/ui/AppIcon";
+import { icons } from "../../src/constants/icons";
 import { isLiveRoomAvailable } from "../../src/services/liveRoomMesh";
 
 export default function LiveRoomScreen() {

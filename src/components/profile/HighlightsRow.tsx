@@ -60,5 +60,5 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   circleImg: { width: 56, height: 56 },
-  label: { fontSize: 11, fontFamily: FontFamily.medium, marginTop: Spacing.xs, textAlign: "center" },
+  label: { fontSize: 13, fontFamily: FontFamily.medium, marginTop: Spacing.xs, textAlign: "center" },
 });

@@ -56,12 +56,12 @@ export function ListItemSkeletonList({
           style={[
             styles.item,
             { borderTopColor: colors.divider },
-            index > 0 && styles.dividedItem,
-          ]}
+            ...(index > 0 ? [styles.dividedItem] : []),
+          ] as const}
         >
           <ListItemSkeleton {...props} />
         </View>
-      ))}
+      )) as React.ReactElement[]}
     </View>
   );
 }

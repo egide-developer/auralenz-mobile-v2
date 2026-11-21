@@ -47,11 +47,20 @@ import {
   MAX_MESSAGES_PER_CONVERSATION,
 } from "../../src/repositories/messages";
 import {
+  clearRecentSearches,
   cleanupSearchCache,
   cleanupExpiredSearchCache,
   enforceSearchCacheCapacity,
+  listRecentSearches,
+  MAX_RECENT_SEARCHES,
+  recordRecentSearch,
+  removeRecentSearch,
   SEARCH_CACHE_TTL_MS,
 } from "../../src/repositories/search";
+import {
+  mapApiPostsPayload,
+  mapSearchUsersPayload,
+} from "../../src/repositories/profileMappers";
 
 const { getUserDatabaseMock, apiMock } = vi.hoisted(() => ({
   getUserDatabaseMock: vi.fn(),
@@ -726,5 +735,118 @@ describe("Phase 5: retention and hardening", () => {
 
     const total = await cleanupAllConversations("user-1");
     expect(total).toBe(15);
+  });
+});
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+describe("recent searches", () => {
+  it("records a term, bumps it to the top on repeat and ignores blanks", async () => {
+    await recordRecentSearch("user-1", "sunset");
+    await sleep(3);
+    await recordRecentSearch("user-1", "beach");
+    await sleep(3);
+    await recordRecentSearch("user-1", "sunset");
+    await recordRecentSearch("user-1", "   ");
+
+    const rows = await listRecentSearches("user-1");
+    expect(rows.map((row) => row.term)).toEqual(["sunset", "beach"]);
+    expect(await listRecentSearches("user-1")).not.toHaveLength(0);
+  });
+
+  it("keeps the list capped at MAX_RECENT_SEARCHES, newest first", async () => {
+    for (let i = 0; i < MAX_RECENT_SEARCHES + 3; i += 1) {
+      await recordRecentSearch("user-1", `term-${i}`);
+      await sleep(3);
+    }
+
+    const rows = await listRecentSearches("user-1");
+    expect(rows).toHaveLength(MAX_RECENT_SEARCHES);
+    expect(rows[0].term).toBe(`term-${MAX_RECENT_SEARCHES + 2}`);
+    expect(rows.some((row) => row.term === "term-0")).toBe(false);
+  });
+
+  it("removes a single term and clears the rest", async () => {
+    await recordRecentSearch("user-1", "alpha");
+    await sleep(3);
+    await recordRecentSearch("user-1", "beta");
+
+    await removeRecentSearch("user-1", "alpha");
+    expect((await listRecentSearches("user-1")).map((row) => row.term)).toEqual(["beta"]);
+
+    await clearRecentSearches("user-1");
+    expect(await listRecentSearches("user-1")).toEqual([]);
+  });
+});
+
+describe("search payload mappers", () => {
+  it("keeps bio and follower counts on user previews", () => {
+    const [user] = mapSearchUsersPayload({
+      users: [
+        {
+          id: "u1",
+          username: "maya",
+          bio: "Light chaser",
+          isVerified: true,
+          followersCount: 48200,
+        },
+      ],
+    });
+
+    expect(user).toMatchObject({
+      id: "u1",
+      username: "maya",
+      bio: "Light chaser",
+      followersCount: 48200,
+      isVerified: true,
+    });
+  });
+
+  it("maps API posts into the UI shape with author, tags, location and counts", () => {
+    const [post] = mapApiPostsPayload({
+      posts: [
+        {
+          id: "p1",
+          author: {
+            id: "u1",
+            username: "maya",
+            avatarUrl: "https://cdn.test/a.png",
+            isVerified: true,
+          },
+          caption: "golden hour",
+          tags: ["sunset"],
+          location: "Lisbon",
+          media: [{ url: "https://cdn.test/p.jpg", type: "image" }],
+          likesCount: 12,
+          commentsCount: 3,
+          sharesCount: 1,
+          isLiked: true,
+          isSaved: false,
+          createdAt: "2026-11-18T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(post).toMatchObject({
+      id: "p1",
+      userId: "u1",
+      caption: "golden hour",
+      tags: ["sunset"],
+      location: "Lisbon",
+      likesCount: 12,
+      commentsCount: 3,
+      sharesCount: 1,
+      isLiked: true,
+      author: { id: "u1", username: "maya", isVerified: true },
+    });
+    expect(post?.media[0]).toMatchObject({
+      id: "p1:0",
+      url: "https://cdn.test/p.jpg",
+      type: "image",
+    });
+  });
+
+  it("drops posts that have no author rather than emitting a broken row", () => {
+    expect(mapApiPostsPayload({ posts: [{ id: "p2", caption: "orphan" }] })).toEqual([]);
   });
 });

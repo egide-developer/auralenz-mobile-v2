@@ -57,7 +57,7 @@ export function ReelSkeleton() {
               <SkeletonCircle size={IconSize.lg} tone="overlay" />
               <Skeleton width={Spacing.xl} height={Spacing.xs} tone="overlay" />
             </View>
-          ))}
+          )) as React.ReactElement[]}
         </View>
       </View>
     </View>

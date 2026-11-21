@@ -10,7 +10,8 @@ import {
 import { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "../../../src/components/ui/AppIcon";
+import { icons } from "../../../src/constants/icons";
 import { useThemeStore } from "../../../src/stores/themeStore";
 import { Colors } from "../../../src/theme/colors";
 import { Spacing } from "../../../src/theme/spacing";
@@ -61,7 +62,7 @@ export default function StoryInsightsScreen() {
     <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={8}>
-          <Ionicons name="close" size={26} color={colors.foreground} />
+          <AppIcon icon={icons.close} size={26} color={colors.foreground}  />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Story insights</Text>
         <View style={styles.iconBtn} />
@@ -105,7 +106,7 @@ export default function StoryInsightsScreen() {
                 {item.avatarUrl ? (
                   <Image source={{ uri: item.avatarUrl }} style={styles.avatarImg} />
                 ) : (
-                  <Ionicons name="person" size={16} color={colors.mutedForeground} />
+                  <AppIcon icon={icons.person} size={16} color={colors.mutedForeground}  />
                 )}
               </View>
               <Text style={[styles.viewerName, { color: colors.foreground }]}>{item.username}</Text>
