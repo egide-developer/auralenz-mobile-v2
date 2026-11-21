@@ -8,3 +8,5 @@ export * from "./MentionSuggestions";
 export * from "./RichText";
 export * from "./ReportSheet";
 export * from "./Toast";
+export * from "./GlassSurface";
+export * from "./GlassHeader";

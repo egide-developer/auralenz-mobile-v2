@@ -8,6 +8,7 @@ import { Colors } from "../../theme/colors";
 import { Spacing } from "../../theme/spacing";
 import { FontFamily, Typography } from "../../theme/typography";
 import { AppIcon } from "../ui/AppIcon";
+import { GlassSurface } from "../ui/GlassSurface";
 import { icons } from "../../constants/icons";
 import type { IconSvgElement } from "@hugeicons/react-native";
 
@@ -66,14 +67,14 @@ export function BottomNav() {
   }, [pathname]);
 
   return (
-    <View
+    <GlassSurface
+      intensity="strong"
+      bordered
+      borderEdge="top"
+      radius={0}
       style={[
         styles.container,
-        {
-          backgroundColor: c.background,
-          borderTopColor: c.border,
-          paddingBottom: Math.max(insets.bottom, Spacing.md),
-        },
+        { paddingBottom: Math.max(insets.bottom, Spacing.md) },
       ]}
     >
       <View style={styles.inner}>
@@ -133,13 +134,16 @@ export function BottomNav() {
           );
         })}
       </View>
-    </View>
+    </GlassSurface>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderTopWidth: StyleSheet.hairlineWidth,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   inner: {
     flexDirection: "row",

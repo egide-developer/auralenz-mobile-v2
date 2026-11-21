@@ -41,6 +41,14 @@ export const IconSize = {
   xl: 28,
 } as const;
 
+// Content-height of the floating glass tab bar (BottomNav), excluding the
+// device's own bottom safe-area inset (callers already add that via
+// useSafeAreaInsets / Screen's extraBottomPadding). The bar floats over
+// content (position: absolute) for the translucent-blur look, so every
+// scrollable tab screen needs this much extra bottom padding or its last
+// content ends up hidden underneath it.
+export const TAB_BAR_HEIGHT = 64;
+
 export const Gap = {
   xs: 4,
   sm: 8,

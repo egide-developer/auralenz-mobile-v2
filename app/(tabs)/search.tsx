@@ -13,7 +13,7 @@ import {
 import { router } from "expo-router";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { Colors } from "../../src/theme/colors";
-import { Gap, Radius, Spacing } from "../../src/theme/spacing";
+import { Gap, Radius, Spacing, TAB_BAR_HEIGHT } from "../../src/theme/spacing";
 import { Typography } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing["3xl"],
+    paddingBottom: Spacing["3xl"] + TAB_BAR_HEIGHT,
   },
   columnWrapper: {
     gap: GRID_GAP,

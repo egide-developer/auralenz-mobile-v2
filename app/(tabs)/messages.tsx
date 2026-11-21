@@ -26,7 +26,7 @@ import Animated, {
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
-import { Radius, Spacing, Gap } from "../../src/theme/spacing";
+import { Radius, Spacing, Gap, TAB_BAR_HEIGHT } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { ConversationRowSkeleton, ConversationRowSkeletonList } from "../../src/components/skeletons";
 import { Screen } from "../../src/components/layout";
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     paddingVertical: 0,
   },
-  listContent: { paddingHorizontal: Spacing.lg },
+  listContent: { paddingHorizontal: Spacing.lg, paddingBottom: TAB_BAR_HEIGHT },
   emptyState: {
     paddingVertical: Spacing["4xl"],
     alignItems: "center",

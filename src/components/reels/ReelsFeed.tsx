@@ -36,7 +36,7 @@ import { useThemeStore } from "../../stores/themeStore";
 import { useAuthStore } from "../../stores/authStore";
 import { Colors } from "../../theme/colors";
 import { Typography, FontFamily } from "../../theme/typography";
-import { Spacing, Radius, Gap } from "../../theme/spacing";
+import { Spacing, Radius, Gap, TAB_BAR_HEIGHT } from "../../theme/spacing";
 import { showToast } from "../../stores/toastStore";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
@@ -399,7 +399,7 @@ function ReelItem({
           </View>
         ) : null}
 
-        <View style={[styles.bottomOverlay, { paddingBottom: insets.bottom + 64 }]}>
+        <View style={[styles.bottomOverlay, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]}>
           <View style={styles.bottomInfo}>
             <View style={styles.reelHeader}>
               {post.author ? (

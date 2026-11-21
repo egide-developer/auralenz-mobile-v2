@@ -34,7 +34,7 @@ import { CachedImage } from "../../src/components/ui/CachedImage";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { Colors } from "../../src/theme/colors";
-import { Spacing, Radius, Gap } from "../../src/theme/spacing";
+import { Spacing, Radius, Gap, TAB_BAR_HEIGHT } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import api from "../../src/api/client";
@@ -1126,7 +1126,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   listContent: {
-    paddingVertical: Spacing.sm,
+    paddingTop: Spacing.sm,
+    // Nav bar floats (position: absolute) over content for the glass-blur
+    // look - without this the last post renders hidden underneath it.
+    paddingBottom: Spacing.sm + TAB_BAR_HEIGHT,
   },
   emptyState: {
     paddingVertical: Spacing["4xl"],
