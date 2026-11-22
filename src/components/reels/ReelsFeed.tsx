@@ -31,6 +31,7 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 // Ionicons removed - using custom Icon component
 import { VideoView } from "expo-video";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCachedVideoPlayer } from "../../hooks/useCachedVideoPlayer";
 import { useThemeStore } from "../../stores/themeStore";
 import { useAuthStore } from "../../stores/authStore";
@@ -41,6 +42,7 @@ import { showToast } from "../../stores/toastStore";
 import api from "../../api/client";
 import { API } from "../../api/endpoints";
 import { Icon } from "../ui/Icon";
+import { GlassSurface } from "../ui/GlassSurface";
 import { UserLink } from "../ui/UserLink";
 import { renderRichText } from "../ui/RichText";
 import type { Post, UserPreview } from "../../types";
@@ -399,6 +401,14 @@ function ReelItem({
           </View>
         ) : null}
 
+        {/* White icons/text over arbitrary video content have no guaranteed
+            contrast otherwise - a bright frame can make them unreadable. */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={["transparent", "rgba(0,0,0,0.55)"]}
+          style={styles.bottomScrim}
+        />
+
         <View style={[styles.bottomOverlay, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT }]}>
           <View style={styles.bottomInfo}>
             <View style={styles.reelHeader}>
@@ -444,7 +454,7 @@ function ReelItem({
                 name="heart"
                 set={post.isLiked ? "bold" : "light"}
                 size={30}
-                color={post.isLiked ? Colors.light.destructive : "#FFFFFF"}
+                color={post.isLiked ? Colors.dark.destructive : "#FFFFFF"}
               />
               <Text style={styles.reelActionText}>{post.likesCount}</Text>
             </TouchableOpacity>
@@ -583,7 +593,7 @@ function CollabSheet({
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.sheetBackdrop}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
-        <View style={[styles.sheetCard, { backgroundColor: colors.card }]}>
+        <GlassSurface intensity="strong" bordered={false} radius={0} style={styles.sheetCard}>
           <Text style={[styles.sheetTitle, { color: colors.foreground }]}>Create with this reel</Text>
 
           <TouchableOpacity
@@ -659,7 +669,7 @@ function CollabSheet({
           <TouchableOpacity onPress={onClose} style={styles.sheetCancel} hitSlop={8}>
             <Text style={[styles.sheetCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
           </TouchableOpacity>
-        </View>
+        </GlassSurface>
       </View>
     </Modal>
   );
@@ -692,6 +702,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
     borderRadius: Radius.md,
     padding: Spacing.xs,
+  },
+  bottomScrim: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "40%",
   },
   bottomOverlay: {
     position: "absolute",
