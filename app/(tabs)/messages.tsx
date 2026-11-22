@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
+import { BlurView } from "expo-blur";
 import { CachedImage } from "../../src/components/ui/CachedImage";
 import Animated, {
   FadeInDown,
@@ -33,6 +34,7 @@ import { Screen } from "../../src/components/layout";
 import { Shadows } from "../../src/theme/shadows";
 // Ionicons removed - using custom Icon component
 import { Icon } from "../../src/components/ui/Icon";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import { UserLink } from "../../src/components/ui/UserLink";
 import { PressableScale } from "../../src/components/ui/PressableScale";
 import api from "../../src/api/client";
@@ -285,7 +287,7 @@ export default function MessagesScreen() {
   );
 
   const header = (
-    <View style={styles.header}>
+    <GlassSurface intensity="regular" bordered borderEdge="bottom" radius={0} style={styles.header}>
       <View>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Messages</Text>
         {totalUnread > 0 && (
@@ -296,41 +298,41 @@ export default function MessagesScreen() {
       </View>
       <View style={{ flexDirection: "row", gap: Gap.sm }}>
         <PressableScale
-          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          style={styles.composeBtn}
           onPress={() => router.push("/(modals)/notes")}
         >
           <Icon name="document" set="light" size={19} color={colors.mutedForeground} />
         </PressableScale>
         <PressableScale
-          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          style={styles.composeBtn}
           onPress={() => router.push("/(modals)/channels")}
         >
           <Icon name="activity" set="light" size={19} color={colors.mutedForeground} />
         </PressableScale>
         <PressableScale
-          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          style={styles.composeBtn}
           onPress={() => router.push("/(modals)/groups")}
         >
           <Icon name="add-user" set="light" size={19} color={colors.mutedForeground} />
         </PressableScale>
         <PressableScale
-          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          style={styles.composeBtn}
           onPress={() => router.push("/(modals)/marketplace")}
         >
           <Icon name="wallet" set="light" size={19} color={colors.mutedForeground} />
         </PressableScale>
         <PressableScale
-          style={[styles.composeBtn, { backgroundColor: colors.card + "90" }]}
+          style={styles.composeBtn}
           onPress={openCompose}
         >
           <Icon name="edit-square" set="light" size={19} color={colors.mutedForeground} />
         </PressableScale>
       </View>
-    </View>
+    </GlassSurface>
   );
 
   return (
-    <Screen header={header} scroll showsVerticalScrollIndicator={false}>
+    <Screen header={header} headerStyle={styles.transparentHeaderWrapper} scroll showsVerticalScrollIndicator={false}>
       <View style={[styles.searchBar, { backgroundColor: colors.card }]}>
         <Icon name="search" set="light" size={17} color={colors.mutedForeground} />
         <TextInput
@@ -509,9 +511,9 @@ export default function MessagesScreen() {
               onPress={closeCompose}
             />
           </Animated.View>
-          <Animated.View
-            style={[styles.sheet, sheetStyle, { backgroundColor: colors.card }]}
-          >
+          <Animated.View style={[styles.sheet, sheetStyle]}>
+            <BlurView intensity={48} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glass, opacity: isDark ? 0.55 : 0.45 }]} />
             <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
 
             <View style={styles.sheetHeader}>
@@ -597,6 +599,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   headerTitle: { ...Typography.h3 },
+  transparentHeaderWrapper: { backgroundColor: "transparent" },
   headerSubtitle: { ...Typography.caption, marginTop: 2 },
   composeBtn: {
     width: 36,
@@ -701,6 +704,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Radius["2xl"],
     paddingTop: 8,
     maxHeight: "80%",
+    overflow: "hidden",
   },
   sheetHandle: {
     alignSelf: "center",
