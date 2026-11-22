@@ -7,7 +7,9 @@ import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import { SafeAreaScreen } from "../../src/components/layout";
+import { showToast } from "../../src/stores/toastStore";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -49,13 +51,13 @@ export default function SettingsScreen() {
   return (
     <SafeAreaScreen style={{ backgroundColor: colors.background }}>
       <ScrollView style={[styles.screen, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.header}>
+      <GlassSurface intensity="regular" bordered borderEdge="bottom" radius={0} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Settings</Text>
         <View style={styles.backBtn} />
-      </View>
+      </GlassSurface>
 
       {sections.map((section) => (
         <View key={section.title} style={styles.section}>
@@ -67,6 +69,7 @@ export default function SettingsScreen() {
                 onPress={() => {
                   if ("toggle" in item && item.onToggle) item.onToggle();
                   else if ("route" in item && item.route) router.push(item.route as any);
+                  else showToast("Coming soon", "info");
                 }}
                 style={[styles.menuRow, i < section.items.length - 1 && { borderBottomColor: colors.border + "30", borderBottomWidth: 0.5 }]}
               >
@@ -86,10 +89,10 @@ export default function SettingsScreen() {
       <View style={styles.logoutContainer}>
         <TouchableOpacity
           onPress={logout}
-          style={[styles.logoutBtn, { borderColor: Colors.light.destructive + "40" }]}
+          style={[styles.logoutBtn, { borderColor: colors.destructive + "40" }]}
         >
-          <Icon name="logout" set="light" size={18} color={Colors.light.destructive} />
-          <Text style={[styles.logoutText, { color: Colors.light.destructive }]}>Log Out</Text>
+          <Icon name="logout" set="light" size={18} color={colors.destructive} />
+          <Text style={[styles.logoutText, { color: colors.destructive }]}>Log Out</Text>
         </TouchableOpacity>
       </View>
       </ScrollView>

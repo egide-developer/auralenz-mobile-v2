@@ -26,6 +26,11 @@ export default function RootLayout() {
     "Urbanist-Medium": require("../assets/fonts/Urbanist-Medium.ttf"),
     "Urbanist-SemiBold": require("../assets/fonts/Urbanist-SemiBold.ttf"),
     "Urbanist-Bold": require("../assets/fonts/Urbanist-Bold.ttf"),
+    // Typography.mono/monoSm referenced "SpaceMono-Regular" with no font
+    // file and no registration here - it silently fell back to the system
+    // default everywhere it was used (comment timestamps, mono numerals).
+    "GeistMono-Regular": require("../assets/fonts/GeistMono-Regular.ttf"),
+    "GeistMono-Medium": require("../assets/fonts/GeistMono-Medium.ttf"),
   });
 
   useEffect(() => {

@@ -7,6 +7,8 @@ export const FontFamily = {
   medium: "Urbanist-Medium",     // 500
   semibold: "Urbanist-SemiBold", // 600 - rare emphasis only
   bold: "Urbanist-SemiBold",     // alias for semibold (backward compat)
+  mono: "GeistMono-Regular",
+  monoMedium: "GeistMono-Medium",
 };
 
 export const FontSize = {
@@ -39,7 +41,7 @@ export const Typography = {
 
   tabLabel: { fontFamily: FontFamily.medium, fontSize: FontSize.xs, lineHeight: 16, textTransform: "none" as const },
 
-  // Numbers - tabular
-  mono: { fontFamily: "SpaceMono-Regular", fontSize: FontSize.sm, lineHeight: 22 },
-  monoSm: { fontFamily: "SpaceMono-Regular", fontSize: FontSize.xs, lineHeight: 18 },
+  // Numbers - tabular (Geist Mono, registered in app/_layout.tsx)
+  mono: { fontFamily: FontFamily.mono, fontSize: FontSize.sm, lineHeight: 22 },
+  monoSm: { fontFamily: FontFamily.mono, fontSize: FontSize.xs, lineHeight: 18 },
 } as const;

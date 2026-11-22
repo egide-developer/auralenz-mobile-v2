@@ -157,7 +157,7 @@ export default function SecurityScreen() {
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>Security & devices</Text>
       </View>
-      {error ? <Text style={[styles.notice, { color: Colors.light.destructive }]}>{error}</Text> : null}
+      {error ? <Text style={[styles.notice, { color: colors.destructive }]}>{error}</Text> : null}
       {message ? <Text style={[styles.notice, { color: colors.primary }]}>{message}</Text> : null}
       {loading ? <Text style={{ color: colors.mutedForeground }}>Loading security settings…</Text> : null}
 
