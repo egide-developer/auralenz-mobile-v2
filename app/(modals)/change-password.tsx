@@ -7,8 +7,10 @@ import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import api from "../../src/api/client";
 import { SafeAreaScreen } from "../../src/components/layout";
+import { showToast } from "../../src/stores/toastStore";
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
@@ -25,6 +27,7 @@ export default function ChangePasswordScreen() {
     setLoading(true);
     try {
       await api.post("/api/auth/change-password", { currentPassword: current, newPassword: newPass });
+      showToast("Password updated", "success");
       router.back();
     } catch (e: any) {
       Alert.alert("Error", e?.response?.data?.message || "Failed");
@@ -34,13 +37,13 @@ export default function ChangePasswordScreen() {
   return (
     <SafeAreaScreen style={{ backgroundColor: colors.background }}>
       <ScrollView style={[styles.screen, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.header}>
+      <GlassSurface intensity="regular" bordered borderEdge="bottom" radius={0} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Change Password</Text>
         <View style={styles.backBtn} />
-      </View>
+      </GlassSurface>
 
       <View style={styles.form}>
         {[

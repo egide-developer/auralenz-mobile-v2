@@ -16,6 +16,7 @@ import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import { SafeAreaScreen } from "../../src/components/layout";
 
 type SecurityStatus = {
@@ -151,12 +152,12 @@ export default function SecurityScreen() {
   return (
     <SafeAreaScreen style={{ backgroundColor: colors.background }}>
       <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}>
+      <GlassSurface intensity="regular" bordered borderEdge="bottom" radius={0} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.foreground }]}>Security & devices</Text>
-      </View>
+      </GlassSurface>
       {error ? <Text style={[styles.notice, { color: colors.destructive }]}>{error}</Text> : null}
       {message ? <Text style={[styles.notice, { color: colors.primary }]}>{message}</Text> : null}
       {loading ? <Text style={{ color: colors.mutedForeground }}>Loading security settings…</Text> : null}
