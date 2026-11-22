@@ -17,6 +17,7 @@ import { Gap, Radius, Spacing, TAB_BAR_HEIGHT } from "../../src/theme/spacing";
 import { Typography } from "../../src/theme/typography";
 import { Shadows } from "../../src/theme/shadows";
 import { Icon } from "../../src/components/ui/Icon";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import { Screen } from "../../src/components/layout";
 import {
   PostGridSkeleton,
@@ -421,12 +422,14 @@ export default function SearchScreen() {
   );
 
   const header = (
-    <View style={styles.header}>
-      <Text style={[styles.headerTitle, { color: colors.foreground }]}>Explore Search</Text>
-      <TouchableOpacity accessibilityLabel="Refresh" hitSlop={8} onPress={handleRefresh}>
-        <Icon name="refresh" set="light" size={20} color={colors.mutedForeground} />
-      </TouchableOpacity>
-    </View>
+    <GlassSurface intensity="regular" bordered borderEdge="bottom" radius={0}>
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Explore Search</Text>
+        <TouchableOpacity accessibilityLabel="Refresh" hitSlop={8} onPress={handleRefresh}>
+          <Icon name="refresh" set="light" size={20} color={colors.mutedForeground} />
+        </TouchableOpacity>
+      </View>
+    </GlassSurface>
   );
 
   const controls = (
@@ -473,7 +476,7 @@ export default function SearchScreen() {
   );
 
   const shell = (content: ReactNode) => (
-    <Screen header={header}>
+    <Screen header={header} headerStyle={styles.transparentHeaderWrapper}>
       <View style={styles.body}>
         {controls}
         {content}
@@ -813,6 +816,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...Typography.h3,
+  },
+  transparentHeaderWrapper: {
+    backgroundColor: "transparent",
   },
   searchRow: {
     flexDirection: "row",
