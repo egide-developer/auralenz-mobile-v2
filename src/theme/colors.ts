@@ -90,19 +90,24 @@ export const Colors = {
 export type ColorScheme = keyof typeof Colors;
 
 export const ProfileColors = {
+  // Derived from Colors.dark so Profile's cards/text/borders are the exact
+  // same shades as every other screen - these used to be hand-typed hex
+  // values that had quietly drifted from the shared palette (e.g. surface
+  // #141416 vs the real card color #121212), making Profile's cards a
+  // visibly different gray than the rest of the app.
   dark: {
-    background: "#0A0A0B",
-    surface: "#141416",
-    elevated: "#1C1C1F",
-    hairline: "rgba(255,255,255,0.06)",
-    foreground: "#F5F5F5",
-    muted: "#8A8A8F",
+    background: Colors.dark.background,
+    surface: Colors.dark.card,
+    elevated: Colors.dark.secondary,
+    hairline: Colors.dark.border,
+    foreground: Colors.dark.foreground,
+    muted: Colors.dark.mutedForeground,
     accent: Colors.dark.primary,
     accentForeground: Colors.dark.primaryForeground,
     accentTint: "rgba(153,204,51,0.12)",
     accentBorder: "rgba(153,204,51,0.34)",
-    danger: "#FF4D3D",
-    headerOverlay: "rgba(10,10,11,0.84)",
+    danger: Colors.dark.destructive,
+    headerOverlay: "rgba(10,10,10,0.84)",
     modalScrim: "rgba(0,0,0,0.64)",
     avatarGradient: ["#263A10", "#3D531D"],
   },

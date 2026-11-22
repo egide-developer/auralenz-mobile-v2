@@ -11,6 +11,7 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { CachedImage } from "../ui/CachedImage";
 import { Icon } from "../ui/Icon";
+import { GlassSurface } from "../ui/GlassSurface";
 import { PressableScale } from "../ui/PressableScale";
 import { Skeleton } from "../skeletons/Skeleton";
 import { ProfileHeaderSkeleton } from "../skeletons/ProfileHeaderSkeleton";
@@ -570,12 +571,14 @@ export function LogoutButton({
             onPress={() => setVisible(false)}
             style={[StyleSheet.absoluteFill, { backgroundColor: palette.modalScrim }]}
           />
-          <View
+          <GlassSurface
+            intensity="strong"
+            bordered={false}
+            radius={0}
             style={[
               styles.confirmSheet,
               {
                 paddingBottom: safeAreaBottom + Spacing.md,
-                backgroundColor: palette.elevated,
                 borderColor: palette.hairline,
               },
             ]}
@@ -611,12 +614,14 @@ export function LogoutButton({
                   { backgroundColor: palette.danger, borderColor: palette.danger },
                 ]}
               >
-                <Text style={[styles.confirmButtonText, { color: palette.foreground }]}>
+                {/* Fixed white, not palette.foreground - in light mode that's
+                    near-black text on a dark-red button, which fails contrast. */}
+                <Text style={[styles.confirmButtonText, { color: "#FFFFFF" }]}>
                   {confirming ? "Logging out..." : "Log out"}
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </GlassSurface>
         </View>
       </Modal>
     </>
@@ -848,6 +853,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
   sheetHandle: {
     alignSelf: "center",
