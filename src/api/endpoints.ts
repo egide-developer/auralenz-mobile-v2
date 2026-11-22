@@ -42,6 +42,7 @@ export const API = {
     block: (id: string) => `/api/users/${id}/block`,
     unblock: (id: string) => `/api/users/${id}/block`,
     pushToken: "/api/users/push-token",
+    settings: "/api/users/settings",
     closeFriends: "/api/users/close-friends",
     closeFriend: (id: string) => `/api/users/close-friends/${id}`,
   },
