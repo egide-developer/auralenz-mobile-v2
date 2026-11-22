@@ -323,7 +323,8 @@ export interface AppNotification {
     | "message"
     | "group_invite"
     | "group_join"
-    | "story_reply";
+    | "story_reply"
+    | "tagged";
   sender: UserPreview;
   post?: { id: string; caption?: string; media?: PostMedia[] };
   comment?: { id: string; text?: string };

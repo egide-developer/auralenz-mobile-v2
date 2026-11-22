@@ -6,6 +6,7 @@ import { Colors } from "../../src/theme/colors";
 import { Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import { UserLink } from "../../src/components/ui/UserLink";
 import api from "../../src/api/client";
 import { API } from "../../src/api/endpoints";
@@ -25,6 +26,8 @@ function notificationText(n: AppNotification): string {
       return `${name} started following you`;
     case "mention":
       return `${name} mentioned you`;
+    case "tagged":
+      return `${name} tagged you in a post`;
     case "story_view":
       return `${name} viewed your story`;
     case "story_reply":
@@ -63,9 +66,44 @@ export default function NotificationsScreen() {
     } catch {}
   };
 
+  const openNotification = (item: AppNotification) => {
+    const id = item._id || item.id;
+    if (!item.isRead) {
+      setNotifications((prev) => prev.map((n) => ((n._id || n.id) === id ? { ...n, isRead: true } : n)));
+      api.put(API.notifications.read(id)).catch(() => {});
+    }
+    switch (item.type) {
+      case "like":
+      case "comment":
+      case "reply":
+      case "mention":
+      case "tagged":
+        if (item.post?.id) router.push(`/post/${item.post.id}`);
+        break;
+      case "follow":
+        if (item.sender?.username) router.push(`/profile/${item.sender.username}`);
+        break;
+      case "message":
+        // The notification only carries the message's own id, not its
+        // conversation (routes/controllers/notificationController.js only
+        // populates message.text) - there's no conversation id to deep-link
+        // to, so send them to the inbox rather than guess one.
+        router.push("/(tabs)/messages");
+        break;
+      case "group_invite":
+      case "group_join":
+        if (item.group?.id) router.push(`/messages/group/${item.group.id}`);
+        break;
+      case "story_view":
+      case "story_reply":
+        if (item.sender?.username) router.push(`/profile/${item.sender.username}`);
+        break;
+    }
+  };
+
   return (
     <SafeAreaScreen style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <GlassSurface intensity="regular" bordered borderEdge="bottom" radius={0} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Icon name="arrow-left" set="light" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -73,7 +111,7 @@ export default function NotificationsScreen() {
         <TouchableOpacity onPress={markAllRead} style={styles.markReadBtn}>
           <Text style={[styles.markReadText, { color: colors.primary }]}>Mark all read</Text>
         </TouchableOpacity>
-      </View>
+      </GlassSurface>
 
       <FlatList
         data={notifications}
@@ -86,7 +124,11 @@ export default function NotificationsScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={[styles.notifRow, { borderBottomColor: colors.border + "30", opacity: item.isRead ? 0.6 : 1 }]}>
+          <TouchableOpacity
+            onPress={() => openNotification(item)}
+            activeOpacity={0.7}
+            style={[styles.notifRow, { borderBottomColor: colors.border + "30", opacity: item.isRead ? 0.6 : 1 }]}
+          >
             {item.sender ? (
               <UserLink user={item.sender} colors={colors} avatarSize={40} showUsername={false} />
             ) : (
@@ -103,7 +145,7 @@ export default function NotificationsScreen() {
             {!item.isRead && (
               <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
             )}
-          </View>
+          </TouchableOpacity>
         )}
       />
     </SafeAreaScreen>
