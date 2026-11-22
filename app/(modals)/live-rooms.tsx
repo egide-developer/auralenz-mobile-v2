@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CachedImage } from "../../src/components/ui/CachedImage";
 import { Icon } from "../../src/components/ui/Icon";
 import { PressableScale } from "../../src/components/ui/PressableScale";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import { useThemeStore } from "../../src/stores/themeStore";
 import { useAuthStore } from "../../src/stores/authStore";
 import { useLiveRoomStore } from "../../src/stores/liveRoomStore";
@@ -121,7 +122,7 @@ export default function LiveRoomsModal() {
           {item.host.username}
         </Text>
         {item.status === "ended" && (
-          <View style={styles.endedBadge}>
+          <View style={[styles.endedBadge, { backgroundColor: colors.destructive }]}>
             <Text style={styles.endedText}>ENDED</Text>
           </View>
         )}
@@ -131,14 +132,14 @@ export default function LiveRoomsModal() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: FontFamily.bold }]}>
+      <GlassSurface intensity="regular" bordered borderEdge="bottom" radius={0} style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>
           Live Rooms
         </Text>
         <PressableScale onPress={() => setCreateOpen(true)}>
           <Icon name="add" set="light" size={24} color={colors.foreground} />
         </PressableScale>
-      </View>
+      </GlassSurface>
 
       <FlatList
         data={rooms}
@@ -173,7 +174,7 @@ export default function LiveRoomsModal() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalOverlay}
         >
-          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+          <GlassSurface intensity="strong" bordered radius={Radius.lg} style={styles.modalCard}>
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
               Start Live Room
             </Text>
@@ -209,14 +210,14 @@ export default function LiveRoomsModal() {
                 </Text>
               </PressableScale>
             </View>
-          </View>
+          </GlassSurface>
         </KeyboardAvoidingView>
       </Modal>
 
       {/* Join Confirmation */}
       <Modal visible={!!joinPrompt} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+          <GlassSurface intensity="strong" bordered radius={Radius.lg} style={styles.modalCard}>
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
               Join "{joinPrompt?.title}"?
             </Text>
@@ -231,7 +232,7 @@ export default function LiveRoomsModal() {
                 <Text style={[styles.modalBtnText, { color: colors.primary }]}>Join</Text>
               </PressableScale>
             </View>
-          </View>
+          </GlassSurface>
         </View>
       </Modal>
     </SafeAreaView>
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
   },
-  headerTitle: { fontSize: FontSize.xl, fontWeight: "700", fontFamily: FontFamily.bold },
+  headerTitle: { ...Typography.h3 },
   listContent: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.xl },
   roomCard: {
     borderRadius: Radius.lg,
@@ -261,14 +262,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   roomTitleWrap: { flex: 1 },
-  roomTitle: { fontSize: FontSize.lg, fontWeight: "600", marginBottom: 2 },
-  roomTopic: { fontSize: FontSize.sm },
+  roomTitle: { ...Typography.h4, marginBottom: 2 },
+  roomTopic: { ...Typography.bodySmall },
   roomMeta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  metaText: { fontSize: FontSize.sm, fontWeight: "500" },
+  metaText: { ...Typography.bodySmall },
   roomFooter: {
     flexDirection: "row",
     alignItems: "center",
@@ -279,24 +280,24 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 28, height: 28, borderRadius: 14, justifyContent: "center", alignItems: "center", overflow: "hidden" },
   avatarImage: { width: "100%", height: "100%" },
-  avatarFallback: { position: "absolute", fontSize: FontSize.sm, fontWeight: "600", color: "#FFFFFF" },
-  hostName: { fontSize: FontSize.sm, fontWeight: "500", flex: 1 },
-  endedBadge: { backgroundColor: "#EF4444", paddingHorizontal: 6, paddingVertical: 2, borderRadius: Radius.sm },
-  endedText: { color: "#FFFFFF", fontSize: 10, fontWeight: "600" },
+  avatarFallback: { position: "absolute", fontFamily: FontFamily.semibold, fontSize: FontSize.sm, color: "#FFFFFF" },
+  hostName: { ...Typography.bodySmall, flex: 1 },
+  endedBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: Radius.sm },
+  endedText: { fontFamily: FontFamily.semibold, fontSize: 10, color: "#FFFFFF" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: Spacing.xl },
-  emptyText: { fontSize: FontSize.lg, fontWeight: "600", marginTop: Spacing.md },
-  emptySub: { fontSize: FontSize.sm, marginTop: 4 },
+  emptyText: { ...Typography.h4, marginTop: Spacing.md },
+  emptySub: { ...Typography.bodySmall, marginTop: 4 },
   modalOverlay: { flex: 1, justifyContent: "center", paddingHorizontal: Spacing.md, backgroundColor: "rgba(0,0,0,0.5)" },
   modalCard: { borderRadius: Radius.lg, padding: Spacing.lg, width: "100%" },
-  modalTitle: { fontSize: FontSize.lg, fontWeight: "700", marginBottom: Spacing.md },
-  modalSub: { fontSize: FontSize.sm, marginBottom: Spacing.md, lineHeight: 20 },
+  modalTitle: { ...Typography.h4, marginBottom: Spacing.md },
+  modalSub: { ...Typography.bodySmall, marginBottom: Spacing.md },
   input: {
     borderWidth: 1,
     borderRadius: Radius.md,
     padding: Spacing.md,
-    fontSize: FontSize.md,
+    ...Typography.body,
     marginBottom: Spacing.sm,
   },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: Spacing.sm, marginTop: Spacing.md },
-  modalBtnText: { fontSize: FontSize.md, fontWeight: "600" },
+  modalBtnText: { ...Typography.body, fontFamily: FontFamily.semibold },
 });

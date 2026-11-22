@@ -18,10 +18,11 @@ import { useAuthStore } from "../../src/stores/authStore";
 import { useLiveRoomStore } from "../../src/stores/liveRoomStore";
 import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
-import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
+import { Typography, FontFamily } from "../../src/theme/typography";
 import { AppIcon } from "../../src/components/ui/AppIcon";
 import { icons } from "../../src/constants/icons";
 import { isLiveRoomAvailable } from "../../src/services/liveRoomMesh";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 
 export default function LiveRoomScreen() {
   const isDark = useThemeStore((s) => s.isDark);
@@ -153,12 +154,12 @@ export default function LiveRoomScreen() {
               </View>
             )}
             <View style={styles.overlay}>
-              <Text style={[styles.nameLabel, { color: colors.foreground }]}>
+              <Text style={styles.nameLabel}>
                 You
               </Text>
-              {localMuted && <Icon name="mic-off" set="bold" size={14} color={colors.foreground} />}
+              {localMuted && <Icon name="mic-off" set="bold" size={14} color="#FFFFFF" />}
               {localCameraOff && localKind === "video" && (
-                <Icon name="videocam-off" set="bold" size={14} color={colors.foreground} />
+                <Icon name="videocam-off" set="bold" size={14} color="#FFFFFF" />
               )}
             </View>
           </View>
@@ -181,14 +182,14 @@ export default function LiveRoomScreen() {
                 </View>
               )}
               <View style={styles.overlay}>
-                <Text style={[styles.nameLabel, { color: colors.foreground }]}>
+                <Text style={styles.nameLabel}>
                   {member.username}
                 </Text>
                 {member.isMuted && (
-                  <Icon name="mic-off" set="bold" size={14} color={colors.foreground} />
+                  <Icon name="mic-off" set="bold" size={14} color="#FFFFFF" />
                 )}
                 {member.isCameraOff && localKind === "video" && (
-                  <Icon name="videocam-off" set="bold" size={14} color={colors.foreground} />
+                  <Icon name="videocam-off" set="bold" size={14} color="#FFFFFF" />
                 )}
               </View>
             </View>
@@ -207,7 +208,7 @@ export default function LiveRoomScreen() {
       </View>
 
       {/* Bottom Controls */}
-      <View style={[styles.controls, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+      <GlassSurface intensity="regular" bordered borderEdge="top" radius={0} style={styles.controls}>
         <View style={styles.controlRow}>
           <ControlButton
             icon={localMuted ? "mic-off" : "mic"}
@@ -240,7 +241,7 @@ export default function LiveRoomScreen() {
             label="Participants"
           />
         </View>
-      </View>
+      </GlassSurface>
     </SafeAreaView>
   );
 }
@@ -293,8 +294,8 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: Spacing.sm, flex: 1 },
   titleWrap: { flex: 1, minWidth: 0 },
-  roomTitle: { fontSize: FontSize.lg, fontWeight: "700", fontFamily: FontFamily.bold },
-  roomMeta: { fontSize: FontSize.sm, marginTop: 2 },
+  roomTitle: { ...Typography.h4 },
+  roomMeta: { ...Typography.bodySmall, marginTop: 2 },
   videoGrid: {
     flex: 1,
     padding: Spacing.sm,
@@ -321,8 +322,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   nameLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: "600",
+    ...Typography.bodySmall,
+    fontFamily: FontFamily.semibold,
+    // Always on a fixed dark chip over video, regardless of app theme -
+    // colors.foreground would render near-black-on-black in light mode.
+    color: "#FFFFFF",
     backgroundColor: "rgba(0,0,0,0.5)",
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -339,7 +343,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     alignItems: "center",
   },
-  reconnectText: { color: "#000", fontSize: 10, fontWeight: "600" },
+  reconnectText: { color: "#000", fontSize: 10, fontFamily: FontFamily.semibold },
   emptySlot: { flex: 1, alignItems: "center", justifyContent: "center", borderWidth: 2, borderStyle: "dashed", borderRadius: Radius.md },
   controls: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, flexDirection: "row", justifyContent: "space-around" },
   controlRow: { flexDirection: "row", justifyContent: "space-around", width: "100%" },
@@ -352,5 +356,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  controlLabel: { fontSize: 10, fontWeight: "500" },
+  controlLabel: { fontSize: 10, fontFamily: FontFamily.medium },
 });
