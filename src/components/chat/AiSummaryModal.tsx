@@ -17,6 +17,7 @@ import { Colors } from "../../theme/colors";
 import { Spacing, Radius } from "../../theme/spacing";
 import { Typography, FontFamily } from "../../theme/typography";
 import { Icon } from "../ui/Icon";
+import { GlassSurface } from "../ui/GlassSurface";
 
 export interface AiSummaryData {
   summary?: string | null;
@@ -64,15 +65,12 @@ export function AiSummaryModal({ visible, title, onClose, loadSummary }: AiSumma
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={[styles.backdrop, { justifyContent: "flex-end" }]}>
         <TouchableOpacity style={styles.backdropTouch} activeOpacity={1} onPress={onClose} />
-        <View
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: colors.card,
-              paddingBottom: insets.bottom + Spacing.lg,
-              borderTopColor: colors.border + "40",
-            },
-          ]}
+        <GlassSurface
+          intensity="strong"
+          bordered
+          borderEdge="top"
+          radius={0}
+          style={[styles.sheet, { paddingBottom: insets.bottom + Spacing.lg }]}
         >
           <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
           <View style={styles.sheetHeader}>
@@ -144,7 +142,7 @@ export function AiSummaryModal({ visible, title, onClose, loadSummary }: AiSumma
               )}
             </ScrollView>
           )}
-        </View>
+        </GlassSurface>
       </View>
     </Modal>
   );

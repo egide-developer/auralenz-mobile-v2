@@ -53,6 +53,7 @@ import { Colors } from "../../src/theme/colors";
 import { Radius, Spacing } from "../../src/theme/spacing";
 import { Typography, FontFamily, FontSize } from "../../src/theme/typography";
 import { Icon } from "../../src/components/ui/Icon";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import { UserLink } from "../../src/components/ui/UserLink";
 import { PressableScale } from "../../src/components/ui/PressableScale";
 import { AiSummaryModal } from "../../src/components/chat/AiSummaryModal";
@@ -634,7 +635,7 @@ function MessageRow({
             size={12}
             color={
               message.failed
-                ? Colors.light.destructive
+                ? colors.destructive
                 : message.status === "read" ||
                     message.readBy?.some((entry) => entry.user !== message.senderId)
                   ? colors.primary
@@ -649,7 +650,7 @@ function MessageRow({
               accessibilityLabel="Retry sending message"
               style={styles.retryMessageButton}
             >
-              <Text style={[styles.seenLabel, { color: Colors.light.destructive }]}>
+              <Text style={[styles.seenLabel, { color: colors.destructive }]}>
                 Failed · Tap to retry
               </Text>
             </TouchableOpacity>
@@ -1668,7 +1669,11 @@ export default function ChatDetailScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={0}
     >
-      <View
+      <GlassSurface
+        intensity="regular"
+        bordered
+        borderEdge="bottom"
+        radius={0}
         style={[
           styles.header,
           {
@@ -1729,7 +1734,7 @@ export default function ChatDetailScreen() {
             <Icon name="more-square" set="light" size={20} color={colors.foreground} />
           </TouchableOpacity>
         </View>
-      </View>
+      </GlassSurface>
 
       <View
         style={styles.connectionStatusRow}
@@ -2158,8 +2163,13 @@ export default function ChatDetailScreen() {
 
       <Modal visible={!!messageActions} transparent animationType="fade" onRequestClose={closeMessageActions}>
         <Pressable style={styles.sheetBackdrop} onPress={closeMessageActions}>
+          <GlassSurface
+            intensity="strong"
+            bordered={false}
+            radius={0}
+            style={[styles.sheet, { paddingBottom: insets.bottom + Spacing.md }]}
+          >
           <Pressable
-            style={[styles.sheet, { backgroundColor: colors.card, paddingBottom: insets.bottom + Spacing.md }]}
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.reactionRow}>
@@ -2243,13 +2253,14 @@ export default function ChatDetailScreen() {
               </TouchableOpacity>
             ) : null}
           </Pressable>
+          </GlassSurface>
         </Pressable>
       </Modal>
 
       <Modal visible={!!editingMessage} transparent animationType="fade" onRequestClose={() => setEditingMessage(null)}>
         <Pressable style={styles.sheetBackdrop} onPress={() => setEditingMessage(null)}>
+          <GlassSurface intensity="strong" bordered={false} radius={16} style={styles.editCard}>
           <Pressable
-            style={[styles.editCard, { backgroundColor: colors.card }]}
             onPress={(e) => e.stopPropagation()}
           >
             <Text style={[styles.editTitle, { color: colors.foreground }]}>Edit message</Text>
@@ -2272,6 +2283,7 @@ export default function ChatDetailScreen() {
               </TouchableOpacity>
             </View>
           </Pressable>
+          </GlassSurface>
         </Pressable>
       </Modal>
 
