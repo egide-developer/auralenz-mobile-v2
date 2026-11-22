@@ -45,6 +45,7 @@ import { PressableScale } from "../../src/components/ui/PressableScale";
 import { renderRichText } from "../../src/components/ui/RichText";
 import { MentionSuggestions, useMentionQuery, applyMentionSelection } from "../../src/components/ui/MentionSuggestions";
 import { ReportSheet } from "../../src/components/ui/ReportSheet";
+import { GlassSurface } from "../../src/components/ui/GlassSurface";
 import { StoryBar } from "../../src/components/feed/StoryBar";
 import { TipSheet } from "../../src/components/monetization/TipSheet";
 import { Screen } from "../../src/components/layout";
@@ -221,35 +222,37 @@ export default function FeedScreen() {
   }, []);
 
   const header = (
-    <View style={styles.header}>
-      <Text style={[styles.headerTitle, { color: colors.foreground }]}>AuraLenz</Text>
-      <View style={styles.headerActions}>
-        <PressableScale
-          onPress={() => router.push("/(modals)/live-rooms")}
-          style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
-        >
-          <Icon name="video" set="light" size={20} color={colors.mutedForeground} />
-        </PressableScale>
-        <PressableScale
-          onPress={() => router.push("/notifications")}
-          style={[styles.headerBtn, { backgroundColor: colors.card + "90" }]}
-        >
-          <Icon name="notification" set="light" size={20} color={colors.mutedForeground} />
-        </PressableScale>
+    <GlassSurface intensity="regular" bordered borderEdge="bottom" radius={0}>
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>AuraLenz</Text>
+        <View style={styles.headerActions}>
+          <PressableScale
+            onPress={() => router.push("/(modals)/live-rooms")}
+            style={styles.headerBtn}
+          >
+            <Icon name="video" set="light" size={20} color={colors.mutedForeground} />
+          </PressableScale>
+          <PressableScale
+            onPress={() => router.push("/notifications")}
+            style={styles.headerBtn}
+          >
+            <Icon name="notification" set="light" size={20} color={colors.mutedForeground} />
+          </PressableScale>
+        </View>
       </View>
-    </View>
+    </GlassSurface>
   );
 
   if (loading) {
     return (
-      <Screen header={header}>
+      <Screen header={header} headerStyle={styles.transparentHeaderWrapper}>
         <PostCardSkeletonList count={4} />
       </Screen>
     );
   }
 
   return (
-    <Screen header={header} scroll showsVerticalScrollIndicator={false}>
+    <Screen header={header} headerStyle={styles.transparentHeaderWrapper} scroll showsVerticalScrollIndicator={false}>
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
@@ -398,7 +401,7 @@ function PostCard({
       <View
         style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: "#808080" },
+          { backgroundColor: colors.card, borderBottomColor: colors.border },
         ]}
       >
         <View style={styles.postHeader}>
@@ -502,9 +505,9 @@ function PostCard({
               name="heart"
               set={post.isLiked ? "bold" : "light"}
               size={20}
-              color={post.isLiked ? Colors.light.destructive : colors.mutedForeground}
+              color={post.isLiked ? colors.destructive : colors.mutedForeground}
             />
-            <Text style={[styles.actionText, { color: post.isLiked ? Colors.light.destructive : colors.mutedForeground }]}>
+            <Text style={[styles.actionText, { color: post.isLiked ? colors.destructive : colors.mutedForeground }]}>
               {post.likesCount}
             </Text>
           </AnimatedTouchable>
@@ -690,16 +693,16 @@ function PostOptionsSheet({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose} />
-      <View style={[styles.optionsSheet, { backgroundColor: colors.card }]}>
+      <GlassSurface intensity="strong" bordered={false} radius={0} style={styles.optionsSheet}>
         {isOwnPost ? (
           <TouchableOpacity style={styles.optionRow} onPress={confirmDelete}>
-            <Icon name="delete" set="light" size={20} color={Colors.light.destructive} />
-            <Text style={[styles.optionText, { color: Colors.light.destructive }]}>Delete post</Text>
+            <Icon name="delete" set="light" size={20} color={colors.destructive} />
+            <Text style={[styles.optionText, { color: colors.destructive }]}>Delete post</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.optionRow} onPress={confirmUnfollow}>
-            <Icon name="close-square" set="light" size={20} color={Colors.light.destructive} />
-            <Text style={[styles.optionText, { color: Colors.light.destructive }]}>Unfollow</Text>
+            <Icon name="close-square" set="light" size={20} color={colors.destructive} />
+            <Text style={[styles.optionText, { color: colors.destructive }]}>Unfollow</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -720,8 +723,8 @@ function PostOptionsSheet({
               setReportVisible(true);
             }}
           >
-            <Icon name="danger" set="light" size={20} color={Colors.light.destructive} />
-            <Text style={[styles.optionText, { color: Colors.light.destructive }]}>Report</Text>
+            <Icon name="danger" set="light" size={20} color={colors.destructive} />
+            <Text style={[styles.optionText, { color: colors.destructive }]}>Report</Text>
           </TouchableOpacity>
         ) : null}
         <TouchableOpacity style={[styles.optionRow, styles.optionCancel]} onPress={onClose}>
@@ -729,7 +732,7 @@ function PostOptionsSheet({
             Cancel
           </Text>
         </TouchableOpacity>
-      </View>
+      </GlassSurface>
       <ReportSheet
         visible={reportVisible}
         onClose={() => setReportVisible(false)}
@@ -946,10 +949,15 @@ export function CommentSheet({
               styles.sheetContent,
               sheetStyle,
               sheetHeightStyle,
-              { backgroundColor: colors.background },
               Shadows[isDark ? "dark" : "light"]["soft-xl"],
             ]}
           >
+            <BlurView
+              intensity={48}
+              tint={isDark ? "dark" : "light"}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glass, opacity: isDark ? 0.55 : 0.45 }]} />
             <View style={[styles.sheetHandle, { backgroundColor: colors.mutedForeground + "40" }]} />
 
             {loading ? (
@@ -1076,10 +1084,10 @@ function CommentItem({
             name="heart"
             set={comment.isLiked ? "bold" : "light"}
             size={14}
-            color={comment.isLiked ? Colors.light.destructive : colors.mutedForeground}
+            color={comment.isLiked ? colors.destructive : colors.mutedForeground}
           />
           {comment.likesCount > 0 && (
-            <Text style={[styles.commentLikeCount, { color: comment.isLiked ? Colors.light.destructive : colors.mutedForeground }]}>
+            <Text style={[styles.commentLikeCount, { color: comment.isLiked ? colors.destructive : colors.mutedForeground }]}>
               {comment.likesCount}
             </Text>
           )}
@@ -1124,6 +1132,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Screen's own headerWrapper paints an opaque theme background by default -
+  // override it to transparent so GlassSurface (the actual blur) is what
+  // shows through, not a flat color sitting on top of it.
+  transparentHeaderWrapper: {
+    backgroundColor: "transparent",
   },
   listContent: {
     paddingTop: Spacing.sm,
